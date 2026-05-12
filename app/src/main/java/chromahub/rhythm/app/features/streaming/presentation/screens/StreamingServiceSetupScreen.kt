@@ -24,6 +24,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,10 +40,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import chromahub.rhythm.app.R
+import chromahub.rhythm.app.shared.data.model.AppSettings
 import chromahub.rhythm.app.features.streaming.domain.model.StreamingServiceRules
 import chromahub.rhythm.app.features.streaming.presentation.model.StreamingServiceOptions
 import chromahub.rhythm.app.features.streaming.presentation.viewmodel.StreamingMusicViewModel
+import chromahub.rhythm.app.features.local.presentation.screens.settings.TunerAnimatedSwitch
 import chromahub.rhythm.app.shared.presentation.components.common.CollapsibleHeaderScreen
 
 @Composable
@@ -51,9 +56,12 @@ fun StreamingServiceSetupScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val appSettings = remember(context) { AppSettings.getInstance(context) }
     val sessions by viewModel.serviceSessions.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val rememberStreamingPasswords by appSettings.rememberStreamingPasswords.collectAsState()
     val isBusy = isLoading
 
     val option = remember(serviceId) {
@@ -255,6 +263,32 @@ fun StreamingServiceSetupScreen(
                             singleLine = true,
                             enabled = !isBusy
                         )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(id = R.string.streaming_service_setup_remember_password),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = stringResource(id = R.string.streaming_service_setup_remember_password_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            TunerAnimatedSwitch(
+                                checked = rememberStreamingPasswords,
+                                onCheckedChange = { enabled -> appSettings.setRememberStreamingPasswords(enabled) },
+                                enabled = !isBusy
+                            )
+                        }
                     }
                 }
             }

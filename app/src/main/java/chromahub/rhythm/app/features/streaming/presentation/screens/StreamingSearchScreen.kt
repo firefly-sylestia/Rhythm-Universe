@@ -63,6 +63,7 @@ fun StreamingSearchScreen(
     val query by viewModel.searchQuery.collectAsState()
     val results by viewModel.searchResults.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val hasLoadedHomeContent by viewModel.hasLoadedHomeContent.collectAsState()
     val recommendations by viewModel.recommendations.collectAsState()
     val newReleases by viewModel.newReleases.collectAsState()
     val featuredPlaylists by viewModel.featuredPlaylists.collectAsState()
@@ -72,8 +73,8 @@ fun StreamingSearchScreen(
             newReleases.isNotEmpty() ||
             featuredPlaylists.isNotEmpty()
 
-    LaunchedEffect(selectedService, isSelectedServiceConnected, hasProviderDiscovery) {
-        if (isSelectedServiceConnected && !hasProviderDiscovery) {
+    LaunchedEffect(selectedService, isSelectedServiceConnected, hasProviderDiscovery, hasLoadedHomeContent) {
+        if (isSelectedServiceConnected && !hasProviderDiscovery && !hasLoadedHomeContent) {
             viewModel.loadHomeContent()
         }
     }

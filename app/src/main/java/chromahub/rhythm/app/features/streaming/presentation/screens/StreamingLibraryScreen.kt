@@ -78,6 +78,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -200,6 +201,7 @@ fun StreamingLibraryScreen(
     val sessions by viewModel.serviceSessions.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val hasLoadedLibrary by viewModel.hasLoadedLibrary.collectAsState()
+    val hasLoadedHomeContent by viewModel.hasLoadedHomeContent.collectAsState()
     val error by viewModel.error.collectAsState()
     val currentStreamingSong by viewModel.currentSong.collectAsState()
     val isPlayerPlaying by viewModel.isPlaying.collectAsState()
@@ -235,8 +237,13 @@ fun StreamingLibraryScreen(
         }
     }
 
-    val librarySongs = remember(likedSongs, downloadedSongs, recommendations) {
-        (likedSongs + downloadedSongs + recommendations).distinctBy { it.id }
+    val allSongs by viewModel.allSongs.collectAsState()
+    val librarySongs = remember(allSongs, likedSongs, downloadedSongs, recommendations) {
+        if (allSongs.isNotEmpty()) {
+            allSongs
+        } else {
+            (likedSongs + downloadedSongs + recommendations).distinctBy { it.id }
+        }
     }
     val libraryAlbums = remember(savedAlbums, newReleases) {
         if (savedAlbums.isNotEmpty()) {
@@ -412,8 +419,12 @@ fun StreamingLibraryScreen(
 
     LaunchedEffect(resolvedServiceId, isSelectedServiceConnected) {
         if (isSelectedServiceConnected) {
-            viewModel.loadLibrary()
-            viewModel.loadHomeContent()
+            if (!hasLoadedLibrary) {
+                viewModel.loadLibrary()
+            }
+            if (!hasLoadedHomeContent) {
+                viewModel.loadHomeContent()
+            }
         }
     }
 
@@ -1726,7 +1737,7 @@ private fun StreamingLibraryLoadingCard(
         icon = Icons.Rounded.History,
         iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
         iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
-        showProgressIndicator = true,
+        centeredContent = true,
         modifier = modifier
     )
 }
@@ -1739,6 +1750,7 @@ private fun StreamingLibraryStateCard(
     iconContainerColor: Color,
     iconTint: Color,
     showProgressIndicator: Boolean = false,
+    centeredContent: Boolean = false,
     actionText: String? = null,
     onAction: (() -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -1753,6 +1765,7 @@ private fun StreamingLibraryStateCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
+            horizontalAlignment = if (centeredContent) Alignment.CenterHorizontally else Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Surface(
@@ -1782,17 +1795,20 @@ private fun StreamingLibraryStateCard(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
+                ,
+                textAlign = if (centeredContent) TextAlign.Center else TextAlign.Start
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = if (centeredContent) TextAlign.Center else TextAlign.Start
             )
 
             if (actionText != null && onAction != null) {
                 Button(
                     onClick = onAction,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = if (centeredContent) Modifier else Modifier.fillMaxWidth()
                 ) {
                     Text(text = actionText)
                 }

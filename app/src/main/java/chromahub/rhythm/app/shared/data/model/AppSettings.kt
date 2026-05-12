@@ -354,6 +354,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_STREAMING_QUALITY = "streaming_quality" // "LOW", "MEDIUM", "HIGH", "LOSSLESS"
         private const val KEY_ALLOW_CELLULAR_STREAMING = "allow_cellular_streaming"
         private const val KEY_OFFLINE_MODE = "offline_mode"
+        private const val KEY_REMEMBER_STREAMING_PASSWORDS = "remember_streaming_passwords"
         
         // Queue & Playback Behavior
         private const val KEY_SHUFFLE_USES_EXOPLAYER = "shuffle_uses_exoplayer"
@@ -784,6 +785,9 @@ class AppSettings private constructor(context: Context) {
     
     private val _offlineMode = MutableStateFlow(prefs.getBoolean(KEY_OFFLINE_MODE, false))
     val offlineMode: StateFlow<Boolean> = _offlineMode.asStateFlow()
+
+    private val _rememberStreamingPasswords = MutableStateFlow(prefs.getBoolean(KEY_REMEMBER_STREAMING_PASSWORDS, true))
+    val rememberStreamingPasswords: StateFlow<Boolean> = _rememberStreamingPasswords.asStateFlow()
     
     // Audio Device Settings
     private val _lastAudioDevice = MutableStateFlow(prefs.getString(KEY_LAST_AUDIO_DEVICE, null))
@@ -1957,6 +1961,11 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     fun setOfflineMode(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_OFFLINE_MODE, enabled).apply()
         _offlineMode.value = enabled
+    }
+
+    fun setRememberStreamingPasswords(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_REMEMBER_STREAMING_PASSWORDS, enabled).apply()
+        _rememberStreamingPasswords.value = enabled
     }
     
     fun setSongsSortOrder(sortOrder: String) {

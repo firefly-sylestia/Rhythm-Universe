@@ -78,13 +78,14 @@ class StreamingMusicRepositoryImpl(
         serviceId: String,
         serverUrl: String,
         username: String,
-        password: String
+        password: String,
+        saveCredentials: Boolean = true
     ): ServiceConnectionInfo {
         val normalizedService = normalizeServiceId(serviceId)
 
         val result = when (normalizedService) {
-            StreamingServiceId.SUBSONIC -> subsonicClient.login(serverUrl, username, password)
-            StreamingServiceId.JELLYFIN -> jellyfinClient.login(serverUrl, username, password)
+            StreamingServiceId.SUBSONIC -> subsonicClient.login(serverUrl, username, password, saveCredentials)
+            StreamingServiceId.JELLYFIN -> jellyfinClient.login(serverUrl, username, password, saveCredentials)
             else -> Result.failure(IllegalArgumentException("Unsupported streaming service"))
         }
 

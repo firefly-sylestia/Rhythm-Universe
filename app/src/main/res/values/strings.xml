@@ -2694,6 +2694,8 @@
     <string name="streaming_service_setup_username_hint">Enter your account username</string>
     <string name="streaming_service_setup_password">Password</string>
     <string name="streaming_service_setup_password_hint">Enter your account password</string>
+    <string name="streaming_service_setup_remember_password">Remember password on this device</string>
+    <string name="streaming_service_setup_remember_password_desc">Store credentials locally so Rhythm can reconnect automatically later.</string>
     <string name="streaming_service_setup_connecting">Connecting…</string>
     <string name="streaming_service_setup_disconnecting">Disconnecting…</string>
     <string name="streaming_service_setup_action_hint">Fill in the required fields to connect this service.</string>

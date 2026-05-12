@@ -40,7 +40,12 @@ class SubsonicApiClient(context: Context) {
 
     fun getUsername(): String = credentials?.username.orEmpty()
 
-    suspend fun login(serverUrl: String, username: String, password: String): Result<ProviderConnectionResult> {
+    suspend fun login(
+        serverUrl: String,
+        username: String,
+        password: String,
+        saveCredentials: Boolean = true
+    ): Result<ProviderConnectionResult> {
         val normalizedUrl = normalizeServerUrl(serverUrl)
         val validationError = validateServerUrl(normalizedUrl)
         if (validationError != null) {
@@ -60,11 +65,15 @@ class SubsonicApiClient(context: Context) {
         )
 
         return ping().map {
-            prefs.edit()
-                .putString(KEY_SERVER_URL, normalizedUrl)
-                .putString(KEY_USERNAME, username.trim())
-                .putString(KEY_PASSWORD, password)
-                .apply()
+            if (saveCredentials) {
+                prefs.edit()
+                    .putString(KEY_SERVER_URL, normalizedUrl)
+                    .putString(KEY_USERNAME, username.trim())
+                    .putString(KEY_PASSWORD, password)
+                    .apply()
+            } else {
+                prefs.edit().clear().apply()
+            }
             ProviderConnectionResult(displayName = username.trim(), serverUrl = normalizedUrl)
         }.onFailure {
             credentials = null

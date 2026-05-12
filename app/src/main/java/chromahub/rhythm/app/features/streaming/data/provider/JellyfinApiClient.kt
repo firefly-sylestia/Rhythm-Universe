@@ -43,7 +43,12 @@ class JellyfinApiClient(context: Context) {
 
     fun getUsername(): String = credentials?.username.orEmpty()
 
-    suspend fun login(serverUrl: String, username: String, password: String): Result<ProviderConnectionResult> {
+    suspend fun login(
+        serverUrl: String,
+        username: String,
+        password: String,
+        saveCredentials: Boolean = true
+    ): Result<ProviderConnectionResult> {
         val normalizedUrl = normalizeServerUrl(serverUrl)
         val validationError = validateServerUrl(normalizedUrl)
         if (validationError != null) {
@@ -68,12 +73,16 @@ class JellyfinApiClient(context: Context) {
                 userId = userId
             )
             credentials = cred
-            prefs.edit()
-                .putString(KEY_SERVER_URL, normalizedUrl)
-                .putString(KEY_USERNAME, username.trim())
-                .putString(KEY_ACCESS_TOKEN, token)
-                .putString(KEY_USER_ID, userId)
-                .apply()
+            if (saveCredentials) {
+                prefs.edit()
+                    .putString(KEY_SERVER_URL, normalizedUrl)
+                    .putString(KEY_USERNAME, username.trim())
+                    .putString(KEY_ACCESS_TOKEN, token)
+                    .putString(KEY_USER_ID, userId)
+                    .apply()
+            } else {
+                prefs.edit().clear().apply()
+            }
             ProviderConnectionResult(displayName = username.trim(), serverUrl = normalizedUrl)
         }
     }

@@ -100,6 +100,10 @@ class StreamingMusicViewModel(application: Application) : AndroidViewModel(appli
     
     private val _downloadedSongs = MutableStateFlow<List<StreamingSong>>(emptyList())
     val downloadedSongs: StateFlow<List<StreamingSong>> = _downloadedSongs.asStateFlow()
+
+    // All provider songs (full catalog exposed by repository)
+    private val _allSongs = MutableStateFlow<List<StreamingSong>>(emptyList())
+    val allSongs: StateFlow<List<StreamingSong>> = _allSongs.asStateFlow()
     
     // Current playback state
     private val _currentSong = MutableStateFlow<StreamingSong?>(null)
@@ -127,6 +131,12 @@ class StreamingMusicViewModel(application: Application) : AndroidViewModel(appli
     
     init {
         observeSelectedService()
+        // Keep an updated view of the provider catalog exposed by the repository
+        viewModelScope.launch {
+            repository.getSongs().collect { items ->
+                _allSongs.value = items.filterIsInstance<StreamingSong>()
+            }
+        }
     }
 
     private fun observeSelectedService() {
@@ -218,7 +228,8 @@ class StreamingMusicViewModel(application: Application) : AndroidViewModel(appli
                     serviceId = normalizedServiceId,
                     serverUrl = serverUrl,
                     username = username,
-                    password = password
+                    password = password,
+                    saveCredentials = appSettings.rememberStreamingPasswords.value
                 ) ?: throw IllegalStateException("Streaming repository is not initialized")
 
                 serviceSessionRepository.connect(

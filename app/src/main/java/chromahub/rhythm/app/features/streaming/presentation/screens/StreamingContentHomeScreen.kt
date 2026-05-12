@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Recommend
@@ -70,6 +71,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.carousel.CarouselDefaults
 import androidx.compose.material3.carousel.HorizontalCenteredHeroCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -201,6 +205,7 @@ fun StreamingContentHomeScreen(
     val rhythmGuardAge by appSettings.rhythmGuardAge.collectAsState()
     val rhythmGuardAlertThresholdMinutes by appSettings.rhythmGuardAlertThresholdMinutes.collectAsState()
     val rhythmGuardTimeoutUntilMs by appSettings.rhythmGuardTimeoutUntilMs.collectAsState()
+    val loadingSectionHeight = LocalConfiguration.current.screenHeightDp.dp
 
     var showSectionOrderBottomSheet by remember { mutableStateOf(false) }
 
@@ -208,6 +213,8 @@ fun StreamingContentHomeScreen(
     var selectedAlbumForSheet by remember { mutableStateOf<StreamingAlbum?>(null) }
     val albumSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
+    val pullToRefreshState = rememberPullToRefreshState()
+    val isRefreshing = isLoading
 
     // Use internal state for album sheet instead of the parameter callback
     val handleAlbumClick: (StreamingAlbum) -> Unit = { album ->
@@ -316,8 +323,8 @@ fun StreamingContentHomeScreen(
     val greetingMessage = rememberGreetingMessage(context)
     val greetingQuote = rememberGreetingQuote(context)
 
-    LaunchedEffect(selectedServiceId, isSelectedServiceConnected) {
-        if (isSelectedServiceConnected) {
+    LaunchedEffect(selectedServiceId, isSelectedServiceConnected, hasLoadedHomeContent) {
+        if (isSelectedServiceConnected && !hasLoadedHomeContent) {
             viewModel.loadHomeContent()
         }
     }
@@ -379,14 +386,28 @@ fun StreamingContentHomeScreen(
             }
         }
     ) { contentModifier ->
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.loadHomeContent() },
+            state = pullToRefreshState,
             modifier = modifier
                 .then(contentModifier)
-                .fillMaxSize()
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(40.dp),
-            contentPadding = PaddingValues(bottom = 24.dp)
+                .fillMaxSize(),
+            indicator = {
+                PullToRefreshDefaults.LoadingIndicator(
+                    state = pullToRefreshState,
+                    isRefreshing = isRefreshing,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            }
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(40.dp),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
 
             when {
                 !isSelectedServiceConnected -> {
@@ -424,7 +445,7 @@ fun StreamingContentHomeScreen(
                     item {
                         Box(
                             modifier = Modifier
-                                .fillMaxHeight()
+                                .height(loadingSectionHeight)
                                 .fillMaxWidth()
                                 .padding(vertical = 24.dp),
                             contentAlignment = Alignment.Center
@@ -484,7 +505,7 @@ fun StreamingContentHomeScreen(
                             StreamingHomeStateCard(
                                 title = stringResource(id = R.string.streaming_home_no_content_title),
                                 subtitle = stringResource(id = R.string.streaming_home_no_content_hint),
-                                icon = Icons.Rounded.Album,
+                                icon = Icons.Filled.Home,
                                 iconContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                                 iconTint = MaterialTheme.colorScheme.onSecondaryContainer,
                                 actionText = stringResource(id = R.string.streaming_manage_service),
@@ -774,6 +795,7 @@ fun StreamingContentHomeScreen(
 
             item {
                 Spacer(modifier = Modifier.height(30.dp))
+            }
             }
         }
 
