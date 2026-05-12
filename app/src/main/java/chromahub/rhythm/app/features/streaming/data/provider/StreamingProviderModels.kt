@@ -11,7 +11,8 @@ data class ProviderSong(
     val durationMs: Long,
     val artworkUrl: String? = null,
     val albumId: String? = null,
-    val albumArtist: String? = null
+    val albumArtist: String? = null,
+    val isFavorite: Boolean = false
 )
 
 /**

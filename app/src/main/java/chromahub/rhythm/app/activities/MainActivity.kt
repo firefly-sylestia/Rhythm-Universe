@@ -606,22 +606,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Suppress("OVERRIDE_DEPRECATION")
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        // Handle permission results for the explorer (requestCode 1001 is used by explorer)
-        if (requestCode == 1001) {
-            // The PermissionHandler will automatically handle permission state changes
-            // through its LaunchedEffect watching permissionsState.allPermissionsGranted
-            // So we don't need to do anything special here - the UI will refresh automatically
-        }
-    }
-
     override fun onDestroy() {
         Log.d(TAG, "MainActivity onDestroy - cleaning up resources")
         

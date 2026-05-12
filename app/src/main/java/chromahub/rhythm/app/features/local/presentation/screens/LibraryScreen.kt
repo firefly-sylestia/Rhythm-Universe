@@ -2108,7 +2108,7 @@ fun SingleCardSongsContent(
     }
 
     // Async category computation to avoid blocking UI on tab switch
-    LaunchedEffect(songs, enableRatingSystem) {
+    LaunchedEffect(songs, favoriteSongs, enableRatingSystem) {
         isLoading = true
         val result = withContext(Dispatchers.Default) {
             val allCategories = mutableListOf("All")

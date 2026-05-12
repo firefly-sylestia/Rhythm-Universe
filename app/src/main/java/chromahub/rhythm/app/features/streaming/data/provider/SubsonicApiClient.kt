@@ -611,7 +611,8 @@ class SubsonicApiClient(context: Context) {
                         durationMs = song.optLong("duration", 0L) * 1000L,
                         artworkUrl = coverArtId?.let { buildCoverArtUrl(it, 500) },
                         albumId = song.optString("albumId", "").takeIf { it.isNotBlank() },
-                        albumArtist = song.optString("albumArtist", "").takeIf { it.isNotBlank() }
+                        albumArtist = song.optString("albumArtist", "").takeIf { it.isNotBlank() },
+                        isFavorite = song.has("starred") && !song.isNull("starred")
                     )
                 )
             }

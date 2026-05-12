@@ -811,6 +811,12 @@ fun StreamingContentHomeScreen(
                     onPlayerClick = { },
                     sheetState = albumSheetState,
                     haptics = haptics,
+                    showPlayNextAction = false,
+                    showAddToQueueAction = false,
+                    showToggleFavoriteAction = false,
+                    showAddToPlaylistAction = false,
+                    showSongInfoAction = false,
+                    showAddToBlacklistAction = false,
                     currentSong = null,
                     isPlaying = false
                 )

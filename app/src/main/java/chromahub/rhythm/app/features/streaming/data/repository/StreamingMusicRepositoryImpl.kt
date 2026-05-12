@@ -769,12 +769,25 @@ class StreamingMusicRepositoryImpl(
         }.getOrElse { emptyList() }
 
         val mappedSongs = providerSongs.map { mapProviderSong(serviceId, it) }
+        syncLikedSongIdsFromProviderSongs(serviceId, providerSongs)
         replaceCatalog(mappedSongs)
         
         // Also sync playlists
         syncPlaylists()
         
         return mappedSongs
+    }
+
+    private fun syncLikedSongIdsFromProviderSongs(serviceId: String, providerSongs: List<ProviderSong>) {
+        val servicePrefix = "$serviceId::"
+
+        likedSongIds.removeIf { it.startsWith(servicePrefix) }
+
+        providerSongs
+            .asSequence()
+            .filter { it.isFavorite }
+            .map { encodeSongId(serviceId, it.providerId) }
+            .forEach { likedSongIds.add(it) }
     }
 
     override suspend fun syncPlaylists(): List<StreamingPlaylist> {
@@ -940,7 +953,8 @@ class StreamingMusicRepositoryImpl(
             isPlayable = true,
             externalId = providerSong.providerId,
             albumId = encodedAlbumId,
-            albumArtist = providerSong.albumArtist
+            albumArtist = providerSong.albumArtist,
+            isFavorite = providerSong.isFavorite
         )
     }
 

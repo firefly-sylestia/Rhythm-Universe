@@ -78,6 +78,11 @@ fun ArtistDetailScreen(
     onToggleFavorite: (Song) -> Unit = {},
     favoriteSongs: Set<String> = emptySet(),
     onShowSongInfo: (Song) -> Unit = {},
+    showPlayNextAction: Boolean = true,
+    showAddToQueueAction: Boolean = true,
+    showToggleFavoriteAction: Boolean = true,
+    showAddToPlaylistAction: Boolean = true,
+    showSongInfoAction: Boolean = true,
     currentSong: Song? = null,
     isPlaying: Boolean = false,
     artistOverride: Artist? = null,
@@ -364,6 +369,11 @@ fun ArtistDetailScreen(
                                         HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.TextHandleMove)
                                         onShowSongInfo(song)
                                     },
+                                    showPlayNextAction = showPlayNextAction,
+                                    showAddToQueueAction = showAddToQueueAction,
+                                    showToggleFavoriteAction = showToggleFavoriteAction,
+                                    showAddToPlaylistAction = showAddToPlaylistAction,
+                                    showSongInfoAction = showSongInfoAction,
                                     currentSong = currentSong,
                                     isPlaying = isPlaying,
                                     useHoursFormat = useHoursFormat,
@@ -783,6 +793,11 @@ private fun ArtistSongItem(
     onToggleFavorite: () -> Unit,
     isFavorite: Boolean,
     onShowSongInfo: () -> Unit,
+    showPlayNextAction: Boolean = true,
+    showAddToQueueAction: Boolean = true,
+    showToggleFavoriteAction: Boolean = true,
+    showAddToPlaylistAction: Boolean = true,
+    showSongInfoAction: Boolean = true,
     currentSong: Song?,
     isPlaying: Boolean,
     useHoursFormat: Boolean,
@@ -810,6 +825,13 @@ private fun ArtistSongItem(
         animationSpec = tween(300),
         label = "containerColor"
     )
+
+    val hasOverflowActions =
+        showPlayNextAction ||
+            showAddToQueueAction ||
+            showToggleFavoriteAction ||
+            showAddToPlaylistAction ||
+            showSongInfoAction
     
     Surface(
         modifier = Modifier
@@ -911,6 +933,7 @@ private fun ArtistSongItem(
                 }
             },
             trailingContent = {
+                if (hasOverflowActions) {
                 FilledIconButton(
                     onClick = {
                         HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.LongPress)
@@ -942,7 +965,7 @@ private fun ArtistSongItem(
                         .padding(6.dp),
                     shape = RoundedCornerShape(20.dp)
                 ) {
-                    // Play next
+                    if (showPlayNextAction) {
                     SongItemDropdownMenuItem(
                         text = "Play next",
                         icon = Icons.Rounded.SkipNext,
@@ -953,8 +976,9 @@ private fun ArtistSongItem(
                             onPlayNext()
                         }
                     )
+                    }
                     
-                    // Add to queue
+                    if (showAddToQueueAction) {
                     SongItemDropdownMenuItem(
                         text = "Add to queue",
                         icon = RhythmIcons.Queue,
@@ -965,8 +989,9 @@ private fun ArtistSongItem(
                             onAddToQueue()
                         }
                     )
+                    }
                     
-                    // Toggle favorite
+                    if (showToggleFavoriteAction) {
                     SongItemDropdownMenuItem(
                         text = if (isFavorite) "Remove from favorites" else "Add to favorites",
                         icon = if (isFavorite) Icons.Filled.Favorite else Icons.Rounded.FavoriteBorder,
@@ -977,8 +1002,9 @@ private fun ArtistSongItem(
                             onToggleFavorite()
                         }
                     )
+                    }
                     
-                    // Add to playlist
+                    if (showAddToPlaylistAction) {
                     SongItemDropdownMenuItem(
                         text = "Add to playlist",
                         icon = RhythmIcons.AddToPlaylist,
@@ -989,8 +1015,9 @@ private fun ArtistSongItem(
                             onAddToPlaylist()
                         }
                     )
+                    }
                     
-                    // Song info
+                    if (showSongInfoAction) {
                     SongItemDropdownMenuItem(
                         text = "Song info",
                         icon = Icons.Rounded.Info,
@@ -1001,6 +1028,8 @@ private fun ArtistSongItem(
                             onShowSongInfo()
                         }
                     )
+                    }
+                }
                 }
             },
             modifier = Modifier.clickable(onClick = {

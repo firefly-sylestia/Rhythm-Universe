@@ -181,7 +181,8 @@ fun SongInfoBottomSheet(
     appSettings: AppSettings,
     onEditSong: ((title: String, artist: String, album: String, genre: String, year: Int, trackNumber: Int, artworkUri: Uri?, removeArtwork: Boolean) -> Unit)? = null,
     onShowLyricsEditor: (() -> Unit)? = null,
-    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    isStreamingMode: Boolean = false
 ) {
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
@@ -295,7 +296,7 @@ fun SongInfoBottomSheet(
     
     // Load rhythm stats and rating
     LaunchedEffect(song.id) {
-        song?.let { currentSong ->
+        song.let { currentSong ->
             // Load playback stats
             songPlaybackStats = withContext(Dispatchers.IO) {
                 chromahub.rhythm.app.shared.data.repository.PlaybackStatsRepository.getInstance(context).getSongPlaybackStats(
@@ -351,7 +352,7 @@ fun SongInfoBottomSheet(
                 Button(
                     onClick = {
                         isLoadingBlacklist = true
-                        song?.let { songToBlock ->
+                        song.let { songToBlock ->
                             if (isBlacklisted) {
                                 appSettings.removeFromBlacklist(songToBlock.id)
                             } else {
@@ -862,13 +863,9 @@ fun SongInfoBottomSheet(
                     }
                 }
             }
-            item {
-                // Actions section
-                AnimatedVisibility(
-                    visible = showContent,
-                    enter = fadeIn() + slideInVertically { it },
-                    exit = fadeOut() + slideOutVertically { it }
-                ) {
+            if (!isStreamingMode) {
+                item {
+                    // Actions section - only shown in local mode
                     Column(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -877,74 +874,78 @@ fun SongInfoBottomSheet(
                             style = ButtonGroupStyle.Tonal
                         ) {
                             // Edit button
-                            onEditSong?.let {
-                                ExpressiveFilledTonalButton(
-                                    onClick = {
-                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        showEditSheet = true
-                                    },
-                                    shape = if (folderPath == null) ExpressiveShapes.Full else RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp, topEnd = 8.dp, bottomEnd = 8.dp),
-                                    colors = ButtonDefaults.filledTonalButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                    ),
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Edit,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Edit")
+                            if (!isStreamingMode) {
+                                onEditSong?.let {
+                                    ExpressiveFilledTonalButton(
+                                        onClick = {
+                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            showEditSheet = true
+                                        },
+                                        shape = if (folderPath == null) ExpressiveShapes.Full else RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp, topEnd = 8.dp, bottomEnd = 8.dp),
+                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Edit,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Edit")
+                                    }
                                 }
                             }
                             
                             // Block Song
-                            ExpressiveFilledTonalButton(
-                                onClick = {
-                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    showBlacklistTrackConfirm = true
-                                },
-                                enabled = !isLoadingBlacklist,
-                                shape = if (onEditSong == null && folderPath == null) 
-                                    ExpressiveShapes.Full 
-                                else if (onEditSong == null) 
-                                    RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp, topEnd = 8.dp, bottomEnd = 8.dp)
-                                else if (folderPath == null)
-                                    RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 20.dp, bottomEnd = 20.dp)
-                                else
-                                    RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = if (isBlacklisted) 
-                                        MaterialTheme.colorScheme.errorContainer 
-                                    else 
-                                        MaterialTheme.colorScheme.secondaryContainer,
-                                    contentColor = if (isBlacklisted) 
-                                        MaterialTheme.colorScheme.onErrorContainer 
-                                    else 
-                                        MaterialTheme.colorScheme.onSecondaryContainer
-                                ),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-                            ) {
-                                if (isLoadingBlacklist) {
-                                    ActionProgressLoader(
-                                        size = 16.dp,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Block,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                            if (!isStreamingMode) {
+                                ExpressiveFilledTonalButton(
+                                    onClick = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showBlacklistTrackConfirm = true
+                                    },
+                                    enabled = !isLoadingBlacklist,
+                                    shape = if (onEditSong == null && folderPath == null) 
+                                        ExpressiveShapes.Full 
+                                    else if (onEditSong == null) 
+                                        RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp, topEnd = 8.dp, bottomEnd = 8.dp)
+                                    else if (folderPath == null)
+                                        RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 20.dp, bottomEnd = 20.dp)
+                                    else
+                                        RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = if (isBlacklisted) 
+                                            MaterialTheme.colorScheme.errorContainer 
+                                        else 
+                                            MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = if (isBlacklisted) 
+                                            MaterialTheme.colorScheme.onErrorContainer 
+                                        else 
+                                            MaterialTheme.colorScheme.onSecondaryContainer
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                                ) {
+                                    if (isLoadingBlacklist) {
+                                        ActionProgressLoader(
+                                            size = 16.dp,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Block,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Track")
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Track")
                             }
                             
                             // Block Folder
-                            if (folderPath != null) {
+                            if (!isStreamingMode && folderPath != null) {
                                 ExpressiveFilledTonalButton(
                                     onClick = {
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -981,97 +982,6 @@ fun SongInfoBottomSheet(
                                 }
                             }
                         }
-                        
-                        // Row(
-                        //     modifier = Modifier.fillMaxWidth(),
-                        //     horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        // ) {
-                        //     // Whitelist/Remove from whitelist Song
-                        //     FilledTonalButton(
-                        //         onClick = {
-                        //             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        //             isLoadingWhitelist = true
-                                    
-                        //             song?.let { songToWhitelist ->
-                        //                 if (isWhitelisted) {
-                        //                     appSettings.removeFromWhitelist(songToWhitelist.id)
-                        //                 } else {
-                        //                     appSettings.addToWhitelist(songToWhitelist.id)
-                        //                 }
-                                        
-                        //                 isLoadingWhitelist = false
-                        //                 val message = if (isWhitelisted) "Song removed from whitelist" else "Song added to whitelist" 
-                        //                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                        //             }
-                        //         },
-                        //         enabled = !isLoadingWhitelist,
-                        //         modifier = Modifier.weight(1f),
-                        //         colors = ButtonDefaults.filledTonalButtonColors(
-                        //             containerColor = if (isWhitelisted) 
-                        //                 MaterialTheme.colorScheme.primaryContainer 
-                        //             else 
-                        //                 MaterialTheme.colorScheme.secondaryContainer
-                        //         )
-                        //     ) {
-                        //         if (isLoadingWhitelist) {
-                        //             SimpleCircularLoader(
-                        //                 size = 16.dp,
-                        //                 color = MaterialTheme.colorScheme.onSecondaryContainer
-                        //             )
-                        //         } else {
-                        //             Icon(
-                        //                 imageVector = if (isWhitelisted) Icons.Rounded.CheckCircle else Icons.Rounded.Add,
-                        //                 contentDescription = null,
-                        //                 modifier = Modifier.size(16.dp)
-                        //             )
-                        //         }
-                        //         Spacer(modifier = Modifier.width(8.dp))
-                        //         Text(if (isWhitelisted) "Un-Whitelist Track" else "Whitelist Track")
-                        //     }
-                            
-                        //     // Whitelist/Remove from whitelist Folder
-                        //     if (folderPath != null) {
-                        //         FilledTonalButton(
-                        //             onClick = {
-                        //                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        //                 isLoadingWhitelist = true
-                                        
-                        //                 if (isInWhitelistedFolder) {
-                        //                     appSettings.removeFolderFromWhitelist(folderPath)
-                        //                 } else {
-                        //                     appSettings.addFolderToWhitelist(folderPath)
-                        //                 }
-                                        
-                        //                 isLoadingWhitelist = false
-                        //                 val message = if (isInWhitelistedFolder) "Folder removed from whitelist" else "Folder added to whitelist"
-                        //                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                        //             },
-                        //             enabled = !isLoadingWhitelist,
-                        //             modifier = Modifier.weight(1f),
-                        //             colors = ButtonDefaults.filledTonalButtonColors(
-                        //                 containerColor = if (isInWhitelistedFolder) 
-                        //                     MaterialTheme.colorScheme.primaryContainer 
-                        //                 else 
-                        //                     MaterialTheme.colorScheme.tertiaryContainer
-                        //             )
-                        //         ) {
-                        //             if (isLoadingWhitelist) {
-                        //                 SimpleCircularLoader(
-                        //                     size = 16.dp,
-                        //                     color = MaterialTheme.colorScheme.onTertiaryContainer
-                        //                 )
-                        //             } else {
-                        //                 Icon(
-                        //                     imageVector = if (isInWhitelistedFolder) Icons.Rounded.FolderOff else Icons.Rounded.Folder,
-                        //                     contentDescription = null,
-                        //                     modifier = Modifier.size(16.dp)
-                        //                 )
-                        //             }
-                        //             Spacer(modifier = Modifier.width(8.dp))
-                        //             Text(if (isInWhitelistedFolder) "Un-Whitelist Folder" else "Whitelist Folder")
-                        //         }
-                        //     }
-                        // }
                     }
                 }
             }

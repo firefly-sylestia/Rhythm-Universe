@@ -88,6 +88,7 @@ import chromahub.rhythm.app.features.local.presentation.screens.PlaylistFabMenu
 import chromahub.rhythm.app.features.local.presentation.screens.SingleCardPlaylistsContent
 import chromahub.rhythm.app.features.local.presentation.screens.SingleCardSongsContent
 import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.AlbumBottomSheet
+import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.SongInfoBottomSheet
 import chromahub.rhythm.app.features.streaming.domain.model.StreamingAlbum
 import chromahub.rhythm.app.features.streaming.domain.model.StreamingArtist
 import chromahub.rhythm.app.features.streaming.domain.model.StreamingPlaylist
@@ -113,6 +114,7 @@ import androidx.compose.material.icons.rounded.ThumbUp
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.rounded.Info
+import chromahub.rhythm.app.ui.LocalMiniPlayerPadding
 import kotlin.random.Random
 
 private enum class StreamingLibraryTab(@param:StringRes val titleRes: Int, val icon: ImageVector) {
@@ -255,6 +257,10 @@ fun StreamingLibraryScreen(
         libraryAlbums
     }
 
+    // Get miniplayer padding for bottom content alignment
+    val miniPlayerBottomPadding = LocalMiniPlayerPadding.current.calculateBottomPadding()
+    val contentBottomPadding = miniPlayerBottomPadding + 24.dp // Add extra space for bottom nav
+
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     val tabs = StreamingLibraryTab.entries
     val selectedTab = tabs[selectedTabIndex.coerceIn(0, tabs.lastIndex)]
@@ -276,6 +282,8 @@ fun StreamingLibraryScreen(
     // Album bottom sheet state - shared across recompositions
     var showAlbumBottomSheet by remember { mutableStateOf(false) }
     var selectedAlbumForSheet by remember { mutableStateOf<StreamingAlbum?>(null) }
+    var showSongInfoSheet by remember { mutableStateOf(false) }
+    var selectedSongForInfo by remember { mutableStateOf<Song?>(null) }
     val albumSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 
     val sortedSongs = remember(librarySongs, songSortOrder) {
@@ -342,6 +350,35 @@ fun StreamingLibraryScreen(
     }
     val currentLocalSong = remember(activeSongId, localSongsById, currentStreamingSong) {
         activeSongId?.let(localSongsById::get) ?: currentStreamingSong?.toLibrarySong()
+    }
+    val streamingFavoriteSongIds = remember(sortedSongs, likedSongs) {
+        (sortedSongs.filter { it.isFavorite }.map { it.id } + likedSongs.map { it.id }).toSet()
+    }
+    val openAlbumBottomSheet: (StreamingAlbum) -> Unit = { album ->
+        if (album.tracks.isEmpty()) {
+            selectedAlbumForSheet = album
+            scope.launch {
+                val tracks = viewModel.getAlbumSongs(album)
+                if (tracks.isNotEmpty()) {
+                    selectedAlbumForSheet = album.copy(tracks = tracks)
+                }
+            }
+        } else {
+            selectedAlbumForSheet = album
+        }
+        showAlbumBottomSheet = true
+    }
+    val openAlbumForSong: (Song) -> Unit = { localSong ->
+        val resolvedStreamingSong = sortedSongsById[localSong.id]
+        val albumArtist = localSong.albumArtist?.takeIf { it.isNotBlank() } ?: localSong.artist
+        val resolvedAlbum = sortedAlbums.firstOrNull { album ->
+            val albumMatchesById = resolvedStreamingSong?.albumId?.let { album.id == it } == true
+            val albumMatchesByMetadata = album.title.equals(localSong.album, ignoreCase = true) &&
+                album.artist.equals(albumArtist, ignoreCase = true)
+            albumMatchesById || albumMatchesByMetadata
+        }
+
+        resolvedAlbum?.let(openAlbumBottomSheet)
     }
     val hasLibraryContent = remember(
         localSongs,
@@ -696,7 +733,7 @@ fun StreamingLibraryScreen(
                             state = pagerState,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(top = 10.dp)
+                                .padding(top = 10.dp, bottom = contentBottomPadding)
                         ) { page ->
                         when (tabs[page]) {
                             StreamingLibraryTab.ALBUMS -> {
@@ -779,44 +816,6 @@ fun StreamingLibraryScreen(
                                         onRefreshClick = { viewModel.loadLibrary() }
                                     )
                                 }
-
-                                if (showAlbumBottomSheet && selectedAlbumForSheet != null) {
-                                    val albumForSheet = selectedAlbumForSheet!!
-                                    val streamingTracks = albumForSheet.tracks
-                                    val libraryAlbum = albumForSheet.toLibraryAlbum(localSongs)
-
-                                    AlbumBottomSheet(
-                                        album = libraryAlbum,
-                                        onDismiss = {
-                                            showAlbumBottomSheet = false
-                                            selectedAlbumForSheet = null
-                                        },
-                                        onSongClick = { song ->
-                                            val streamingSong = streamingTracks.firstOrNull { it.id == song.id }
-                                            streamingSong?.let { ss ->
-                                                viewModel.playQueue(queue = listOf(ss), startIndex = 0, shuffle = false)
-                                            }
-                                        },
-                                        onPlayAll = { songs ->
-                                            if (streamingTracks.isNotEmpty()) {
-                                                viewModel.playQueue(queue = streamingTracks, startIndex = 0, shuffle = false)
-                                            }
-                                        },
-                                        onShufflePlay = { songs ->
-                                            if (streamingTracks.isNotEmpty()) {
-                                                val startIndex = random.nextInt(streamingTracks.size)
-                                                viewModel.playQueue(queue = streamingTracks, startIndex = startIndex, shuffle = true)
-                                            }
-                                        },
-                                        onAddToQueue = { },
-                                        onAddSongToPlaylist = { },
-                                        onPlayerClick = { },
-                                        sheetState = albumSheetState,
-                                        haptics = haptics,
-                                        currentSong = currentLocalSong,
-                                        isPlaying = isPlayerPlaying
-                                    )
-                                }
                             }
 
                             StreamingLibraryTab.SONGS -> {
@@ -837,9 +836,12 @@ fun StreamingLibraryScreen(
                                     onAddToPlaylist = {},
                                     onAddToQueue = {},
                                     onPlayNext = {},
-                                    onShowSongInfo = {},
+                                    onShowSongInfo = { song ->
+                                        selectedSongForInfo = song
+                                        showSongInfoSheet = true
+                                    },
                                     onAddToBlacklist = {},
-                                    favoriteSongs = likedSongs.map { it.id }.toSet(),
+                                    favoriteSongs = streamingFavoriteSongIds,
                                     onPlayQueue = { localQueue ->
                                         val queue = mapLocalSongsToStreaming(localQueue)
                                         if (queue.isNotEmpty()) {
@@ -877,7 +879,10 @@ fun StreamingLibraryScreen(
                                             }
                                         resolvedArtist?.let(onNavigateToArtist)
                                     },
-                                    onGoToAlbum = {},
+                                    onGoToAlbum = { album ->
+                                        val streamingAlbum = sortedAlbums.firstOrNull { it.id == album.id }
+                                        streamingAlbum?.let(openAlbumBottomSheet)
+                                    },
                                     currentSong = currentLocalSong,
                                     isPlaying = isPlayerPlaying,
                                     haptics = haptics,
@@ -1051,6 +1056,99 @@ fun StreamingLibraryScreen(
                                             )
                                         }
 
+                                        // Song info
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.surfaceContainer,
+                                            shape = RoundedCornerShape(16.dp),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        "Song info",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                },
+                                                leadingIcon = {
+                                                    Surface(
+                                                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                                                        shape = CircleShape,
+                                                        modifier = Modifier.size(32.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.Info,
+                                                            contentDescription = null,
+                                                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .padding(6.dp)
+                                                        )
+                                                    }
+                                                },
+                                                onClick = {
+                                                    dismissMenu()
+                                                    selectedSongForInfo = localSong
+                                                    showSongInfoSheet = true
+                                                }
+                                            )
+                                        }
+
+                                        val resolvedAlbum = sortedSongsById[localSong.id]?.let { streamingSong ->
+                                            val albumArtist = localSong.albumArtist?.takeIf { it.isNotBlank() } ?: localSong.artist
+                                            sortedAlbums.firstOrNull { album ->
+                                                val albumMatchesById = streamingSong.albumId?.let { album.id == it } == true
+                                                val albumMatchesByMetadata = album.title.equals(localSong.album, ignoreCase = true) &&
+                                                    album.artist.equals(albumArtist, ignoreCase = true)
+                                                albumMatchesById || albumMatchesByMetadata
+                                            }
+                                        }
+
+                                        resolvedAlbum?.let { album ->
+                                            // Go to album
+                                            Surface(
+                                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                                shape = RoundedCornerShape(16.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                            ) {
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Text(
+                                                            "Go to album",
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            fontWeight = FontWeight.Medium,
+                                                            color = MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                    },
+                                                    leadingIcon = {
+                                                        Surface(
+                                                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                                                            shape = CircleShape,
+                                                            modifier = Modifier.size(32.dp)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Rounded.Album,
+                                                                contentDescription = null,
+                                                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                                modifier = Modifier
+                                                                    .fillMaxSize()
+                                                                    .padding(6.dp)
+                                                            )
+                                                        }
+                                                    },
+                                                    onClick = {
+                                                        dismissMenu()
+                                                        openAlbumBottomSheet(album)
+                                                    }
+                                                )
+                                            }
+                                        }
+
                                         // Go to artist
                                         resolvedArtist?.let { artist ->
                                             Surface(
@@ -1156,6 +1254,75 @@ fun StreamingLibraryScreen(
                 }
             }
             }
+        }
+
+        // Album BottomSheet - rendered outside tabs so it's available from any tab
+        if (showAlbumBottomSheet && selectedAlbumForSheet != null) {
+            val albumForSheet = selectedAlbumForSheet!!
+            val streamingTracks = albumForSheet.tracks
+            val libraryAlbum = albumForSheet.toLibraryAlbum(localSongs)
+
+            AlbumBottomSheet(
+                album = libraryAlbum,
+                onDismiss = {
+                    showAlbumBottomSheet = false
+                    selectedAlbumForSheet = null
+                },
+                onSongClick = { song ->
+                    val streamingSong = streamingTracks.firstOrNull { it.id == song.id }
+                    streamingSong?.let { ss ->
+                        viewModel.playQueue(queue = listOf(ss), startIndex = 0, shuffle = false)
+                    }
+                },
+                onPlayAll = { songs ->
+                    if (streamingTracks.isNotEmpty()) {
+                        viewModel.playQueue(queue = streamingTracks, startIndex = 0, shuffle = false)
+                    }
+                },
+                onShufflePlay = { songs ->
+                    if (streamingTracks.isNotEmpty()) {
+                        val startIndex = random.nextInt(streamingTracks.size)
+                        viewModel.playQueue(queue = streamingTracks, startIndex = startIndex, shuffle = true)
+                    }
+                },
+                onAddToQueue = { },
+                onAddSongToPlaylist = { },
+                onPlayerClick = { },
+                sheetState = albumSheetState,
+                haptics = haptics,
+                onToggleFavorite = { localSong ->
+                    sortedSongsById[localSong.id]?.let { streamingSong ->
+                        if (streamingFavoriteSongIds.contains(streamingSong.id)) {
+                            viewModel.unlikeSong(streamingSong)
+                        } else {
+                            viewModel.likeSong(streamingSong)
+                        }
+                    }
+                },
+                favoriteSongs = streamingFavoriteSongIds,
+                onShowSongInfo = { song ->
+                    selectedSongForInfo = song
+                    showSongInfoSheet = true
+                },
+                showPlayNextAction = false,
+                showAddToQueueAction = false,
+                showAddToPlaylistAction = false,
+                showAddToBlacklistAction = false,
+                currentSong = currentLocalSong,
+                isPlaying = isPlayerPlaying
+            )
+        }
+
+        if (showSongInfoSheet && selectedSongForInfo != null) {
+            SongInfoBottomSheet(
+                song = selectedSongForInfo,
+                onDismiss = {
+                    showSongInfoSheet = false
+                    selectedSongForInfo = null
+                },
+                appSettings = appSettings,
+                isStreamingMode = true
+            )
         }
     }
 

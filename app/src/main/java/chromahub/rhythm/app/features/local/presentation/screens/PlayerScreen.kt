@@ -301,7 +301,8 @@ fun PlayerScreen(
     onShuffleArtistSongs: (List<Song>) -> Unit = {},
     appSettings: chromahub.rhythm.app.shared.data.model.AppSettings,
     musicViewModel: chromahub.rhythm.app.viewmodel.MusicViewModel,
-    navController: NavController
+    navController: NavController,
+    isStreamingMode: Boolean = false
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
@@ -401,6 +402,78 @@ fun PlayerScreen(
                     names = names.flatMap { it.split(separator, ignoreCase = true) }
                 }
                 names.map { it.trim() }.filter { it.isNotBlank() }
+            }
+        }
+    }
+
+    val resolveAlbumForSong: (Song) -> Album = remember(albums, songs) {
+        { targetSong ->
+            val baseAlbumId = targetSong.albumId.takeIf { it.isNotBlank() }
+            val baseAlbumArtist = targetSong.albumArtist
+                ?.trim()
+                ?.takeIf { it.isNotBlank() && !it.equals("<unknown>", ignoreCase = true) }
+                ?: targetSong.artist
+
+            val matchedSongs = songs
+                .filter { candidate ->
+                    val candidateAlbumId = candidate.albumId.takeIf { it.isNotBlank() }
+                    if (baseAlbumId != null) {
+                        candidateAlbumId == baseAlbumId
+                    } else {
+                        val candidateAlbumArtist = candidate.albumArtist
+                            ?.trim()
+                            ?.takeIf { it.isNotBlank() && !it.equals("<unknown>", ignoreCase = true) }
+                            ?: candidate.artist
+                        candidate.album.equals(targetSong.album, ignoreCase = true) &&
+                            candidateAlbumArtist.equals(baseAlbumArtist, ignoreCase = true)
+                    }
+                }
+                .ifEmpty { listOf(targetSong) }
+                .distinctBy { it.id }
+                .sortedWith(
+                    compareBy<Song> { it.discNumber.coerceAtLeast(1) }
+                        .thenBy { it.trackNumber.takeIf { value -> value > 0 } ?: Int.MAX_VALUE }
+                        .thenBy { it.title.lowercase(Locale.getDefault()) }
+                )
+
+            val matchedAlbum = when {
+                baseAlbumId != null -> albums.firstOrNull { album -> album.id == baseAlbumId }
+                else -> albums.firstOrNull { album ->
+                    album.title.equals(targetSong.album, ignoreCase = true) &&
+                        album.artist.equals(baseAlbumArtist, ignoreCase = true)
+                } ?: albums.firstOrNull { album ->
+                    album.title.equals(targetSong.album, ignoreCase = true)
+                }
+            }
+
+            val mergedSongs = ((matchedAlbum?.songs ?: emptyList()) + matchedSongs)
+                .distinctBy { it.id }
+                .sortedWith(
+                    compareBy<Song> { it.discNumber.coerceAtLeast(1) }
+                        .thenBy { it.trackNumber.takeIf { value -> value > 0 } ?: Int.MAX_VALUE }
+                        .thenBy { it.title.lowercase(Locale.getDefault()) }
+                )
+
+            if (matchedAlbum != null) {
+                matchedAlbum.copy(
+                    songs = mergedSongs,
+                    numberOfSongs = maxOf(
+                        matchedAlbum.numberOfSongs,
+                        mergedSongs.size,
+                        matchedAlbum.songs.size
+                    )
+                )
+            } else {
+                Album(
+                    id = baseAlbumId
+                        ?: "player:album:${baseAlbumArtist.lowercase(Locale.getDefault())}:${targetSong.album.lowercase(Locale.getDefault())}",
+                    title = targetSong.album,
+                    artist = baseAlbumArtist,
+                    artworkUri = targetSong.artworkUri,
+                    year = targetSong.year,
+                    songs = mergedSongs,
+                    numberOfSongs = mergedSongs.size
+                )
             }
         }
     }
@@ -945,6 +1018,7 @@ fun PlayerScreen(
             song = song,
             onDismiss = { showSongInfoSheet = false },
             appSettings = appSettings,
+            isStreamingMode = isStreamingMode,
             onEditSong = { title, artist, album, genre, year, trackNumber, artworkUri, removeArtwork ->
                 try {
                     // Use the ViewModel's new metadata saving function
@@ -1048,7 +1122,8 @@ fun PlayerScreen(
             },
             onSongClick = onSongClick,
             onAlbumClick = { album -> 
-                selectedAlbum = album
+                val anchorSong = album.songs.firstOrNull() ?: song
+                selectedAlbum = anchorSong?.let(resolveAlbumForSong) ?: album
                 showArtistSheet = false
                 selectedArtist = null
                 showAlbumSheet = true
@@ -1108,7 +1183,7 @@ fun PlayerScreen(
             onLyricsEditor = { showLyricsEditorDialog = true },
             onAlbum = {
                 song?.let { currentSong ->
-                    val albumForSong = albums.find { it.title == currentSong.album }
+                    val albumForSong = resolveAlbumForSong(currentSong)
                     albumForSong?.let {
                         selectedAlbum = it
                         showAlbumSheet = true
@@ -3252,8 +3327,7 @@ fun PlayerScreen(
                                                         )
                                                         // Find the album for the current song and show bottom sheet
                                                         song?.let { currentSong ->
-                                                            val albumForSong =
-                                                                albums.find { it.title == currentSong.album }
+                                                            val albumForSong = resolveAlbumForSong(currentSong)
                                                             albumForSong?.let {
                                                                 selectedAlbum = it
                                                                 showAlbumSheet = true

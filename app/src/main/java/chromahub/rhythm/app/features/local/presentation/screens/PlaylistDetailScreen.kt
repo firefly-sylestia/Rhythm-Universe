@@ -671,7 +671,8 @@ fun PlaylistDetailScreen(
                 showSongInfo = false
                 selectedSongForInfo = null
             },
-            appSettings = appSettings
+            appSettings = appSettings,
+            isStreamingMode = true
         )
     }
 

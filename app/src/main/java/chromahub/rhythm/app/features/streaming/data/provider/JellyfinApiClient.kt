@@ -673,6 +673,7 @@ class JellyfinApiClient(context: Context) {
             put("IncludeItemTypes", "Audio")
             put("Recursive", "true")
             put("Fields", "MediaSources,Genres,Path,Artists,AlbumArtist,AlbumId,Album,RunTimeTicks")
+            put("enableUserData", "true")
             put("Limit", limit.coerceIn(1, 100).toString())
             if (startIndex > 0) {
                 put("StartIndex", startIndex.toString())
@@ -692,6 +693,10 @@ class JellyfinApiClient(context: Context) {
                 val artist = parseArtist(song)
                 val album = song.optString("Album", "Unknown album")
                 val durationMs = song.optLong("RunTimeTicks", 0L) / 10_000L
+                val isFavorite = song
+                    .optJSONObject("UserData")
+                    ?.optBoolean("IsFavorite", false)
+                    ?: false
 
                 add(
                     ProviderSong(
@@ -702,7 +707,8 @@ class JellyfinApiClient(context: Context) {
                         durationMs = durationMs,
                         artworkUrl = buildImageUrl(id),
                         albumId = song.optString("AlbumId", "").takeIf { it.isNotBlank() },
-                        albumArtist = song.optString("AlbumArtist", "").takeIf { it.isNotBlank() }
+                        albumArtist = song.optString("AlbumArtist", "").takeIf { it.isNotBlank() },
+                        isFavorite = isFavorite
                     )
                 )
             }

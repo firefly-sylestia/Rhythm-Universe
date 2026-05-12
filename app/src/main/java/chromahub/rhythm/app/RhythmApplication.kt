@@ -21,6 +21,11 @@ class RhythmApplication : Application() {
     
     companion object {
         private const val TAG = "RhythmApplication"
+        private const val TRIM_MEMORY_RUNNING_MODERATE_LEVEL = 5
+        private const val TRIM_MEMORY_RUNNING_LOW_LEVEL = 10
+        private const val TRIM_MEMORY_RUNNING_CRITICAL_LEVEL = 15
+        private const val TRIM_MEMORY_MODERATE_LEVEL = 60
+        private const val TRIM_MEMORY_COMPLETE_LEVEL = 80
         
         // Static reference to the application instance
         // Using a static reference is safe for Application class
@@ -123,13 +128,13 @@ class RhythmApplication : Application() {
         super.onTrimMemory(level)
         
         val levelName = when (level) {
-            ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE -> "RUNNING_MODERATE"
-            ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> "RUNNING_LOW"
-            ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> "RUNNING_CRITICAL"
+            TRIM_MEMORY_RUNNING_MODERATE_LEVEL -> "RUNNING_MODERATE"
+            TRIM_MEMORY_RUNNING_LOW_LEVEL -> "RUNNING_LOW"
+            TRIM_MEMORY_RUNNING_CRITICAL_LEVEL -> "RUNNING_CRITICAL"
             ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> "UI_HIDDEN"
             ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> "BACKGROUND"
-            ComponentCallbacks2.TRIM_MEMORY_MODERATE -> "MODERATE"
-            ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> "COMPLETE"
+            TRIM_MEMORY_MODERATE_LEVEL -> "MODERATE"
+            TRIM_MEMORY_COMPLETE_LEVEL -> "COMPLETE"
             else -> "UNKNOWN($level)"
         }
         
@@ -137,14 +142,14 @@ class RhythmApplication : Application() {
         
         // Perform cleanup based on memory pressure level
         when (level) {
-            ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL,
-            ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> {
+            TRIM_MEMORY_RUNNING_CRITICAL_LEVEL,
+            TRIM_MEMORY_COMPLETE_LEVEL -> {
                 Log.w(TAG, "Critical memory pressure - performing aggressive cleanup")
                 // Trigger aggressive cleanup
                 // You can broadcast an event here for repositories to clear caches
             }
-            ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW,
-            ComponentCallbacks2.TRIM_MEMORY_MODERATE -> {
+            TRIM_MEMORY_RUNNING_LOW_LEVEL,
+            TRIM_MEMORY_MODERATE_LEVEL -> {
                 Log.w(TAG, "Moderate memory pressure - performing standard cleanup")
                 // Trigger standard cleanup
             }
