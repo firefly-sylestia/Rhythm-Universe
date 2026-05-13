@@ -123,7 +123,7 @@ fun SleepTimerBottomSheetNew(
     
     // Clean timer functions
     fun startTimer(minutes: Int) {
-        if (!isPlaying || !serviceConnected || currentSong == null) {
+        if (!isPlaying || currentSong == null) {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             return
         }
@@ -143,7 +143,7 @@ fun SleepTimerBottomSheetNew(
     
     fun showTimePicker() {
         // Check if music is playing and service is connected before showing picker
-        if (!isPlaying || !serviceConnected || currentSong == null) {
+        if (!isPlaying || currentSong == null) {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             // Don't show picker - let the UI show the disabled state
             return

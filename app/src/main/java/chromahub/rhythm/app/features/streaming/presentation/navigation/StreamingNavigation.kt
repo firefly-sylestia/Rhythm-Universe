@@ -1690,6 +1690,12 @@ fun StreamingNavigation(
 }
 
 private fun StreamingSong.toLocalSong(): Song? {
+    val playbackUri = when {
+        !streamingUrl.isNullOrBlank() -> Uri.parse(streamingUrl)
+        !previewUrl.isNullOrBlank() -> Uri.parse(previewUrl)
+        else -> Uri.parse("streaming://track/$id")
+    }
+
     return Song(
         id = id,
         title = title,
@@ -1697,7 +1703,7 @@ private fun StreamingSong.toLocalSong(): Song? {
         album = album,
         albumId = albumId.orEmpty(),
         duration = duration,
-        uri = Uri.parse("streaming://track/$id"),
+        uri = playbackUri,
         artworkUri = artworkUri?.takeIf { it.isNotBlank() }?.let(Uri::parse),
         albumArtist = albumArtist
     )

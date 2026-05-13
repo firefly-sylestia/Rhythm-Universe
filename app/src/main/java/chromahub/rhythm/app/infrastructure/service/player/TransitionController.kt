@@ -53,6 +53,7 @@ class TransitionController(
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var transitionListener: Player.Listener? = null
     private var transitionSchedulerJob: Job? = null
+    private var transitionCompletionWatchJob: Job? = null
     private var currentObservedPlayer: Player? = null
     private var scheduleGeneration: Long = 0L
     private var currentState: TransitionState = TransitionState.IDLE
@@ -92,6 +93,19 @@ class TransitionController(
             // Reset to IDLE after a short delay to allow cleanup
             scope.launch {
                 kotlinx.coroutines.delay(100)
+                setState(TransitionState.IDLE)
+            }
+        }
+    }
+
+    private fun watchForTransitionCompletion(generation: Long) {
+        transitionCompletionWatchJob?.cancel()
+        transitionCompletionWatchJob = scope.launch {
+            while (isActive && engine.isTransitionRunning()) {
+                delay(100)
+            }
+
+            if (isActive && generation == scheduleGeneration) {
                 setState(TransitionState.IDLE)
             }
         }
@@ -373,6 +387,7 @@ class TransitionController(
                 setState(TransitionState.TRANSITIONING)
                 Log.d(TAG, "FIRING TRANSITION NOW!")
                 engine.performTransition(settings.copy(durationMs = effectiveDuration.toInt()))
+                watchForTransitionCompletion(generation)
             } else {
                 Log.d(TAG, "Job cancelled before firing.")
                 engine.setPauseAtEndOfMediaItems(false)
@@ -387,6 +402,7 @@ class TransitionController(
         Log.d(TAG, "Releasing controller.")
         invalidateScheduledTransitions()
         transitionSchedulerJob?.cancel()
+        transitionCompletionWatchJob?.cancel()
         engine.removePlayerSwapListener(swapListener)
         transitionListener?.let { currentObservedPlayer?.removeListener(it) }
         transitionListener = null
