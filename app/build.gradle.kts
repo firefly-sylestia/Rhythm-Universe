@@ -1,4 +1,5 @@
 import java.util.Properties
+import com.android.build.api.variant.FilterConfiguration
 
 plugins {
     alias(libs.plugins.android.application)
@@ -151,7 +152,15 @@ android {
 androidComponents {
     onVariants { variant ->
         variant.outputs.forEach { output ->
-            output.outputFileName.set("Rhythm-${android.defaultConfig.versionName}-${variant.name}.apk")
+            val abiSuffix = output.filters
+                .find { it.filterType == FilterConfiguration.FilterType.ABI }
+                ?.identifier
+                ?.let { "-$it" }
+                ?: ""
+
+            output.outputFileName.set(
+                "Rhythm-${android.defaultConfig.versionName}-${variant.name}${abiSuffix}.apk"
+            )
         }
     }
 }

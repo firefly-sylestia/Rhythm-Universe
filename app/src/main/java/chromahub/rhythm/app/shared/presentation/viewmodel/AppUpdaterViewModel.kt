@@ -576,7 +576,9 @@ class AppUpdaterViewModel(application: Application) : AndroidViewModel(applicati
         // Find the APK asset: prefer github-flavored APKs (arm64-v8a > universal > any github),
         // explicitly excluding fdroid variants so the in-app updater always pulls the github build.
         val githubApks = release.assets.filter {
-            it.name.contains("-github-", ignoreCase = true) &&
+            val lowerName = it.name.lowercase(Locale.ROOT)
+            (lowerName.contains("-github-") || lowerName.contains("githubrelease")) &&
+            !lowerName.contains("fdroid") &&
             it.name.endsWith(".apk") &&
             it.state == "uploaded"
         }

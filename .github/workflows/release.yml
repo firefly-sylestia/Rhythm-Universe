@@ -46,14 +46,14 @@ jobs:
       - name: Generate checksums
         run: |
           cd app/build/outputs/apk/github/release
-          for file in Rhythm-*-github-*-release.apk; do
+          for file in Rhythm-*-githubRelease*.apk; do
             if [ -f "$file" ]; then
               sha256sum "$file" > "$file.sha256"
               md5sum "$file" > "$file.md5"
             fi
           done
           cd $GITHUB_WORKSPACE/app/build/outputs/apk/fdroid/release
-          for file in Rhythm-*-fdroid-*-release.apk; do
+          for file in Rhythm-*-fdroidRelease*.apk; do
             if [ -f "$file" ]; then
               sha256sum "$file" > "$file.sha256"
               md5sum "$file" > "$file.md5"
@@ -76,9 +76,9 @@ jobs:
           prerelease: ${{ steps.prerelease.outputs.value }}
           generate_release_notes: true
           files: |
-            app/build/outputs/apk/github/release/Rhythm-*-github-*-release.apk
-            app/build/outputs/apk/github/release/Rhythm-*-github-*-release.apk.sha256
-            app/build/outputs/apk/github/release/Rhythm-*-github-*-release.apk.md5
-            app/build/outputs/apk/fdroid/release/Rhythm-*-fdroid-*-release.apk
-            app/build/outputs/apk/fdroid/release/Rhythm-*-fdroid-*-release.apk.sha256
-            app/build/outputs/apk/fdroid/release/Rhythm-*-fdroid-*-release.apk.md5
+            app/build/outputs/apk/github/release/Rhythm-*-githubRelease*.apk
+            app/build/outputs/apk/github/release/Rhythm-*-githubRelease*.apk.sha256
+            app/build/outputs/apk/github/release/Rhythm-*-githubRelease*.apk.md5
+            app/build/outputs/apk/fdroid/release/Rhythm-*-fdroidRelease*.apk
+            app/build/outputs/apk/fdroid/release/Rhythm-*-fdroidRelease*.apk.sha256
+            app/build/outputs/apk/fdroid/release/Rhythm-*-fdroidRelease*.apk.md5
