@@ -113,6 +113,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.rememberModalBottomSheetState
 import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShapes
 import chromahub.rhythm.app.shared.presentation.components.icons.RhythmIcons
+import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.SongPickerBottomSheet
 import chromahub.rhythm.app.ui.LocalMiniPlayerPadding
 import chromahub.rhythm.app.ui.UiConstants
 import chromahub.rhythm.app.ui.theme.MusicDimensions

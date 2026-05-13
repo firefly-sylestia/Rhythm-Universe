@@ -220,7 +220,7 @@ fun AutoEQProfileSelector(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search profiles, brands...") },
+                    placeholder = { Text("Find EQ profiles or brands...") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Rounded.Search,

@@ -1,6 +1,8 @@
 package chromahub.rhythm.app.features.local.presentation.screens
 
 import android.content.Context
+import androidx.compose.ui.focus.FocusRequester
+import chromahub.rhythm.app.features.local.presentation.screens.settings.SettingsSearchBar
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -73,9 +75,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import chromahub.rhythm.app.features.local.presentation.viewmodel.MusicViewModel
+import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.SongPickerBottomSheet
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.platform.LocalConfiguration
@@ -213,6 +219,7 @@ fun PlaylistDetailScreen(
     var newPlaylistName by remember { mutableStateOf(playlist.name) }
     var searchQuery by remember { mutableStateOf("") }
     var showSearchBar by remember { mutableStateOf(false) }
+    val searchFocusRequester = remember { FocusRequester() }
     var showQueueOptionsDialog by remember { mutableStateOf(false) }
     var selectedSongForQueue by remember { mutableStateOf<Song?>(null) }
     var isReorderMode by remember { mutableStateOf(false) }
@@ -230,6 +237,13 @@ fun PlaylistDetailScreen(
     var isMultiSelectMode by remember { mutableStateOf(false) }
     var selectedSongs by remember { mutableStateOf(setOf<String>()) }
     var showBulkDeleteDialog by remember { mutableStateOf(false) }
+
+    // Song picker sheet state
+    val coroutineScope = rememberCoroutineScope()
+    val musicViewModel: MusicViewModel = viewModel()
+    val allSongs by musicViewModel.songs.collectAsState()
+    var showSongPicker by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
 
     val haptics = LocalHapticFeedback.current
     val context = LocalContext.current
@@ -660,6 +674,33 @@ fun PlaylistDetailScreen(
             },
             showRemoveFromPlaylist = canEditPlaylist,
             haptics = haptics
+        )
+    }
+
+    // Song picker bottom sheet (overlayed) - open when requested
+    val availableSongs = remember(allSongs, playlist.songs) {
+        allSongs.filter { song -> !playlist.songs.any { it.id == song.id } }
+    }
+
+    if (showSongPicker) {
+        SongPickerBottomSheet(
+            targetPlaylist = playlist,
+            availableSongs = availableSongs,
+            onDismissRequest = { showSongPicker = false },
+            onAddSongsToPlaylist = { songs ->
+                operationInProgress = "Adding"
+                showOperationProgress = true
+                val (successCount, playlistName) = musicViewModel.addSongsToPlaylist(songs, playlist.id)
+                showOperationProgress = false
+                val message = when {
+                    successCount == 0 -> "No songs added - they may already be in the playlist"
+                    successCount == songs.size -> "Added $successCount songs to $playlistName"
+                    else -> "Added $successCount of ${songs.size} songs to $playlistName"
+                }
+                operationResult = Pair(message, false)
+                showSongPicker = false
+            },
+            sheetState = sheetState
         )
     }
 
@@ -1272,7 +1313,7 @@ fun PlaylistDetailScreen(
                             FilledTonalButton(
                                 onClick = {
                                     HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.TextHandleMove)
-                                    onAddSongsToPlaylist()
+                                    showSongPicker = true
                                 },
                                 shape = RoundedCornerShape(24.dp),
                                 modifier = Modifier.fillMaxWidth(),
@@ -1402,28 +1443,14 @@ fun PlaylistDetailScreen(
                                     animationSpec = tween(durationMillis = 200)
                                 )
                             ) {
-                                OutlinedTextField(
-                                    value = searchQuery,
-                                    onValueChange = { searchQuery = it },
-                                    label = { Text("Search songs") },
-                                    singleLine = true,
+                                SettingsSearchBar(
+                                    query = searchQuery,
+                                    onQueryChange = { searchQuery = it },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(bottom = 12.dp),
-                                    shape = RoundedCornerShape(24.dp),
-                                    trailingIcon = {
-                                        if (searchQuery.isNotEmpty()) {
-                                            IconButton(onClick = {
-                                                HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.TextHandleMove)
-                                                searchQuery = ""
-                                            }) {
-                                                Icon(
-                                                    imageVector = RhythmIcons.Close,
-                                                    contentDescription = "Clear search"
-                                                )
-                                            }
-                                        }
-                                    }
+                                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                                    focusRequester = searchFocusRequester,
+                                    hint = "Find a track in this playlist"
                                 )
                             }
                         }
@@ -1745,7 +1772,7 @@ fun PlaylistDetailScreen(
                                 Button(
                                     onClick = {
                                         HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.TextHandleMove)
-                                        onAddSongsToPlaylist()
+                                        showSongPicker = true
                                         addPressed = true
                                     },
                                     modifier = Modifier
@@ -1970,7 +1997,7 @@ fun PlaylistDetailScreen(
                             Button(
                                 onClick = {
                                     HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.TextHandleMove)
-                                    onAddSongsToPlaylist()
+                                    showSongPicker = true
                                 },
                                 shape = RoundedCornerShape(24.dp),
                                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
@@ -2279,28 +2306,14 @@ fun PlaylistDetailScreen(
                         animationSpec = tween(durationMillis = 200)
                     )
                 ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        label = { Text("Search songs") },
-                        singleLine = true,
+                    SettingsSearchBar(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = {
-                                    HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.TextHandleMove)
-                                    searchQuery = ""
-                                }) {
-                                    Icon(
-                                        imageVector = RhythmIcons.Close,
-                                        contentDescription = "Clear search"
-                                    )
-                                }
-                            }
-                        }
+                            .padding(horizontal = 6.dp, vertical = 8.dp),
+                        focusRequester = searchFocusRequester,
+                        hint = "Find a track in this playlist"
                     )
                 }
                 
@@ -2582,7 +2595,7 @@ fun PlaylistDetailScreen(
                                 Button(
                                     onClick = {
                                         HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.TextHandleMove)
-                                        onAddSongsToPlaylist()
+                                        showSongPicker = true
                                         addPressed = true
                                     },
                                     modifier = Modifier

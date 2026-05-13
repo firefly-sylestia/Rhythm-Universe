@@ -222,7 +222,7 @@ fun AddToPlaylistScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
-                placeholder = { Text("Search songs") },
+                placeholder = { Text("Pick a tune to add...") },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()

@@ -1258,7 +1258,7 @@ private fun DeviceAutoEQSelector(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search profiles...") },
+                    placeholder = { Text("Find a profile for this device...") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Rounded.Search,

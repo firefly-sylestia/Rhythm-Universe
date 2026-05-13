@@ -66,6 +66,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.rememberModalBottomSheetState
+import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.SongPickerBottomSheet
 import chromahub.rhythm.app.shared.presentation.components.common.CollapsibleHeaderScreen
 import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveFilledIconButton
 import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShapes
@@ -2051,11 +2052,7 @@ private fun LocalNavigationContent(
                                 viewModel.deletePlaylist(playlistId)
                                 navigateBackOrToLanding()
                             },
-                            onAddSongsToPlaylist = {
-                                // Set the target playlist ID and navigate to search screen
-                                viewModel.setTargetPlaylistForAddingSongs(playlistId)
-                                navController.navigate(Screen.AddToPlaylist.route)
-                            },
+                            onAddSongsToPlaylist = {},
                             onSkipNext = onSkipNext,
                             onReorderSongs = { fromIndex, toIndex ->
                                 viewModel.reorderPlaylistSongs(playlistId, fromIndex, toIndex)
@@ -2398,7 +2395,6 @@ private fun LocalNavigationContent(
                                     shape = RoundedCornerShape(24.dp)
                                 )
                             } else {
-                                // Show the new multi-selection screen
                                 AddToPlaylistScreen(
                                     targetPlaylist = targetPlaylist,
                                     availableSongs = availableSongs,
@@ -2409,9 +2405,7 @@ private fun LocalNavigationContent(
                                         navigateBackOrToLanding()
                                     },
                                     onAddSongsToPlaylist = { songs ->
-                                        // Add multiple songs to the playlist using batch operation
                                         if (songs.size == 1) {
-                                            // Single song - use original method for individual feedback
                                             viewModel.addSongToPlaylist(
                                                 songs[0],
                                                 targetPlaylistId
@@ -2421,7 +2415,6 @@ private fun LocalNavigationContent(
                                                 }
                                             }
                                         } else {
-                                            // Multiple songs - use batch operation
                                             val (successCount, playlistName) = viewModel.addSongsToPlaylist(
                                                 songs,
                                                 targetPlaylistId

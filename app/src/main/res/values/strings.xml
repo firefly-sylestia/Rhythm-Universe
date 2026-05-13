@@ -201,8 +201,8 @@
     <string name="playlist_delete">Delete playlist</string>
     <string name="playlist_play_all">Play All</string>
     <string name="playlist_shuffle_play">Shuffle play</string>
-    <string name="playlist_search_songs">Search songs</string>
-    <string name="playlist_search_in_playlist">Search songs in playlist</string>
+    <string name="playlist_search_songs">Pick a tune...</string>
+    <string name="playlist_search_in_playlist">Find in this playlist</string>
     <string name="playlist_clear_search">Clear search</string>
     <string name="playlist_add_songs">Add Songs</string>
     <string name="playlist_add_songs_to_playlist">Add songs to playlist</string>
@@ -1322,8 +1322,8 @@
     <!-- Playlist Actions -->
     <string name="playlist_rename_action">Rename playlist</string>
     <string name="playlist_delete_action">Delete playlist</string>
-    <string name="playlist_search">Search songs</string>
-    <string name="playlist_search_in">Search songs in playlist</string>
+    <string name="playlist_search">Find a track...</string>
+    <string name="playlist_search_in">Find in this playlist</string>
     <string name="playlist_no_songs_available">No Songs Available</string>
     <string name="playlist_all_in_playlist">All songs are already in this playlist.</string>
     <string name="playlist_name_field">Playlist name</string>
@@ -2733,7 +2733,7 @@
     <string name="streaming_home_guard_exposure">Today: %1$d / %2$d min</string>
     <string name="streaming_search_subtitle">Search is scoped to %1$s.</string>
     <string name="streaming_search_discovery_title">Discover from %1$s</string>
-    <string name="streaming_search_hint">Search songs, artists, albums, playlists</string>
+    <string name="streaming_search_hint">Find a song, artist, or album</string>
     <string name="streaming_search_unavailable_title">Search unavailable</string>
     <string name="streaming_search_suggestions_title">Service Suggestions</string>
     <string name="streaming_search_results_empty">No results from %1$s yet. Integration loading is in progress.</string>

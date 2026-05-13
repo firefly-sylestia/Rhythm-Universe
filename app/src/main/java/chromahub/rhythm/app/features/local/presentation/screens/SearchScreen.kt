@@ -47,8 +47,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import chromahub.rhythm.app.features.local.presentation.screens.settings.SettingsSearchBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
@@ -121,6 +120,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -153,6 +154,7 @@ import chromahub.rhythm.app.util.ArtistSeparator
 import chromahub.rhythm.app.shared.presentation.components.common.M3PlaceholderType
 import chromahub.rhythm.app.shared.presentation.components.common.rememberExpressiveShapeFor
 import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShapeTarget
+import chromahub.rhythm.app.features.local.presentation.screens.settings.SettingsSearchBar
 
 // Experimental API opt-ins required for:
 // - Material3 SearchBar APIs (DockedSearchBar, SearchBarDefaults) - stable in Material3 1.4.0
@@ -449,7 +451,7 @@ fun SearchScreen(
         }
     }
 
-    val showFloatingFilters = showFilterOptions && searchQuery.isNotEmpty() && !showAllSongsPage
+    val showFloatingFilters = showFilterOptions && !showAllSongsPage
     val controlsScrimAlpha by animateFloatAsState(
         targetValue = if (showFloatingFilters) 0.98f else 0.92f,
         animationSpec = tween(durationMillis = 220),
@@ -789,8 +791,7 @@ fun SearchScreen(
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         tonalElevation = 0.dp,
-                        shadowElevation = 0.dp,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                        shadowElevation = 0.dp
                     ) {
                         IconButton(
                             onClick = {
@@ -805,131 +806,108 @@ fun SearchScreen(
                             Icon(
                                 imageVector = RhythmIcons.Back,
                                 contentDescription = "Back",
-                                modifier = Modifier.size(if (isCompactWidth) 18.dp else 20.dp)
+                                modifier = Modifier.size(if (isCompactWidth) 18.dp else 20.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
 
-                    Surface(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(if (isCompactWidth) 20.dp else 24.dp),
-                        color = if (isSearchActive || searchQuery.isNotEmpty()) {
-                            MaterialTheme.colorScheme.surfaceContainerHighest
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
-                        },
-                        tonalElevation = 0.dp,
-                        shadowElevation = 0.dp,
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = if (isSearchActive || searchQuery.isNotEmpty()) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
-                            } else {
-                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            }
-                        )
-                    ) {
-                        TextField(
-                            value = searchQuery,
-                            onValueChange = { newQuery ->
+                    // Use SettingsSearchBar for a unified search UI and keep filter/clear actions
+                    val defaultPlaceholders = listOf(
+                        "Find songs",
+                        "Search artists",
+                        "Browse albums",
+                        "Discover playlists",
+                        "What'll you play?"
+                    )
+
+                    val randomizedDefault by remember { mutableStateOf(defaultPlaceholders.random()) }
+
+                    val placeholderText = when {
+                        filterSongs && !filterAlbums && !filterArtists && !filterPlaylists -> if (isCompactWidth) "Find songs..." else "Find songs"
+                        !filterSongs && filterAlbums && !filterArtists && !filterPlaylists -> "Find albums"
+                        !filterSongs && !filterAlbums && filterArtists && !filterPlaylists -> "Search artists"
+                        !filterSongs && !filterAlbums && !filterArtists && filterPlaylists -> "Search playlists"
+                        else -> randomizedDefault
+                    }
+
+                    Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                        SettingsSearchBar(
+                            query = searchQuery,
+                            onQueryChange = { newQuery: String ->
                                 searchQuery = newQuery
                                 isSearchActive = true
                             },
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .weight(1f)
                                 .heightIn(min = if (isCompactWidth) 52.dp else 56.dp)
-                                .padding(horizontal = if (isCompactWidth) 2.dp else 4.dp, vertical = 2.dp)
-                                .focusRequester(focusRequester),
-                            placeholder = {
-                                Text(
-                                    if (isCompactWidth) "Search songs, artists..." else "Search songs, artists, albums...",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = RhythmIcons.Search,
-                                    contentDescription = "Search",
-                                    modifier = Modifier.size(if (isCompactWidth) 18.dp else 20.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
-                            trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(if (isCompactWidth) 2.dp else 4.dp)
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.LongPress)
-                                                showFilterOptions = !showFilterOptions
-                                            },
-                                            modifier = Modifier.size(if (isCompactWidth) 36.dp else 40.dp),
-                                            colors = IconButtonDefaults.iconButtonColors(
-                                                containerColor = if (showFilterOptions) {
-                                                    MaterialTheme.colorScheme.secondaryContainer
-                                                } else {
-                                                    Color.Transparent
-                                                },
-                                                contentColor = if (showFilterOptions) {
-                                                    MaterialTheme.colorScheme.onSecondaryContainer
-                                                } else {
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                                }
-                                            )
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.FilterList,
-                                                contentDescription = "Filters",
-                                                modifier = Modifier.size(if (isCompactWidth) 16.dp else 18.dp)
-                                            )
-                                        }
-
-                                        IconButton(
-                                            onClick = {
-                                                HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.LongPress)
-                                                searchQuery = ""
-                                                isSearchActive = false
-                                                showFilterOptions = false
-                                                showAllSongsPage = false
-                                                focusManager.clearFocus()
-                                                keyboardController?.hide()
-                                            },
-                                            modifier = Modifier.size(if (isCompactWidth) 36.dp else 40.dp),
-                                            colors = IconButtonDefaults.iconButtonColors(
-                                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f),
-                                                contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                            )
-                                        ) {
-                                            Icon(
-                                                imageVector = RhythmIcons.Close,
-                                                contentDescription = "Clear search",
-                                                modifier = Modifier.size(if (isCompactWidth) 16.dp else 18.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            },
-                            singleLine = true,
+                                .padding(horizontal = if (isCompactWidth) 6.dp else 8.dp, vertical = 2.dp),
+                            focusRequester = focusRequester,
+                            hint = placeholderText,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(onSearch = {
                                 focusManager.clearFocus()
                                 if (searchQuery.isNotEmpty()) {
                                     viewModel.addSearchQuery(searchQuery)
                                 }
-                            }),
-                            colors = TextFieldDefaults.colors(
-                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                cursorColor = MaterialTheme.colorScheme.primary,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedContainerColor = Color.Transparent
-                            )
+                            })
                         )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(if (isCompactWidth) 2.dp else 4.dp)
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.LongPress)
+                                    showFilterOptions = !showFilterOptions
+                                },
+                                modifier = Modifier.size(if (isCompactWidth) 36.dp else 40.dp),
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = if (showFilterOptions) {
+                                        MaterialTheme.colorScheme.secondaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerHigh
+                                    },
+                                    contentColor = if (showFilterOptions) {
+                                        MaterialTheme.colorScheme.onSecondaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.FilterList,
+                                    contentDescription = "Filters",
+                                    modifier = Modifier.size(if (isCompactWidth) 16.dp else 18.dp)
+                                )
+                            }
+
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(
+                                    onClick = {
+                                        HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.LongPress)
+                                        searchQuery = ""
+                                        isSearchActive = false
+                                        showFilterOptions = false
+                                        showAllSongsPage = false
+                                        focusManager.clearFocus()
+                                        keyboardController?.hide()
+                                    },
+                                    modifier = Modifier.size(if (isCompactWidth) 36.dp else 40.dp),
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f),
+                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = RhythmIcons.Close,
+                                        contentDescription = "Clear search",
+                                        modifier = Modifier.size(if (isCompactWidth) 16.dp else 18.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
