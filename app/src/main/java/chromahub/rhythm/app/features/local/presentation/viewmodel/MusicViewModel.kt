@@ -1078,7 +1078,16 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
 
         // Step 3: Initialize media controller (non-blocking, will connect async)
         try {
-            initializeController()
+            val songsWithMetadata = songs.value.count {
+                it.bitrate != null && it.sampleRate != null && it.channels != null && it.codec != null
+            }
+            val hasMissingMetadata = songsWithMetadata < songs.value.size
+
+            if (!appSettings.audioMetadataExtractionCompleted.value || hasMissingMetadata) {
+                initializeController()
+            } else {
+                Log.d(TAG, "Audio metadata already extracted for current library, skipping startup pass")
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing media controller", e)
         }
@@ -1460,8 +1469,17 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             delay(5000) // Wait 5 seconds after app load before starting metadata extraction
             try {
-                _isExtractingMetadata.value = true
-                extractAudioMetadataInBackground()
+                val songsWithMetadata = songs.value.count {
+                    it.bitrate != null && it.sampleRate != null && it.channels != null && it.codec != null
+                }
+                val hasMissingMetadata = songsWithMetadata < songs.value.size
+
+                if (!appSettings.audioMetadataExtractionCompleted.value || hasMissingMetadata) {
+                    _isExtractingMetadata.value = true
+                    extractAudioMetadataInBackground()
+                } else {
+                    Log.d(TAG, "Audio metadata already extracted for current library, skipping startup pass")
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error starting background audio metadata extraction", e)
             } finally {
@@ -1598,6 +1616,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 _songs.value = mergedSongs
                 _albums.value = repository.loadAlbums()
                 _artists.value = repository.loadArtists()
+                appSettings.setAudioMetadataExtractionCompleted(false)
                 
                 // Keep the repository's in-memory cache aligned before persisting to Room.
                 repository.updateAndPersistSongs(mergedSongs)
@@ -1721,6 +1740,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 // Update repository cache and persist metadata to disk cache
                 Log.d(TAG, "Background metadata extraction completed, updating repository cache and persisting ${updatedSongs.size} songs to cache")
                 repository.updateAndPersistSongs(updatedSongs)
+                appSettings.setAudioMetadataExtractionCompleted(true)
                 val songsWithMetadata = updatedSongs.count { 
                     it.bitrate != null && it.sampleRate != null && it.channels != null && it.codec != null 
                 }

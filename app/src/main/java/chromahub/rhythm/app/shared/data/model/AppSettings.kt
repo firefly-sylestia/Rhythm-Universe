@@ -245,6 +245,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
         private const val KEY_INITIAL_MEDIA_SCAN_COMPLETED = "initial_media_scan_completed"
         private const val KEY_GENRE_DETECTION_COMPLETED = "genre_detection_completed"
+        private const val KEY_AUDIO_METADATA_EXTRACTION_COMPLETED = "audio_metadata_extraction_completed"
 
         // App Updater Settings
         private const val KEY_AUTO_CHECK_FOR_UPDATES = "auto_check_for_updates"
@@ -447,6 +448,7 @@ class AppSettings private constructor(context: Context) {
         // Artist Separator Settings
         private const val KEY_ARTIST_SEPARATOR_ENABLED = "artist_separator_enabled"
         private const val KEY_ARTIST_SEPARATOR_DELIMITERS = "artist_separator_delimiters" // Comma-separated string of delimiters
+        private const val KEY_ARTIST_SEPARATOR_CACHE_SIGNATURE = "artist_separator_cache_signature"
         
         // Player Screen Customization Settings
         private const val KEY_PLAYER_SHOW_GRADIENT_OVERLAY = "player_show_gradient_overlay"
@@ -1294,6 +1296,11 @@ class AppSettings private constructor(context: Context) {
     private val _genreDetectionCompleted = MutableStateFlow(prefs.getBoolean(KEY_GENRE_DETECTION_COMPLETED, false))
     val genreDetectionCompleted: StateFlow<Boolean> = _genreDetectionCompleted.asStateFlow()
 
+    private val _audioMetadataExtractionCompleted = MutableStateFlow(
+        prefs.getBoolean(KEY_AUDIO_METADATA_EXTRACTION_COMPLETED, false)
+    )
+    val audioMetadataExtractionCompleted: StateFlow<Boolean> = _audioMetadataExtractionCompleted.asStateFlow()
+
     // App Updater Settings
 private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CHECK_FOR_UPDATES, BuildConfig.FLAVOR != "fdroid"))
     val autoCheckForUpdates: StateFlow<Boolean> = _autoCheckForUpdates.asStateFlow()
@@ -1728,6 +1735,20 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         prefs.edit().putString(KEY_ARTIST_SEPARATOR_DELIMITERS, delimiters).apply()
         _artistSeparatorDelimiters.value = delimiters
     }
+
+    fun getArtistSeparatorCacheSignature(): String? {
+        return prefs.getString(KEY_ARTIST_SEPARATOR_CACHE_SIGNATURE, null)
+    }
+
+    fun setArtistSeparatorCacheSignature(signature: String?) {
+        prefs.edit().apply {
+            if (signature.isNullOrBlank()) {
+                remove(KEY_ARTIST_SEPARATOR_CACHE_SIGNATURE)
+            } else {
+                putString(KEY_ARTIST_SEPARATOR_CACHE_SIGNATURE, signature)
+            }
+        }.apply()
+    }
     
     fun setCustomColorScheme(scheme: String) {
         prefs.edit().putString(KEY_CUSTOM_COLOR_SCHEME, scheme).apply()
@@ -1912,6 +1933,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
 
         _initialMediaScanCompleted.value = false
         _genreDetectionCompleted.value = false
+        _audioMetadataExtractionCompleted.value = false
         _lastScanTimestamp.value = 0L
         _lastScanDuration.value = 0L
 
@@ -2640,6 +2662,11 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     fun setGenreDetectionCompleted(completed: Boolean) {
         prefs.edit().putBoolean(KEY_GENRE_DETECTION_COMPLETED, completed).apply()
         _genreDetectionCompleted.value = completed
+    }
+
+    fun setAudioMetadataExtractionCompleted(completed: Boolean) {
+        prefs.edit().putBoolean(KEY_AUDIO_METADATA_EXTRACTION_COMPLETED, completed).apply()
+        _audioMetadataExtractionCompleted.value = completed
     }
 
     // App Updater Settings Methods

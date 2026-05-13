@@ -144,6 +144,7 @@ class MusicRepository(context: Context) {
     // Room database for persistent storage backend
     private val roomDb by lazy { RhythmDatabase.getInstance(context) }
     private val songDao by lazy { roomDb.songDao() }
+    private val appSettings by lazy { AppSettings.getInstance(context) }
     
     /**
      * Persists the current in-memory song cache to Room database.
@@ -310,11 +311,15 @@ class MusicRepository(context: Context) {
                     val shouldUseSavedArtwork = savedArtworkUsable && (useEmbeddedArt || !savedArtworkIsEmbeddedCache)
 
                     val embeddedCachedArtwork = if (useEmbeddedArt) {
-                        chromahub.rhythm.app.util.MediaUtils.getCachedEmbeddedAlbumArtUri(
-                            cacheDir = context.cacheDir,
-                            songUri = songUri,
-                            lossless = losslessArtwork
-                        )
+                        if (savedArtworkIsEmbeddedCache && savedArtworkUsable) {
+                            savedArtworkUri
+                        } else {
+                            chromahub.rhythm.app.util.MediaUtils.getCachedEmbeddedAlbumArtUri(
+                                cacheDir = context.cacheDir,
+                                songUri = songUri,
+                                lossless = losslessArtwork
+                            )
+                        }
                     } else {
                         null
                     }
@@ -2009,7 +2014,7 @@ class MusicRepository(context: Context) {
         artists
     }
 
-    private var cachedArtistSplitConfig: String? = null
+    private var cachedArtistSplitConfig: String? = appSettings.getArtistSeparatorCacheSignature()
 
     private suspend fun refreshArtistRelationshipsIfNeeded(appSettings: AppSettings) {
         val artistSeparatorEnabled = appSettings.artistSeparatorEnabled.value
@@ -2028,6 +2033,7 @@ class MusicRepository(context: Context) {
             roomDb.artistDao().deleteAll()
         }
         cachedArtistSplitConfig = configKey
+        appSettings.setArtistSeparatorCacheSignature(configKey)
 
         Log.d(
             TAG,
