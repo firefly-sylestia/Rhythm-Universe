@@ -311,10 +311,10 @@ fun StreamingContentHomeScreen(
             ?: rhythmGuardPolicy.recommendedDailyMinutes
         else -> rhythmGuardPolicy.recommendedDailyMinutes
     }
-    val todayListeningMinutes = remember(dailyListeningStats, persistedSongsPlayed, totalListeningDurationMs) {
+    val todayListeningMinutes = remember(dailyListeningStats, songsPlayedForStats, totalListeningDurationMs) {
         appSettings.estimateRhythmGuardTodayListeningMinutes(
             dailyListeningStats = dailyListeningStats,
-            songsPlayed = persistedSongsPlayed,
+            songsPlayed = songsPlayedForStats,
             listeningTimeMs = totalListeningDurationMs
         )
     }

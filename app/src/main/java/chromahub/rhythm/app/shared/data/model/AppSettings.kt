@@ -3742,6 +3742,14 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
 
                 val originalType = preferencesTypes[key]
                 applyBackupPreferenceValue(editor, key, value, originalType)
+                // Migrate legacy "rhythm_aura_" keys to new "rhythm_guard_" equivalents
+                if (key.startsWith("rhythm_aura_") && !preferences.containsKey(key.replaceFirst("rhythm_aura_", "rhythm_guard_"))) {
+                    val guardKey = key.replaceFirst("rhythm_aura_", "rhythm_guard_")
+                    if (shouldIncludeKeyInBackupSections(guardKey, sections)) {
+                        applyBackupPreferenceValue(editor, guardKey, value, originalType)
+                        Log.d("AppSettings", "Migrated legacy key $key -> $guardKey during restore")
+                    }
+                }
             }
 
             if (sections.includeStatsAndRhythmGuard) {
@@ -3763,6 +3771,12 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
                 statsData.forEach { (key, value) ->
                     if (isStatsAndRhythmGuardBackupKey(key) && !isRhythmGuardTransientRuntimeKey(key)) {
                         applyBackupPreferenceValue(editor, key, value, statsTypes[key] ?: preferencesTypes[key])
+                        // Also migrate legacy aura keys to rhythm_guard_ counterparts
+                        if (key.startsWith("rhythm_aura_") && !statsData.containsKey(key.replaceFirst("rhythm_aura_", "rhythm_guard_"))) {
+                            val guardKey = key.replaceFirst("rhythm_aura_", "rhythm_guard_")
+                            applyBackupPreferenceValue(editor, guardKey, value, statsTypes[guardKey] ?: statsTypes[key] ?: preferencesTypes[key])
+                            Log.d("AppSettings", "Migrated legacy stats key $key -> $guardKey during restore")
+                        }
                     }
                 }
             }

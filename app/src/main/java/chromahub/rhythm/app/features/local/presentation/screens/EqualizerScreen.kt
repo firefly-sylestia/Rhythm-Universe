@@ -329,7 +329,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import chromahub.rhythm.app.features.local.presentation.components.dialogs.AutoEQProfileSelector
+import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.AutoEQPresetPickerBottomSheet
 import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.DeviceConfigurationBottomSheet
 import chromahub.rhythm.app.shared.data.model.AutoEQProfile
 
@@ -455,6 +455,8 @@ fun EqualizerScreen(
     var showAutoEQSelector by remember { mutableStateOf(false) }
     var showDeviceConfiguration by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    
+    val currentAutoEQProfile by viewModel.appSettings.autoEQProfile.collectAsState()
 
     // Screen entrance animation
     var showContent by remember { mutableStateOf(false) }
@@ -1461,9 +1463,9 @@ fun EqualizerScreen(
         
         // AutoEQ Profile Selector
         if (showAutoEQSelector) {
-            AutoEQProfileSelector(
-                musicViewModel = viewModel,
-                onDismiss = { showAutoEQSelector = false },
+            AutoEQPresetPickerBottomSheet(
+                currentProfileName = currentAutoEQProfile,
+                onDismissRequest = { showAutoEQSelector = false },
                 onProfileSelected = { profile: AutoEQProfile ->
                     viewModel.applyAutoEQProfile(profile)
                     showAutoEQSelector = false

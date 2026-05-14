@@ -515,6 +515,21 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
                     }
                 }
             }
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (playWhenReady) {
+                    val now = System.currentTimeMillis()
+                    if (appSettings.rhythmGuardTimeoutUntilMs.value > now) {
+                        Log.d(TAG, "Blocking player start due to active Rhythm Guard timeout")
+                        try {
+                            // Force pause to prevent playback
+                            player.pause()
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to pause player while enforcing Rhythm Guard", e)
+                        }
+                    }
+                }
+            }
             
             override fun onPlayerError(error: PlaybackException) {
                 handlePlaybackError(error)
@@ -1248,6 +1263,12 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
         // Use service-scoped coroutine to handle operations without blocking the main thread
         serviceScope.launch {
             try {
+                // Respect Rhythm Guard timeout: do not start external playback if a timeout is active
+                val now = System.currentTimeMillis()
+                if (appSettings.rhythmGuardTimeoutUntilMs.value > now) {
+                    Log.d(TAG, "Refusing to play external file due to active Rhythm Guard timeout: $uri")
+                    return@launch
+                }
                 // Check if we've seen this URI before (on main thread - quick cache lookup)
                 val cachedItem = externalUriCache[uri.toString()]
                 if (cachedItem != null) {
@@ -1479,6 +1500,10 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
                     }
                 })
         }
+
+        // NOTE: we avoid overriding onPlay directly because MediaLibrarySession callback
+        // signatures vary across Media3 versions. Instead we enforce Rhythm Guard at the
+        // player level via the Player.Listener implementation (see onPlayWhenReadyChanged).
 
         override fun onDisconnected(
             session: MediaSession,

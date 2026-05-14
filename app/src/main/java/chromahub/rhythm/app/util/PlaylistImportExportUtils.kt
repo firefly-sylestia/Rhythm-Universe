@@ -10,6 +10,8 @@ import chromahub.rhythm.app.shared.data.model.Song
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.*
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -624,29 +626,54 @@ object PlaylistImportExportUtils {
     }
     
     private fun createPlaylistsZip(playlists: List<Playlist>, format: PlaylistExportFormat, zipFile: File) {
-        // For now, we'll just export as individual files
-        // In a full implementation, you'd use ZipOutputStream
-        val tempDir = File(zipFile.parent, "temp_playlists")
+        // Create a temp directory to hold individual playlist files
+        val tempDir = File(zipFile.parentFile, "temp_playlists_${System.currentTimeMillis()}")
         tempDir.mkdirs()
-        
+
         try {
+            // Write each playlist to a temp file
+            val tempFiles = mutableListOf<File>()
             playlists.forEach { playlist ->
                 val fileName = sanitizeFileName("${playlist.name}${format.extension}")
                 val tempFile = File(tempDir, fileName)
-                
+
                 when (format) {
                     PlaylistExportFormat.JSON -> exportToJson(playlist, tempFile)
                     PlaylistExportFormat.M3U -> exportToM3u(playlist, tempFile, false)
                     PlaylistExportFormat.M3U8 -> exportToM3u(playlist, tempFile, true)
                     PlaylistExportFormat.PLS -> exportToPls(playlist, tempFile)
                 }
+
+                tempFiles.add(tempFile)
             }
-            
-            // For now, just rename the temp directory to indicate completion
-            // In a full implementation, you'd zip the contents
-            Log.d(TAG, "Exported ${playlists.size} playlists to ${tempDir.absolutePath}")
+
+            // Create zip output stream and add each temp file as an entry
+            ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
+                tempFiles.forEach { file ->
+                    FileInputStream(file).use { fis ->
+                        val entry = ZipEntry(file.name)
+                        entry.time = file.lastModified()
+                        zos.putNextEntry(entry)
+                        fis.copyTo(zos)
+                        zos.closeEntry()
+                    }
+                }
+            }
+
+            Log.d(TAG, "Created zip with ${playlists.size} playlists: ${zipFile.absolutePath}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating playlists zip", e)
+            // If zip creation failed, ensure partial zip is removed
+            try { zipFile.delete() } catch (_: Exception) {}
+            throw e
         } finally {
-            // Clean up temp directory in a real implementation
+            // Clean up temp files and directory
+            try {
+                tempDir.listFiles()?.forEach { it.delete() }
+                tempDir.delete()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to clean temp files: ${e.message}")
+            }
         }
     }
     

@@ -110,6 +110,8 @@ import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.
 import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.UpdateBottomSheet
 import chromahub.rhythm.app.ui.utils.LazyListStateSaver
 import chromahub.rhythm.app.features.local.presentation.viewmodel.MusicViewModel
+import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShapeProvider
+import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShapes
 import chromahub.rhythm.app.shared.presentation.viewmodel.AppUpdaterViewModel
 import chromahub.rhythm.app.ui.theme.getFontPreviewStyle
 import kotlinx.coroutines.delay
@@ -4050,44 +4052,79 @@ fun AboutScreen(
             item { Spacer(modifier = Modifier.height(8.dp)) }
 
             item {
-                Column(
+                val appSettings = remember { AppSettings.getInstance(context) }
+                val expressiveShapesEnabled by appSettings.expressiveShapesEnabled.collectAsState()
+                val expressiveShapeA by appSettings.expressiveShapeSongArt.collectAsState()
+                val expressiveShapeB by appSettings.expressiveShapePlayerArt.collectAsState()
+
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = chromahub.rhythm.app.R.drawable.rhythm_splash_logo),
-                            contentDescription = context.getString(R.string.updates_rhythm_logo_cd),
-                            modifier = Modifier.size(82.dp)
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            text = context.getString(R.string.app_name),
-                            style = MaterialTheme.typography.displaySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                    if (expressiveShapesEnabled) {
+                        // Simple two-shape backdrop similar to splash but lightweight
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .offset(x = (-12).dp, y = (-8).dp)
+                                .size(110.dp)
+                                .graphicsLayer { alpha = 0.14f },
+                            shape = ExpressiveShapeProvider.getShapeById(expressiveShapeA, ExpressiveShapes.Large),
+                            color = MaterialTheme.colorScheme.primary
+                        ) {}
+
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 16.dp, y = (-4).dp)
+                                .size(92.dp)
+                                .graphicsLayer { alpha = 0.12f },
+                            shape = ExpressiveShapeProvider.getShapeById(expressiveShapeB, ExpressiveShapes.Medium),
+                            color = MaterialTheme.colorScheme.secondary
+                        ) {}
                     }
 
-                    Text(
-                        text = context.getString(R.string.settings_about_music_player),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = chromahub.rhythm.app.R.drawable.rhythm_splash_logo),
+                                contentDescription = context.getString(R.string.updates_rhythm_logo_cd),
+                                modifier = Modifier.size(82.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = context.getString(R.string.app_name),
+                                style = MaterialTheme.typography.displaySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
 
-                    Text(
-                        text = "Your Music, Your Rhythm",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+                        Text(
+                            text = context.getString(R.string.settings_about_music_player),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Text(
+                            text = "Your Music, Your Rhythm",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
 
