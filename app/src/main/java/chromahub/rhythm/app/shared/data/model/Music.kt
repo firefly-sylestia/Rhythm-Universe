@@ -2,9 +2,11 @@ package chromahub.rhythm.app.shared.data.model
 
 import android.net.Uri
 import android.os.Parcelable
+import androidx.compose.runtime.Immutable
 import kotlinx.parcelize.Parcelize
 import java.util.Objects
 
+@Immutable
 @Parcelize
 data class Song(
     val id: String,
@@ -82,6 +84,7 @@ data class Song(
     }
 }
 
+@Immutable
 @Parcelize
 data class Album(
     val id: String,
@@ -93,6 +96,8 @@ data class Album(
     val numberOfSongs: Int = 0,
     val dateModified: Long = System.currentTimeMillis()
 ) : Parcelable
+
+@Immutable
 @Parcelize
 data class Artist(
     val id: String,
@@ -104,6 +109,7 @@ data class Artist(
     val numberOfTracks: Int = 0
 ) : Parcelable
 
+@Immutable
 @Parcelize
 data class Playlist(
     val id: String,
@@ -118,12 +124,14 @@ data class Playlist(
 }
 
 // Represents the current playback queue
+@Immutable
 data class Queue(
     val songs: List<Song>,
     val currentIndex: Int = 0
 )
 
 // Represents a location in the app (for the "Living room" feature)
+@Immutable
 data class PlaybackLocation(
     val id: String,
     val name: String,

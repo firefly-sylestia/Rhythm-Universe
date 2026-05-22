@@ -271,7 +271,6 @@ fun LibraryScreen(
     artists: List<Artist>,
     currentSong: Song?,
     isPlaying: Boolean,
-    progress: Float,
     onSongClick: (Song) -> Unit,
     onPlayPause: () -> Unit,
     onPlayerClick: () -> Unit,

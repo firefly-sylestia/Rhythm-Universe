@@ -1,11 +1,13 @@
 package chromahub.rhythm.app.shared.data.model
 
+import androidx.compose.runtime.Immutable
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
 /**
  * Represents a user's audio device with associated AutoEQ profile
  */
+@Immutable
 data class UserAudioDevice(
     val id: String = java.util.UUID.randomUUID().toString(),
     val name: String,

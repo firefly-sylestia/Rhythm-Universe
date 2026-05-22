@@ -127,7 +127,7 @@ import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShap
 fun MiniPlayer(
     song: Song?,
     isPlaying: Boolean,
-    progress: Float,
+    progress: () -> Float,
     onPlayPause: () -> Unit,
     onPlayerClick: () -> Unit,
     onSkipNext: () -> Unit,
@@ -163,7 +163,7 @@ fun MiniPlayer(
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
     val animatedProgress by animateFloatAsState(
-        targetValue = progress,
+        targetValue = progress(),
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "progress"
     )
@@ -1007,7 +1007,7 @@ fun MiniPlayer(
                                 }
 
                                 // Compact time indicator - controlled by setting
-                                if (miniPlayerShowTime && song != null && progress > 0) {
+                                if (miniPlayerShowTime && song != null && progress() > 0) {
                                     Surface(
                                         color = MaterialTheme.colorScheme.primaryContainer.copy(
                                             alpha = 0.6f
@@ -1017,7 +1017,7 @@ fun MiniPlayer(
                                         Text(
                                             text = "${
                                                 formatDuration(
-                                                    (progress * song.duration).toLong(),
+                                                    (progress() * song.duration).toLong(),
                                                     useHoursFormat
                                                 )
                                             }/${formatDuration(song.duration, useHoursFormat)}",

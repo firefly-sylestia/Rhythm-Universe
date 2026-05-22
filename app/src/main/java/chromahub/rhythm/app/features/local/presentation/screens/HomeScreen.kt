@@ -223,7 +223,6 @@ fun HomeScreen(
     recentlyPlayed: List<Song>,
     currentSong: Song?,
     isPlaying: Boolean,
-    progress: Float,
     onSongClick: (Song) -> Unit,
     onAlbumClick: (Album) -> Unit,
     onArtistClick: (Artist) -> Unit,

@@ -167,7 +167,6 @@ fun PlaylistDetailScreen(
     playlist: Playlist,
     currentSong: Song?,
     isPlaying: Boolean,
-    progress: Float,
     onPlayPause: () -> Unit,
     onPlayerClick: () -> Unit,
     onPlayAll: () -> Unit,

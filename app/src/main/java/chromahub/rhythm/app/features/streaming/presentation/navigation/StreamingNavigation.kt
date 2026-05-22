@@ -516,7 +516,7 @@ fun StreamingNavigation(
                             MiniPlayer(
                                 song = song,
                                 isPlaying = isPlaying,
-                                progress = progress,
+                                progress = { progress },
                                 onPlayPause = { localMusicViewModel.togglePlayPause() },
                                 onPlayerClick = {
                                     onNavigateToPlayer()
@@ -1310,7 +1310,6 @@ fun StreamingNavigation(
                     playlist = localPlaylist,
                     currentSong = currentSong,
                     isPlaying = isPlaying,
-                    progress = progress,
                     onPlayPause = { localMusicViewModel.togglePlayPause() },
                     onPlayerClick = {
                         navController.navigate(StreamingScreen.Player.route) {
@@ -1672,7 +1671,7 @@ fun StreamingNavigation(
                 PlayerScreen(
                     song = currentSong,
                     isPlaying = isPlaying,
-                    progress = progress,
+                    progress = { progress },
                     location = currentDevice,
                     queuePosition = (queueState.currentIndex + 1).coerceAtLeast(1),
                     queueTotal = queueState.songs.size.coerceAtLeast(1),

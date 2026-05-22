@@ -236,7 +236,7 @@ import androidx.navigation.NavController
 fun PlayerScreen(
     song: Song?,
     isPlaying: Boolean,
-    progress: Float,
+    progress: () -> Float,
     location: PlaybackLocation?,
     queuePosition: Int = 1,
     queueTotal: Int = 1,
@@ -797,14 +797,18 @@ fun PlayerScreen(
 
     // Calculate current and total time
     val totalTimeMs = song?.duration?.takeIf { it > 0 } ?: resolvedDurationMs.takeIf { it > 0 } ?: 0L
-    val currentTimeMs = (totalTimeMs * progress).toLong()
+    val currentTimeMs by remember(totalTimeMs) {
+        derivedStateOf { (totalTimeMs * progress()).toLong() }
+    }
     val canSeek = totalTimeMs > 0
     
     // Calculate scrub preview time when enhanced seeking is active
     val scrubTimeMs = (totalTimeMs * scrubProgress).toLong()
 
     // Format current and total time
-    val currentTimeFormatted = formatDuration(currentTimeMs, useHoursFormat)
+    val currentTimeFormatted by remember(totalTimeMs, useHoursFormat) {
+        derivedStateOf { formatDuration(currentTimeMs, useHoursFormat) }
+    }
     val totalTimeFormatted = formatDuration(totalTimeMs, useHoursFormat)
     val scrubTimeFormatted = formatDuration(scrubTimeMs, useHoursFormat)
 
@@ -2444,10 +2448,10 @@ fun PlayerScreen(
                                             .height(8.dp),
                                         trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
                                     )
-                                } else if (playerProgressStyle == "WAVY") {
+                                                                } else if (playerProgressStyle == "WAVY") {
                                     // WaveSlider: proper animated waves + morphing thumb + play/pause reaction
                                     WaveSlider(
-                                        value = if (isScrubbing && enhancedSeekingEnabled) scrubProgress else progress,
+                                        value = if (isScrubbing && enhancedSeekingEnabled) scrubProgress else progress(),
                                         onValueChange = { newValue ->
                                             if (canSeek && enhancedSeekingEnabled) {
                                                 isScrubbing = true
@@ -2493,7 +2497,7 @@ fun PlayerScreen(
                                     ) {
                                         // Use a clickable slider overlay for seeking
                                         StyledProgressBar(
-                                            progress = progress,
+                                            progress = progress(),
                                             style = progressStyle,
                                             modifier = Modifier.fillMaxWidth(),
                                             progressColor = MaterialTheme.colorScheme.primary,
@@ -2533,7 +2537,7 @@ fun PlayerScreen(
                                         
                                         // Invisible slider for seeking - overlays the progress bar
                                         androidx.compose.material3.Slider(
-                                            value = if (isScrubbing && enhancedSeekingEnabled) scrubProgress else progress,
+                                            value = if (isScrubbing && enhancedSeekingEnabled) scrubProgress else progress(),
                                             onValueChange = { newValue ->
                                                 if (canSeek && enhancedSeekingEnabled) {
                                                     isScrubbing = true
@@ -2623,7 +2627,7 @@ fun PlayerScreen(
                                         HapticFeedbackType.LongPress
                                     )
                                     onSeek(
-                                        (currentTimeMs - 10000).coerceAtLeast(0L)
+                                        ((progress() * totalTimeMs).toLong() - 10000).coerceAtLeast(0L)
                                             .toFloat() / totalTimeMs
                                     )
                                 }
@@ -2636,7 +2640,7 @@ fun PlayerScreen(
                                         HapticFeedbackType.LongPress
                                     )
                                     onSeek(
-                                        (currentTimeMs + 10000).coerceAtMost(totalTimeMs.toLong())
+                                        ((progress() * totalTimeMs).toLong() + 10000).coerceAtMost(totalTimeMs.toLong())
                                             .toFloat() / totalTimeMs
                                     )
                                 }
