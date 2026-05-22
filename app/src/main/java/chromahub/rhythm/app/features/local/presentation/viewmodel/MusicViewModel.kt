@@ -2,9 +2,6 @@ package chromahub.rhythm.app.features.local.presentation.viewmodel
 
 import android.app.Activity
 import android.app.Application
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -22,7 +19,6 @@ import chromahub.rhythm.app.shared.data.model.AutoEQDatabase
 import chromahub.rhythm.app.shared.data.model.AutoEQProfile
 import chromahub.rhythm.app.util.AutoEQManager
 import android.util.LruCache
-import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -119,11 +115,9 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         // Avoid rapid controller rebuild storms during cold start/service reconnect windows.
         private const val CONTROLLER_CONNECT_MIN_INTERVAL_MS = 750L
 
-        private const val OPERATIONS_NOTIFICATION_CHANNEL_ID = "rhythm_operations"
         private const val MEDIA_SCAN_NOTIFICATION_ID = 1501
         private const val PLAYLIST_IMPORT_NOTIFICATION_ID = 1502
         private const val PLAYLIST_EXPORT_NOTIFICATION_ID = 1503
-        private const val LIBRARY_SETUP_NOTIFICATION_ID = 1504
         private const val OPERATION_NOTIFICATION_AUTO_DISMISS_MS = 6000L
 
         private const val DEFAULT_BLUETOOTH_LYRIC_LINE = "No lyrics"
@@ -133,16 +127,19 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private val repository = MusicRepository(application)
-    private val notificationManager =
-        application.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    private val operationNotificationDismissJobs = mutableMapOf<Int, Job>()
-    private var mediaScanNotificationJob: Job? = null
+    private val notificationManagerHelper = LibraryNotificationManager(application)
+    private val metadataManagerHelper = LibraryMetadataManager(
+        context = application,
+        scope = viewModelScope,
+        getCurrentSong = { _currentSong.value },
+        updateCurrentSongMetadata = { updatedSong -> updateCurrentSongMetadata(updatedSong) },
+        bulkUpdateSongs = { updatedSongsMap ->
+            _songs.value = _songs.value.map { song ->
+                updatedSongsMap[song.id] ?: song
+            }
+        }
+    )
     private var mediaScanNotificationSequence: Long = 0L
-    private var lastMediaScanProgressKey: String? = null
-    private var lastLibrarySetupProgressText: String? = null
-    private var librarySetupNotificationArmed = false
-    private var librarySetupProcessingObserved = false
-    private var librarySetupCompletionDebounceJob: Job? = null
     
     // Job for debouncing ContentObserver-triggered refreshes
     private var mediaStoreRefreshJob: kotlinx.coroutines.Job? = null
@@ -731,12 +728,12 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     val targetPlaylistId: StateFlow<String?> = _targetPlaylistId.asStateFlow()
     
     // Pending lyrics write request for Android 11+ permission flow
-    private val _pendingLyricsWriteRequest = MutableStateFlow<PendingLyricsWriteRequest?>(null)
-    val pendingLyricsWriteRequest: StateFlow<PendingLyricsWriteRequest?> = _pendingLyricsWriteRequest.asStateFlow()
+    val pendingLyricsWriteRequest: StateFlow<PendingLyricsWriteRequest?>
+        get() = metadataManagerHelper.pendingLyricsWriteRequest
 
     // Pending write request for metadata editing (Android 11+ permission flow)
-    private val _pendingWriteRequest = MutableStateFlow<PendingWriteRequest?>(null)
-    val pendingWriteRequest: StateFlow<PendingWriteRequest?> = _pendingWriteRequest.asStateFlow()
+    val pendingWriteRequest: StateFlow<PendingWriteRequest?>
+        get() = metadataManagerHelper.pendingWriteRequest
 
     // Sort library functionality - Load saved sort order from AppSettings
     private val _sortOrder = MutableStateFlow(
@@ -1999,158 +1996,28 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun armLibrarySetupCompletionNotification() {
-        librarySetupNotificationArmed = true
-        librarySetupProcessingObserved = false
-        lastLibrarySetupProgressText = null
+        notificationManagerHelper.armLibrarySetupCompletionNotification()
     }
 
     private fun disarmLibrarySetupCompletionNotification() {
-        librarySetupCompletionDebounceJob?.cancel()
-        librarySetupCompletionDebounceJob = null
-        librarySetupNotificationArmed = false
-        librarySetupProcessingObserved = false
-        lastLibrarySetupProgressText = null
-    }
-
-    private fun resolveLibrarySetupProgressText(
-        context: Application,
-        isMediaScanRunning: Boolean,
-        isGenreDetectionRunning: Boolean,
-        isArtworkFetching: Boolean,
-        isMetadataExtractionRunning: Boolean
-    ): String {
-        return when {
-            isMediaScanRunning -> context.getString(R.string.scanning_media)
-            isGenreDetectionRunning -> context.getString(R.string.detecting_genres)
-            isArtworkFetching -> context.getString(R.string.fetching_artwork)
-            isMetadataExtractionRunning -> context.getString(R.string.extracting_metadata)
-            else -> context.getString(R.string.processing_library)
-        }
+        notificationManagerHelper.disarmLibrarySetupCompletionNotification()
     }
 
     private fun startLibrarySetupCompletionMonitor() {
-        viewModelScope.launch {
-            combine(
-                isBackgroundProcessing,
-                isMediaScanning,
-                isGenreDetectionRunning,
-                isFetchingArtwork,
-                isExtractingMetadata
-            ) { processing, mediaScanRunning, genreDetectionRunning, artworkFetching, metadataExtractionRunning ->
-                listOf(
-                    processing,
-                    mediaScanRunning,
-                    genreDetectionRunning,
-                    artworkFetching,
-                    metadataExtractionRunning
-                )
-            }.collect { state ->
-                if (!librarySetupNotificationArmed) {
-                    return@collect
-                }
-
-                val processing = state[0]
-                val mediaScanRunning = state[1]
-                val genreDetectionRunning = state[2]
-                val artworkFetching = state[3]
-                val metadataExtractionRunning = state[4]
-
-                val context = getApplication<Application>()
-
-                if (processing) {
-                    librarySetupProcessingObserved = true
-                    librarySetupCompletionDebounceJob?.cancel()
-                    librarySetupCompletionDebounceJob = null
-
-                    // Media scan has its own dedicated progress notification.
-                    // Show library-setup progress only for post-scan background tasks.
-                    if (mediaScanRunning && !genreDetectionRunning && !artworkFetching && !metadataExtractionRunning) {
-                        return@collect
-                    }
-
-                    val progressText = resolveLibrarySetupProgressText(
-                        context = context,
-                        isMediaScanRunning = mediaScanRunning,
-                        isGenreDetectionRunning = genreDetectionRunning,
-                        isArtworkFetching = artworkFetching,
-                        isMetadataExtractionRunning = metadataExtractionRunning
-                    )
-
-                    if (progressText != lastLibrarySetupProgressText) {
-                        lastLibrarySetupProgressText = progressText
-                        showOperationProgressNotification(
-                            notificationId = LIBRARY_SETUP_NOTIFICATION_ID,
-                            title = context.getString(R.string.notification_library_setup_title),
-                            content = progressText,
-                            indeterminate = true
-                        )
-                    }
-
-                    return@collect
-                }
-
-                if (!librarySetupProcessingObserved) {
-                    return@collect
-                }
-
-                librarySetupCompletionDebounceJob?.cancel()
-                librarySetupCompletionDebounceJob = viewModelScope.launch {
-                    delay(5500)
-                    if (!librarySetupNotificationArmed || isBackgroundProcessing.value) {
-                        return@launch
-                    }
-
-                    val summary = context.getString(
-                        R.string.notification_library_setup_complete_summary,
-                        filteredSongs.value.size,
-                        filteredAlbums.value.size,
-                        filteredArtists.value.size
-                    )
-
-                    showOperationResultNotification(
-                        notificationId = LIBRARY_SETUP_NOTIFICATION_ID,
-                        title = context.getString(R.string.notification_library_setup_title),
-                        content = summary,
-                        isError = false,
-                        autoDismissMs = 5000L
-                    )
-
-                    disarmLibrarySetupCompletionNotification()
-                }
-            }
-        }
-    }
-
-    private fun ensureOperationsNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-
-        val context = getApplication<Application>()
-        val channel = NotificationChannel(
-            OPERATIONS_NOTIFICATION_CHANNEL_ID,
-            context.getString(R.string.notification_operations_channel_name),
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = context.getString(R.string.notification_operations_channel_desc)
-            setShowBadge(false)
-            enableVibration(false)
-        }
-        notificationManager.createNotificationChannel(channel)
-    }
-
-    private fun createMainActivityPendingIntent(requestCode: Int): PendingIntent {
-        val context = getApplication<Application>()
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        return PendingIntent.getActivity(
-            context,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        notificationManagerHelper.startLibrarySetupCompletionMonitor(
+            scope = viewModelScope,
+            isBackgroundProcessing = isBackgroundProcessing,
+            isMediaScanning = isMediaScanning,
+            isGenreDetectionRunning = isGenreDetectionRunning,
+            isFetchingArtwork = isFetchingArtwork,
+            isExtractingMetadata = isExtractingMetadata,
+            filteredSongsSize = { filteredSongs.value.size },
+            filteredAlbumsSize = { filteredAlbums.value.size },
+            filteredArtistsSize = { filteredArtists.value.size }
         )
     }
 
-    private fun showOperationProgressNotification(
+    fun showOperationProgressNotification(
         notificationId: Int,
         title: String,
         content: String,
@@ -2159,31 +2026,18 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         indeterminate: Boolean = true,
         requestCode: Int = notificationId
     ) {
-        ensureOperationsNotificationChannel()
-        operationNotificationDismissJobs.remove(notificationId)?.cancel()
-
-        val notification = NotificationCompat.Builder(
-            getApplication<Application>(),
-            OPERATIONS_NOTIFICATION_CHANNEL_ID
+        notificationManagerHelper.showOperationProgressNotification(
+            notificationId = notificationId,
+            title = title,
+            content = content,
+            progress = progress,
+            max = max,
+            indeterminate = indeterminate,
+            requestCode = requestCode
         )
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(content)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
-            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOnlyAlertOnce(true)
-            .setSilent(true)
-            .setOngoing(true)
-            .setAutoCancel(false)
-            .setProgress(max.coerceAtLeast(0), progress.coerceAtLeast(0), indeterminate)
-            .setContentIntent(createMainActivityPendingIntent(requestCode))
-            .build()
-
-        notificationManager.notify(notificationId, notification)
     }
 
-    private fun showOperationResultNotification(
+    fun showOperationResultNotification(
         notificationId: Int,
         title: String,
         content: String,
@@ -2191,137 +2045,31 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         autoDismissMs: Long = OPERATION_NOTIFICATION_AUTO_DISMISS_MS,
         requestCode: Int = notificationId
     ) {
-        ensureOperationsNotificationChannel()
-        operationNotificationDismissJobs.remove(notificationId)?.cancel()
-
-        val notification = NotificationCompat.Builder(
-            getApplication<Application>(),
-            OPERATIONS_NOTIFICATION_CHANNEL_ID
+        notificationManagerHelper.showOperationResultNotification(
+            scope = viewModelScope,
+            notificationId = notificationId,
+            title = title,
+            content = content,
+            isError = isError,
+            autoDismissMs = autoDismissMs,
+            requestCode = requestCode
         )
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(content)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
-            .setCategory(
-                if (isError) {
-                    NotificationCompat.CATEGORY_ERROR
-                } else {
-                    NotificationCompat.CATEGORY_STATUS
-                }
-            )
-            .setPriority(
-                if (isError) {
-                    NotificationCompat.PRIORITY_DEFAULT
-                } else {
-                    NotificationCompat.PRIORITY_LOW
-                }
-            )
-            .setOnlyAlertOnce(true)
-            .setOngoing(false)
-            .setAutoCancel(true)
-            .setProgress(0, 0, false)
-            .setContentIntent(createMainActivityPendingIntent(requestCode))
-            .build()
-
-        notificationManager.notify(notificationId, notification)
-        if (autoDismissMs > 0L) {
-            operationNotificationDismissJobs[notificationId] = viewModelScope.launch {
-                delay(autoDismissMs)
-                notificationManager.cancel(notificationId)
-                operationNotificationDismissJobs.remove(notificationId)
-            }
-        }
     }
 
     private fun startMediaScanProgressNotifications(sequence: Long) {
-        val context = getApplication<Application>()
-        mediaScanNotificationJob?.cancel()
-        lastMediaScanProgressKey = null
-
-        showOperationProgressNotification(
-            notificationId = MEDIA_SCAN_NOTIFICATION_ID,
-            title = context.getString(R.string.notification_media_scan_title),
-            content = context.getString(R.string.scanning_media),
-            indeterminate = true
+        notificationManagerHelper.startMediaScanProgressNotifications(
+            scope = viewModelScope,
+            repository = repository,
+            sequence = sequence
         )
-
-        mediaScanNotificationJob = viewModelScope.launch {
-            repository.scanProgress.collectLatest { progressState ->
-                if (sequence != mediaScanNotificationSequence) {
-                    return@collectLatest
-                }
-
-                val rawStage = progressState.stage.ifBlank { "Songs" }
-                if (rawStage.equals("Idle", ignoreCase = true)) {
-                    return@collectLatest
-                }
-
-                val stageLabel = when {
-                    rawStage.equals("Songs", ignoreCase = true) -> {
-                        context.getString(R.string.notification_media_scan_stage_songs)
-                    }
-
-                    rawStage.equals("Saving Database", ignoreCase = true) -> {
-                        context.getString(R.string.notification_media_scan_stage_saving)
-                    }
-
-                    rawStage.equals("Complete", ignoreCase = true) -> {
-                        context.getString(R.string.notification_media_scan_stage_finishing)
-                    }
-
-                    rawStage.equals("Error", ignoreCase = true) -> {
-                        context.getString(R.string.notification_media_scan_failed)
-                    }
-
-                    else -> rawStage
-                }
-
-                val hasDeterminateProgress = progressState.total > 0
-                val safeTotal = if (hasDeterminateProgress) progressState.total else 0
-                val safeCurrent = if (hasDeterminateProgress) {
-                    progressState.current.coerceIn(0, progressState.total)
-                } else {
-                    0
-                }
-                val content = if (hasDeterminateProgress) {
-                    "$stageLabel ($safeCurrent/$safeTotal)"
-                } else {
-                    stageLabel
-                }
-
-                val progressKey = "$rawStage|$safeCurrent|$safeTotal"
-                if (progressKey == lastMediaScanProgressKey) {
-                    return@collectLatest
-                }
-                lastMediaScanProgressKey = progressKey
-
-                showOperationProgressNotification(
-                    notificationId = MEDIA_SCAN_NOTIFICATION_ID,
-                    title = context.getString(R.string.notification_media_scan_title),
-                    content = content,
-                    progress = safeCurrent,
-                    max = safeTotal,
-                    indeterminate = !hasDeterminateProgress
-                )
-            }
-        }
     }
 
     private fun stopMediaScanProgressNotifications() {
-        mediaScanNotificationJob?.cancel()
-        mediaScanNotificationJob = null
-        lastMediaScanProgressKey = null
+        notificationManagerHelper.stopMediaScanProgressNotifications()
     }
 
     private fun clearOperationNotifications() {
-        disarmLibrarySetupCompletionNotification()
-        stopMediaScanProgressNotifications()
-        operationNotificationDismissJobs.values.forEach { it.cancel() }
-        operationNotificationDismissJobs.clear()
-        notificationManager.cancel(MEDIA_SCAN_NOTIFICATION_ID)
-        notificationManager.cancel(PLAYLIST_IMPORT_NOTIFICATION_ID)
-        notificationManager.cancel(PLAYLIST_EXPORT_NOTIFICATION_ID)
-        notificationManager.cancel(LIBRARY_SETUP_NOTIFICATION_ID)
+        notificationManagerHelper.clearOperationNotifications()
     }
 
     /**
@@ -2460,199 +2208,20 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         onError: (String) -> Unit,
         onPermissionRequired: ((PendingWriteRequest) -> Unit)? = null
     ) {
-        viewModelScope.launch {
-            try {
-                // Try to update the actual file metadata first
-                val context = getApplication<Application>().applicationContext
-
-                // Early format check — unsupported formats cannot be tag-edited
-                val fileExtension = run {
-                    val projection = arrayOf(android.provider.MediaStore.Audio.Media.DATA)
-                    context.contentResolver.query(song.uri, projection, null, null, null)
-                        ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
-                        ?.substringAfterLast('.', "")
-                        ?.lowercase()
-                        ?: song.uri.lastPathSegment?.substringAfterLast('.', "") ?: ""
-                }
-                if (fileExtension.isNotEmpty() && !chromahub.rhythm.app.util.MediaUtils.isSupportedByJaudiotagger(fileExtension)) {
-                    withContext(Dispatchers.Main) {
-                        val msg = ".$fileExtension files are not supported for metadata editing. Supported: MP3, FLAC, OGG, WAV, M4A, WMA"
-                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
-                        onError(msg)
-                    }
-                    return@launch
-                }
-
-                val success = withContext(Dispatchers.IO) {
-                    chromahub.rhythm.app.util.MediaUtils.updateSongMetadata(
-                        context = context,
-                        song = song,
-                        newTitle = title,
-                        newArtist = artist,
-                        newAlbum = album,
-                        newGenre = genre,
-                        newYear = year,
-                        newTrackNumber = trackNumber,
-                        artworkUri = artworkUri,
-                        removeArtwork = removeArtwork
-                    )
-                }
-
-                val updatedArtworkUri = when {
-                    removeArtwork -> {
-                        clearCachedArtwork(context, song.id)
-                        persistArtworkOverrideRemoved(context, song.id)
-                        null
-                    }
-                    artworkUri != null -> {
-                        try {
-                            val cachedUri = saveArtworkToCache(context, song, artworkUri) ?: artworkUri
-                            persistArtworkOverrideUri(context, song.id, cachedUri)
-                            cachedUri
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Failed to cache updated artwork for ${song.title}", e)
-                            artworkUri
-                        }
-                    }
-                    else -> song.artworkUri
-                }
-                
-                // Always update in-memory data
-                val updatedSong = song.copy(
-                    title = title,
-                    artist = artist,
-                    album = album,
-                    genre = genre,
-                    year = year,
-                    trackNumber = trackNumber,
-                    artworkUri = updatedArtworkUri
-                )
-                
-                // Update the song using existing function
-                updateCurrentSongMetadata(updatedSong)
-                
-                // Update genre cache so it persists across library rescans
-                if (genre.isNotBlank()) {
-                    try {
-                        val genrePrefs = context.getSharedPreferences("genre_cache", android.content.Context.MODE_PRIVATE)
-                        genrePrefs.edit().putString("genre_${song.id}", genre).apply()
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Failed to update genre cache for song ${song.id}", e)
-                    }
-                }
-                
-                withContext(Dispatchers.Main) {
-                    if (success) {
-                        Log.d(TAG, "Successfully updated file metadata for: $title by $artist")
-                        onSuccess(true)
-                    } else {
-                        // File update failed - on Android 11+, try the permission request approach
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            Log.d(TAG, "File write failed on Android 11+, attempting createWriteRequest approach")
-                            val pendingRequest = withContext(Dispatchers.IO) {
-                                chromahub.rhythm.app.util.MediaUtils.createWriteRequestForSong(
-                                    context = context,
-                                    song = song,
-                                    newTitle = title,
-                                    newArtist = artist,
-                                    newAlbum = album,
-                                    newGenre = genre,
-                                    newYear = year,
-                                    newTrackNumber = trackNumber,
-                                    artworkUri = artworkUri,
-                                    removeArtwork = removeArtwork
-                                )
-                            }
-                            
-                            if (pendingRequest != null) {
-                                Log.d(TAG, "Created pending write request, triggering permission dialog")
-                                _pendingWriteRequest.value = pendingRequest
-                                onPermissionRequired?.invoke(pendingRequest)
-                                    ?: onError("Permission required to modify this file. Please grant access when prompted.")
-                            } else {
-                                Log.w(TAG, "Failed to create write request")
-                                onSuccess(false)
-                            }
-                        } else {
-                            Log.w(TAG, "File metadata write failed")
-                            onSuccess(false)
-                        }
-                    }
-                }
-                
-            } catch (e: chromahub.rhythm.app.util.RecoverableSecurityExceptionWrapper) {
-                // Android 11+ scoped storage restriction - file not owned by app
-                Log.w(TAG, "RecoverableSecurityException - attempting createWriteRequest approach")
-                
-                val context = getApplication<Application>().applicationContext
-                
-                // Update in-memory data first
-                val updatedSong = song.copy(
-                    title = title,
-                    artist = artist,
-                    album = album,
-                    genre = genre,
-                    year = year,
-                    trackNumber = trackNumber,
-                    artworkUri = when {
-                        removeArtwork -> {
-                            clearCachedArtwork(context, song.id)
-                            persistArtworkOverrideRemoved(context, song.id)
-                            null
-                        }
-                        artworkUri != null -> {
-                            try {
-                                val cachedUri = saveArtworkToCache(context, song, artworkUri) ?: artworkUri
-                                persistArtworkOverrideUri(context, song.id, cachedUri)
-                                cachedUri
-                            } catch (_: Exception) {
-                                artworkUri
-                            }
-                        }
-                        else -> song.artworkUri
-                    }
-                )
-                updateCurrentSongMetadata(updatedSong)
-                
-                // Try to create a write request for Android 11+
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    val pendingRequest = withContext(Dispatchers.IO) {
-                        chromahub.rhythm.app.util.MediaUtils.createWriteRequestForSong(
-                            context = context,
-                            song = song,
-                            newTitle = title,
-                            newArtist = artist,
-                            newAlbum = album,
-                            newGenre = genre,
-                            newYear = year,
-                            newTrackNumber = trackNumber,
-                            artworkUri = artworkUri,
-                            removeArtwork = removeArtwork
-                        )
-                    }
-                    
-                    withContext(Dispatchers.Main) {
-                        if (pendingRequest != null) {
-                            Log.d(TAG, "Created pending write request after RecoverableSecurityException")
-                            _pendingWriteRequest.value = pendingRequest
-                            onPermissionRequired?.invoke(pendingRequest)
-                                ?: onError("Permission required to modify this file. Please grant access when prompted.")
-                        } else {
-                            onError("Cannot modify this file. Changes saved to library only.")
-                        }
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        onError("Cannot modify this file: permission denied. Changes saved to library only.")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error saving metadata", e)
-                withContext(Dispatchers.Main) {
-                    onError("Failed to save metadata: ${e.message ?: "Unknown error"}")
-                }
-            }
-        }
+        metadataManagerHelper.saveMetadataChanges(
+            song = song,
+            title = title,
+            artist = artist,
+            album = album,
+            genre = genre,
+            year = year,
+            trackNumber = trackNumber,
+            artworkUri = artworkUri,
+            removeArtwork = removeArtwork,
+            onSuccess = onSuccess,
+            onError = onError,
+            onPermissionRequired = onPermissionRequired
+        )
     }
     
     /**
@@ -2663,79 +2232,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        val pendingRequest = _pendingWriteRequest.value
-        if (pendingRequest == null) {
-            Log.w(TAG, "No pending write request to complete")
-            onError("No pending write request")
-            return
-        }
-        
-        viewModelScope.launch {
-            try {
-                val context = getApplication<Application>().applicationContext
-                val success = withContext(Dispatchers.IO) {
-                    chromahub.rhythm.app.util.MediaUtils.completeWriteAfterPermissionGranted(
-                        context = context,
-                        pendingRequest = pendingRequest
-                    )
-                }
-                
-                // Clear the pending request
-                _pendingWriteRequest.value = null
-                
-                if (success) {
-                    val updatedArtworkUri = when {
-                        pendingRequest.removeArtwork -> {
-                            clearCachedArtwork(context, pendingRequest.song.id)
-                            persistArtworkOverrideRemoved(context, pendingRequest.song.id)
-                            null
-                        }
-                        !pendingRequest.artworkUriString.isNullOrBlank() -> {
-                            val pendingArtworkUri = pendingRequest.artworkUriString.toUri()
-                            try {
-                                val cachedUri = saveArtworkToCache(
-                                    context,
-                                    pendingRequest.song,
-                                    pendingArtworkUri
-                                ) ?: pendingArtworkUri
-                                persistArtworkOverrideUri(context, pendingRequest.song.id, cachedUri)
-                                cachedUri
-                            } catch (_: Exception) {
-                                pendingArtworkUri
-                            }
-                        }
-                        else -> pendingRequest.song.artworkUri
-                    }
-
-                    // Update in-memory data
-                    val updatedSong = pendingRequest.song.copy(
-                        title = pendingRequest.newTitle,
-                        artist = pendingRequest.newArtist,
-                        album = pendingRequest.newAlbum,
-                        genre = pendingRequest.newGenre,
-                        year = pendingRequest.newYear,
-                        trackNumber = pendingRequest.newTrackNumber,
-                        artworkUri = updatedArtworkUri
-                    )
-                    updateCurrentSongMetadata(updatedSong)
-                    
-                    withContext(Dispatchers.Main) {
-                        Log.d(TAG, "Successfully completed metadata write after permission granted")
-                        onSuccess()
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        onError("Failed to write metadata even after permission was granted")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error completing metadata write after permission", e)
-                _pendingWriteRequest.value = null
-                withContext(Dispatchers.Main) {
-                    onError("Error: ${e.message}")
-                }
-            }
-        }
+        metadataManagerHelper.completeMetadataWriteAfterPermission(onSuccess, onError)
     }
     
     /**
@@ -2743,14 +2240,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
      * Cleans up the pending request
      */
     fun cancelPendingMetadataWrite() {
-        val pendingRequest = _pendingWriteRequest.value
-        if (pendingRequest != null) {
-            viewModelScope.launch(Dispatchers.IO) {
-                chromahub.rhythm.app.util.MediaUtils.cleanupPendingWriteRequest(pendingRequest)
-            }
-            _pendingWriteRequest.value = null
-            Log.d(TAG, "Cancelled pending metadata write request")
-        }
+        metadataManagerHelper.cancelPendingMetadataWrite()
     }
 
     /**
@@ -2768,212 +2258,17 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         onProgress: (Int, Int) -> Unit,
         onComplete: (successCount: Int, failCount: Int) -> Unit
     ) {
-        viewModelScope.launch {
-            val context = getApplication<Application>().applicationContext
-            var successCount = 0
-            var failCount = 0
-            // Collect updated songs for bulk in-memory update at the end
-            val updatedSongs = mutableMapOf<String, Song>()
-
-            songs.forEachIndexed { index, song ->
-                try {
-                    val newArtist = artist ?: song.artist
-                    val newAlbum = album ?: song.album
-                    val newGenre = genre ?: (song.genre ?: "")
-                    val newYear = year ?: song.year
-                    val hasArtworkEdit = artworkUri != null || removeArtwork
-
-                    // Check if file format is supported before attempting write
-                    val fileExtension = try {
-                        val projection = arrayOf(android.provider.MediaStore.Audio.Media.DATA)
-                        context.contentResolver.query(song.uri, projection, null, null, null)
-                            ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
-                            ?.substringAfterLast('.', "")
-                            ?.lowercase()
-                            ?: song.uri.lastPathSegment?.substringAfterLast('.', "") ?: ""
-                    } catch (_: Exception) { "" }
-
-                    val formatSupported = fileExtension.isEmpty() ||
-                        chromahub.rhythm.app.util.MediaUtils.isSupportedByJaudiotagger(fileExtension)
-
-                    val success = if (formatSupported) {
-                        try {
-                            val fileWriteSuccess = withContext(Dispatchers.IO) {
-                                chromahub.rhythm.app.util.MediaUtils.updateSongMetadata(
-                                    context = context,
-                                    song = song,
-                                    newTitle = song.title,
-                                    newArtist = newArtist,
-                                    newAlbum = newAlbum,
-                                    newGenre = newGenre,
-                                    newYear = newYear,
-                                    newTrackNumber = song.trackNumber,
-                                    artworkUri = artworkUri,
-                                    removeArtwork = removeArtwork
-                                )
-                            }
-
-                            if (!fileWriteSuccess && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                // Batch flow cannot open per-item permission dialogs like single-edit.
-                                // Count this as partial success when MediaStore/app-level state is still updated.
-                                Log.w(
-                                    TAG,
-                                    "Batch edit: file tag write blocked by scoped storage for ${song.title}; counting as partial success"
-                                )
-                                true
-                            } else {
-                                fileWriteSuccess
-                            }
-                        } catch (e: chromahub.rhythm.app.util.RecoverableSecurityExceptionWrapper) {
-                            // On Android 11+, file write requires per-file user permission (scoped storage).
-                            // MediaStore was already updated in updateSongMetadata before the exception.
-                            // Count as partial success — in-memory and MediaStore updated, file tags not.
-                            Log.w(TAG, "Batch edit: scoped storage restriction for ${song.title}, MediaStore updated only")
-                            true
-                        }
-                    } else {
-                        // Unsupported format — update MediaStore only via ContentValues
-                        val mediaStoreSuccess = try {
-                            withContext(Dispatchers.IO) {
-                                val values = android.content.ContentValues().apply {
-                                    put(android.provider.MediaStore.Audio.Media.ARTIST, newArtist)
-                                    put(android.provider.MediaStore.Audio.Media.ALBUM, newAlbum)
-                                    if (newGenre.isNotBlank() && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                                        put(android.provider.MediaStore.Audio.Media.GENRE, newGenre)
-                                    }
-                                    if (newYear > 0) {
-                                        put(android.provider.MediaStore.Audio.Media.YEAR, newYear)
-                                    }
-                                }
-                                context.contentResolver.update(song.uri, values, null, null) > 0
-                            }
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Batch edit: MediaStore-only update failed for ${song.title}", e)
-                            false
-                        }
-
-                        if (hasArtworkEdit) {
-                            Log.w(
-                                TAG,
-                                "Batch artwork update skipped for unsupported format .$fileExtension (${song.title})"
-                            )
-                            false
-                        } else {
-                            mediaStoreSuccess
-                        }
-                    }
-
-                    val updatedArtworkUri = when {
-                        removeArtwork -> {
-                            clearCachedArtwork(context, song.id)
-                            persistArtworkOverrideRemoved(context, song.id)
-                            null
-                        }
-                        artworkUri != null -> {
-                            try {
-                                val cachedUri = saveArtworkToCache(context, song, artworkUri) ?: artworkUri
-                                persistArtworkOverrideUri(context, song.id, cachedUri)
-                                cachedUri
-                            } catch (_: Exception) {
-                                artworkUri
-                            }
-                        }
-                        else -> song.artworkUri
-                    }
-
-                    val updatedSong = song.copy(
-                        artist = newArtist,
-                        album = newAlbum,
-                        genre = newGenre,
-                        year = newYear,
-                        artworkUri = updatedArtworkUri
-                    )
-                    // Track for bulk update
-                    updatedSongs[song.id] = updatedSong
-                    // Also update currently playing song if it matches
-                    updateCurrentSongMetadata(updatedSong)
-
-                    if (newGenre.isNotBlank()) {
-                        try {
-                            val genrePrefs = context.getSharedPreferences("genre_cache", android.content.Context.MODE_PRIVATE)
-                            genrePrefs.edit().putString("genre_${song.id}", newGenre).apply()
-                        } catch (_: Exception) {}
-                    }
-
-                    if (success) successCount++ else failCount++
-                } catch (e: Exception) {
-                    Log.e(TAG, "Batch edit failed for ${song.title}", e)
-                    failCount++
-                }
-                withContext(Dispatchers.Main) {
-                    onProgress(index + 1, songs.size)
-                }
-            }
-
-            // Bulk update the in-memory song list so UI reflects changes immediately
-            if (updatedSongs.isNotEmpty()) {
-                _songs.value = _songs.value.map { song ->
-                    updatedSongs[song.id] ?: song
-                }
-            }
-
-            withContext(Dispatchers.Main) {
-                onComplete(successCount, failCount)
-            }
-        }
-    }
-    
-    private suspend fun saveArtworkToCache(context: Context, song: Song, artworkUri: Uri): Uri? {
-        try {
-            context.contentResolver.openInputStream(artworkUri)?.use { inputStream ->
-                val artworkFile = File(context.cacheDir, "artwork_${song.id}.jpg")
-                artworkFile.outputStream().use { output ->
-                    inputStream.copyTo(output)
-                }
-                Log.d(TAG, "Artwork saved to cache: ${artworkFile.absolutePath}")
-                return artworkFile.toUri()
-            }
-            return null
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to save artwork to cache", e)
-            throw e
-        }
-    }
-
-    private fun persistArtworkOverrideRemoved(context: Context, songId: String) {
-        try {
-            context.getSharedPreferences("artwork_overrides", Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean("removed_$songId", true)
-                .remove("uri_$songId")
-                .apply()
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to persist removed artwork override for song $songId", e)
-        }
-    }
-
-    private fun persistArtworkOverrideUri(context: Context, songId: String, artworkUri: Uri?) {
-        if (artworkUri == null) return
-        try {
-            context.getSharedPreferences("artwork_overrides", Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean("removed_$songId", false)
-                .putString("uri_$songId", artworkUri.toString())
-                .apply()
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to persist artwork override URI for song $songId", e)
-        }
-    }
-
-    private fun clearCachedArtwork(context: Context, songId: String) {
-        try {
-            val cachedArtwork = File(context.cacheDir, "artwork_${songId}.jpg")
-            if (cachedArtwork.exists()) {
-                cachedArtwork.delete()
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to clear cached artwork for song $songId", e)
-        }
+        metadataManagerHelper.batchEditMetadata(
+            songs = songs,
+            artist = artist,
+            album = album,
+            genre = genre,
+            year = year,
+            artworkUri = artworkUri,
+            removeArtwork = removeArtwork,
+            onProgress = onProgress,
+            onComplete = onComplete
+        )
     }
     
     /**
@@ -6855,105 +6150,12 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         onError: ((String) -> Unit)? = null,
         onPermissionRequired: ((PendingLyricsWriteRequest) -> Unit)? = null
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val song = _currentSong.value
-                if (song == null) {
-                    Log.w(TAG, "Cannot embed lyrics - no current song")
-                    return@launch
-                }
-                val context = getApplication<Application>()
-
-                // Early format check — OGG Opus and other unsupported codecs cannot be tag-edited
-                val fileExtension = run {
-                    val projection = arrayOf(android.provider.MediaStore.Audio.Media.DATA)
-                    context.contentResolver.query(song.uri, projection, null, null, null)
-                        ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
-                        ?.substringAfterLast('.', "")
-                        ?.lowercase()
-                        ?: song.uri.lastPathSegment?.substringAfterLast('.', "") ?: ""
-                }
-                if (fileExtension.isNotEmpty() && !MediaUtils.isSupportedByJaudiotagger(fileExtension)) {
-                    withContext(Dispatchers.Main) {
-                        val msg = context.getString(R.string.lyrics_embed_failed) +
-                            " — .$fileExtension files are not supported. Try MP3, FLAC, OGG, WAV, or M4A."
-                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
-                        onError?.invoke(msg)
-                    }
-                    return@launch
-                }
-
-                val success = MediaUtils.embedLyricsInFile(context, song, lyrics)
-                withContext(Dispatchers.Main) {
-                    if (success) {
-                        android.widget.Toast.makeText(
-                            context,
-                            context.getString(R.string.lyrics_embed_success),
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                        onSuccess?.invoke()
-                    } else {
-                        // File update failed - on Android 11+, try createWriteRequest
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            Log.d(TAG, "Lyrics embed failed, attempting createWriteRequest approach")
-                            val pendingRequest = withContext(Dispatchers.IO) {
-                                MediaUtils.createWriteRequestForLyrics(context, song, lyrics)
-                            }
-                            if (pendingRequest != null) {
-                                _pendingLyricsWriteRequest.value = pendingRequest
-                                onPermissionRequired?.invoke(pendingRequest)
-                                    ?: onError?.invoke("Permission required to embed lyrics.")
-                            } else {
-                                android.widget.Toast.makeText(
-                                    context,
-                                    context.getString(R.string.lyrics_embed_failed),
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
-                                onError?.invoke("Failed to embed lyrics")
-                            }
-                        } else {
-                            android.widget.Toast.makeText(
-                                context,
-                                context.getString(R.string.lyrics_embed_failed),
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                            onError?.invoke("Failed to embed lyrics")
-                        }
-                    }
-                }
-                Log.d(TAG, "Embed lyrics result: $success for ${song.title}")
-            } catch (e: chromahub.rhythm.app.util.RecoverableSecurityExceptionWrapper) {
-                Log.w(TAG, "RecoverableSecurityException for lyrics - attempting createWriteRequest")
-                val context = getApplication<Application>()
-                val song = _currentSong.value ?: return@launch
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    val pendingRequest = MediaUtils.createWriteRequestForLyrics(context, song, lyrics)
-                    withContext(Dispatchers.Main) {
-                        if (pendingRequest != null) {
-                            _pendingLyricsWriteRequest.value = pendingRequest
-                            onPermissionRequired?.invoke(pendingRequest)
-                                ?: onError?.invoke("Permission required to embed lyrics.")
-                        } else {
-                            onError?.invoke("Cannot embed lyrics: permission denied.")
-                        }
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        onError?.invoke("Cannot embed lyrics: permission denied.")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error embedding lyrics in file", e)
-                withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(
-                        getApplication(),
-                        getApplication<Application>().getString(R.string.lyrics_embed_failed),
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
-                    onError?.invoke("Error: ${e.message}")
-                }
-            }
-        }
+        metadataManagerHelper.embedLyricsInFile(
+            lyrics = lyrics,
+            onSuccess = onSuccess,
+            onError = onError,
+            onPermissionRequired = onPermissionRequired
+        )
     }
 
     /**
@@ -6963,51 +6165,14 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        val pendingRequest = _pendingLyricsWriteRequest.value
-        if (pendingRequest == null) {
-            onError("No pending lyrics write request")
-            return
-        }
-        viewModelScope.launch {
-            try {
-                val context = getApplication<Application>().applicationContext
-                val success = withContext(Dispatchers.IO) {
-                    MediaUtils.completeLyricsWriteAfterPermission(context, pendingRequest)
-                }
-                _pendingLyricsWriteRequest.value = null
-                withContext(Dispatchers.Main) {
-                    if (success) {
-                        android.widget.Toast.makeText(
-                            context,
-                            context.getString(R.string.lyrics_embed_success),
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                        onSuccess()
-                    } else {
-                        onError("Failed to embed lyrics even after permission was granted")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error completing lyrics write after permission", e)
-                _pendingLyricsWriteRequest.value = null
-                withContext(Dispatchers.Main) {
-                    onError("Error: ${e.message}")
-                }
-            }
-        }
+        metadataManagerHelper.completeLyricsWriteAfterPermission(onSuccess, onError)
     }
 
     /**
      * Cancel pending lyrics write request
      */
     fun cancelPendingLyricsWrite() {
-        val pendingRequest = _pendingLyricsWriteRequest.value
-        if (pendingRequest != null) {
-            viewModelScope.launch(Dispatchers.IO) {
-                MediaUtils.cleanupPendingLyricsWriteRequest(pendingRequest)
-            }
-            _pendingLyricsWriteRequest.value = null
-        }
+        metadataManagerHelper.cancelPendingLyricsWrite()
     }
 
     /**
