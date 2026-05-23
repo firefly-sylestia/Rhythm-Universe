@@ -198,8 +198,8 @@ dependencies {
     implementation(libs.androidx.media3.cast)
     implementation(libs.androidx.media3.exoplayer.midi)
     
-    // Icons
-    implementation(libs.androidx.compose.material.icons.extended)
+    // Icons - Material Symbols variable font (res/font/material_symbols_outlined.ttf)
+    // Replaces the deprecated material-icons-extended library for faster build times
     implementation(libs.androidx.palette.ktx)
     
     // Glance for modern widgets
