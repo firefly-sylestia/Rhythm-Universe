@@ -36,6 +36,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +45,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -195,6 +197,7 @@ import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveGrou
 import chromahub.rhythm.app.shared.presentation.components.common.ActionProgressLoader
 import chromahub.rhythm.app.shared.presentation.components.common.NetworkOperationLoader
 import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveAnimatedCounter
+import chromahub.rhythm.app.shared.presentation.components.common.MarqueeText
 import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.AlbumBottomSheet
 import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.AddToPlaylistBottomSheet
 import chromahub.rhythm.app.features.local.presentation.components.bottomsheets.SongInfoBottomSheet
@@ -1041,23 +1044,49 @@ private fun ModernScrollableContent(
                         if (showRecommended) {
                             item(key = "section_recommended") {
                                 Box(modifier = Modifier.padding(horizontal = horizontalPadding)) {
-                                    val recommendedSongs = remember(recentlyPlayed, songs, recommendedCount) {
-                                        if (recentlyPlayed.isNotEmpty()) {
+                                    val favoriteSongsState = musicViewModel.favoriteSongs.collectAsState()
+                                    val recommendedSongs = remember(recentlyPlayed, songs, recommendedCount, favoriteSongsState.value) {
+                                        val favoriteIds = favoriteSongsState.value
+                                        val favoriteSongsList = songs.filter { it.id in favoriteIds }
+                                        
+                                        var result = if (recentlyPlayed.isNotEmpty()) {
                                             val playedArtists = recentlyPlayed.map { it.artist }.distinct()
                                             val playedAlbums = recentlyPlayed.map { it.album }.distinct()
-
+ 
                                             songs.filter { song ->
                                                 (song.artist in playedArtists || song.album in playedAlbums) &&
                                                         !recentlyPlayed.contains(song)
-                                            }.shuffled().take(recommendedCount)
+                                            }.shuffled()
                                         } else {
-                                            songs.shuffled().take(recommendedCount)
+                                            emptyList()
                                         }
+                                        
+                                        if (result.isEmpty() && recentlyPlayed.isNotEmpty()) {
+                                            val playedArtists = recentlyPlayed.map { it.artist }.distinct()
+                                            val playedAlbums = recentlyPlayed.map { it.album }.distinct()
+                                            result = songs.filter { song ->
+                                                song.artist in playedArtists || song.album in playedAlbums
+                                            }.shuffled()
+                                        }
+                                        
+                                        if (result.isEmpty()) {
+                                            result = favoriteSongsList.shuffled()
+                                        }
+                                        
+                                        if (result.isEmpty()) {
+                                            result = songs.shuffled()
+                                        }
+                                        
+                                        result.take(recommendedCount)
                                     }
 
                                     ModernRecommendedSection(
                                         recommendedSongs = recommendedSongs,
-                                        onSongClick = onSongClick
+                                        artists = availableArtists,
+                                        onSongClick = onSongClick,
+                                        onPlayClick = { songsToPlay ->
+                                            musicViewModel.playSongs(songsToPlay)
+                                        }
                                     )
                                 }
                             }
@@ -1435,13 +1464,7 @@ private fun ModernRecentSongCard(
             HapticUtils.performHapticFeedback(context, haptic, HapticFeedbackType.TextHandleMove)
             onClick()
         },
-        modifier = cardModifier
-            .shadow(
-                elevation = 4.dp,
-                shape = ExpressiveShapes.Large,
-                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
-                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            ),
+        modifier = cardModifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
@@ -1548,12 +1571,6 @@ private fun ModernSectionTitle(
                             isStart = true,
                             isEnd = onShufflePlay == null
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = context.getString(R.string.action_play),
                                 style = MaterialTheme.typography.labelMedium,
@@ -1793,12 +1810,6 @@ private fun ModernFeaturedSection(
                                 contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp),
                                 modifier = Modifier.height(56.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.PlayArrow,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = context.getString(R.string.action_play),
                                     style = MaterialTheme.typography.titleMedium,
@@ -2024,22 +2035,16 @@ private fun ModernAlbumCard(
         else -> 160.dp to 240.dp
     }
 
-    ExpressiveElevatedCard(
+    ExpressiveCard(
         onClick = {
             HapticUtils.performHapticFeedback(context, haptic, HapticFeedbackType.TextHandleMove)
             onClick(album)
         },
         modifier = Modifier
             .width(cardWidth)
-            .height(cardHeight)
-            .shadow(
-                elevation = 12.dp,
-                shape = ExpressiveShapes.SquircleLarge,
-                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-            ),
+            .height(cardHeight),
         shape = ExpressiveShapes.SquircleLarge,
-        colors = CardDefaults.elevatedCardColors(
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     ) {
@@ -2173,21 +2178,15 @@ private fun ModernSongCard(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
-    ExpressiveElevatedCard(
+    ExpressiveCard(
         onClick = {
             HapticUtils.performHapticFeedback(context, haptic, HapticFeedbackType.TextHandleMove)
             onClick()
         },
         modifier = Modifier
             .width(190.dp)
-            .height(270.dp)
-            .shadow(
-                elevation = 10.dp,
-                shape = ExpressiveShapes.SquircleLarge,
-                ambientColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f),
-                spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
-            ),
-        colors = CardDefaults.elevatedCardColors(
+            .height(270.dp),
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
         shape = ExpressiveShapes.SquircleLarge
@@ -2270,10 +2269,10 @@ private fun ModernListeningStatsSection(
         statsSummary?.uniqueArtists ?: 0
     }
 
-    ExpressiveElevatedCard(
+    ExpressiveCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
         shape = ExpressiveShapes.SquircleLarge
@@ -2488,9 +2487,13 @@ private fun ModernStatCard(
 @Composable
 private fun ModernRecommendedSection(
     recommendedSongs: List<Song>,
-    onSongClick: (Song) -> Unit
+    artists: List<Artist>,
+    onSongClick: (Song) -> Unit,
+    onPlayClick: (List<Song>) -> Unit
 ) {
     val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
+
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -2502,22 +2505,124 @@ private fun ModernRecommendedSection(
         Spacer(modifier = Modifier.height(20.dp))
 
         if (recommendedSongs.isNotEmpty()) {
-            Surface(
-                color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
-                shape = ExpressiveShapes.Large,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(25.dp)
-                ) {
-                    recommendedSongs.forEachIndexed { index, song ->
-                        RecommendedSongItem(
-                            song = song,
-                            onClick = { onSongClick(song) }
-                        )
+            val firstSong = recommendedSongs.firstOrNull()
+            val artistName = firstSong?.artist ?: "Unknown Artist"
+            
+            // Find the corresponding Artist object to get the artworkUri
+            val recommendedArtist = remember(artistName, artists) {
+                artists.find { it.name.equals(artistName, ignoreCase = true) }
+            }
+            
+            val artistArtworkUri = recommendedArtist?.artworkUri ?: firstSong?.artworkUri
+            val cardBgColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            val onCardBgColor = MaterialTheme.colorScheme.onSurface
 
-                        if (index != recommendedSongs.lastIndex) {
-                            Spacer(modifier = Modifier.height(12.dp))
+            // Dynamic Font Sizing for long artist names to prevent card overflow
+            val artistNameLength = artistName.length
+            val artistNameStyle = when {
+                artistNameLength > 20 -> MaterialTheme.typography.titleLarge
+                artistNameLength > 12 -> MaterialTheme.typography.headlineMedium
+                else -> MaterialTheme.typography.displaySmall
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(380.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = cardBgColor
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp)
+                ) {
+                    // 1. Dynamic Resizing Artist Name in Upper-Left
+                    MarqueeText(
+                        text = artistName,
+                        style = artistNameStyle.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = onCardBgColor
+                        ),
+                        gradientEdgeColor = cardBgColor,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .fillMaxWidth(0.48f) // Prevents overlapping with the image
+                    )
+                    
+                    // 2. Large Artist Image in Center-Right (using Artist expressive shape!)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(top = 20.dp, bottom = 40.dp)
+                            .fillMaxWidth(0.55f)
+                            .fillMaxHeight(0.72f)
+                    ) {
+                        M3ImageUtils.ArtistImage(
+                            imageUrl = artistArtworkUri,
+                            artistName = artistName,
+                            modifier = Modifier.fillMaxSize(),
+                            applyExpressiveShape = true // Native Material 3 expressive artist shape
+                        )
+                    }
+                    
+                    // 3. Bottom Row: Flat Album Covers Stack + PLAY button
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Left Side: Flat overlapping covers (up to 4 songs, no static "+1" pill)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy((-12).dp)
+                        ) {
+                            val coverSongs = recommendedSongs.take(4)
+                            coverSongs.forEach { song ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .border(
+                                            width = 1.5.dp,
+                                            color = cardBgColor, // Dynamic border matches theme card background
+                                            shape = RoundedCornerShape(12.dp)
+                                        )
+                                        .clip(RoundedCornerShape(12.dp))
+                                ) {
+                                    M3ImageUtils.TrackImage(
+                                        imageUrl = song.artworkUri,
+                                        trackName = song.title,
+                                        modifier = Modifier.fillMaxSize(),
+                                        applyExpressiveShape = false
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Right Side: PLAY button (clean text only, no redundant icons)
+                        Button(
+                            onClick = {
+                                HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.LongPress)
+                                onPlayClick(recommendedSongs)
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 14.dp),
+                            shape = RoundedCornerShape(24.dp)
+                        ) {
+                            Text(
+                                text = "Play",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
                         }
                     }
                 }
@@ -2608,12 +2713,12 @@ private fun ModernEmptyState(
     subtitle: String,
     iconSize: Dp = 64.dp
 ) {
-    ExpressiveElevatedCard(
+    ExpressiveCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(220.dp)
             .padding(horizontal = 8.dp),
-        colors = CardDefaults.elevatedCardColors(
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
         shape = ExpressiveShapes.SquircleLarge
