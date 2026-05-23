@@ -2781,8 +2781,8 @@ private fun LocalNavigationRail(
                 LocalNavRailItem(
                     route = libraryRoute,
                     title = "Library",
-                    selectedIcon = RhythmIcons.Library,
-                    unselectedIcon = RhythmIcons.Library,
+                    selectedIcon = RhythmIcons.Navigation.Library,
+                    unselectedIcon = RhythmIcons.Navigation.LibraryOutlined,
                     onClick = {
                         navigateToTopLevel(libraryRoute)
                     }

@@ -29,15 +29,15 @@ object RhythmIcons {
     //  Player Controls
     // ═══════════════════════════════════════════════════
     object Player {
-        val Play = MaterialSymbolIcon("play_arrow")
-        val Pause = MaterialSymbolIcon("pause")
-        val SkipNext = MaterialSymbolIcon("skip_next")
-        val SkipPrevious = MaterialSymbolIcon("skip_previous")
-        val Replay10 = MaterialSymbolIcon("replay_10")
-        val Forward10 = MaterialSymbolIcon("forward_10")
-        val Shuffle = MaterialSymbolIcon("shuffle")
-        val Repeat = MaterialSymbolIcon("repeat")
-        val RepeatOne = MaterialSymbolIcon("repeat_one")
+        val Play = MaterialSymbolIcon("play_arrow", defaultWeight = 500)
+        val Pause = MaterialSymbolIcon("pause", defaultWeight = 500)
+        val SkipNext = MaterialSymbolIcon("skip_next", defaultWeight = 500)
+        val SkipPrevious = MaterialSymbolIcon("skip_previous", defaultWeight = 500)
+        val Replay10 = MaterialSymbolIcon("replay_10", defaultWeight = 500)
+        val Forward10 = MaterialSymbolIcon("forward_10", defaultWeight = 500)
+        val Shuffle = MaterialSymbolIcon("shuffle", defaultWeight = 500)
+        val Repeat = MaterialSymbolIcon("repeat", defaultWeight = 500)
+        val RepeatOne = MaterialSymbolIcon("repeat_one", defaultWeight = 500)
         val Lyrics = MaterialSymbolIcon("lyrics")
         val Stop = MaterialSymbolIcon("stop", filled = true)
 
@@ -58,26 +58,26 @@ object RhythmIcons {
     //  Navigation
     // ═══════════════════════════════════════════════════
     object Navigation {
-        val Home = MaterialSymbolIcon("home", filled = true)
-        val HomeOutlined = MaterialSymbolIcon("home")
-        val Search = MaterialSymbolIcon("search", filled = true)
-        val SearchOutlined = MaterialSymbolIcon("search")
-        val Library = MaterialSymbolIcon("library_music", filled = true)
-        val LibraryOutlined = MaterialSymbolIcon("library_music")
-        val Settings = MaterialSymbolIcon("settings", filled = true)
-        val SettingsOutlined = MaterialSymbolIcon("settings")
+        val Home = MaterialSymbolIcon("home", filled = true, defaultWeight = 500)
+        val HomeOutlined = MaterialSymbolIcon("home", defaultWeight = 500)
+        val Search = MaterialSymbolIcon("search", filled = true, defaultWeight = 500)
+        val SearchOutlined = MaterialSymbolIcon("search", defaultWeight = 500)
+        val Library = MaterialSymbolIcon("library_music", filled = true, defaultWeight = 500)
+        val LibraryOutlined = MaterialSymbolIcon("library_music", defaultWeight = 500)
+        val Settings = MaterialSymbolIcon("settings", filled = true, defaultWeight = 500)
+        val SettingsOutlined = MaterialSymbolIcon("settings", defaultWeight = 500)
 
         // Navigation actions
-        val Back = MaterialSymbolIcon("arrow_back")
-        val Forward = MaterialSymbolIcon("arrow_forward")
-        val Close = MaterialSymbolIcon("close")
-        val ExpandMore = MaterialSymbolIcon("expand_more")
-        val ExpandLess = MaterialSymbolIcon("expand_less")
-        val ArrowDropDown = MaterialSymbolIcon("arrow_drop_down")
-        val KeyboardArrowDown = MaterialSymbolIcon("keyboard_arrow_down")
-        val KeyboardArrowUp = MaterialSymbolIcon("keyboard_arrow_up")
-        val ArrowUpward = MaterialSymbolIcon("arrow_upward")
-        val ArrowDownward = MaterialSymbolIcon("arrow_downward")
+        val Back = MaterialSymbolIcon("arrow_back", defaultWeight = 500)
+        val Forward = MaterialSymbolIcon("arrow_forward", defaultWeight = 500)
+        val Close = MaterialSymbolIcon("close", defaultWeight = 500)
+        val ExpandMore = MaterialSymbolIcon("expand_more", defaultWeight = 500)
+        val ExpandLess = MaterialSymbolIcon("expand_less", defaultWeight = 500)
+        val ArrowDropDown = MaterialSymbolIcon("arrow_drop_down", defaultWeight = 500)
+        val KeyboardArrowDown = MaterialSymbolIcon("keyboard_arrow_down", defaultWeight = 500)
+        val KeyboardArrowUp = MaterialSymbolIcon("keyboard_arrow_up", defaultWeight = 500)
+        val ArrowUpward = MaterialSymbolIcon("arrow_upward", defaultWeight = 500)
+        val ArrowDownward = MaterialSymbolIcon("arrow_downward", defaultWeight = 500)
     }
 
     // ═══════════════════════════════════════════════════

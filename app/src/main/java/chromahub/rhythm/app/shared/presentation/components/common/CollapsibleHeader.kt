@@ -229,7 +229,8 @@ fun CollapsibleHeaderScreen(
                                     Icon(
                                         imageVector = RhythmIcons.Back,
                                         contentDescription = "Back",
-                                        tint = MaterialTheme.colorScheme.onSurface
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(25.dp)
                                     )
                                 }
                             }
@@ -532,7 +533,8 @@ fun ArtistCollapsibleHeaderScreen(
                                         Icon(
                                             imageVector = RhythmIcons.Back,
                                             contentDescription = "Back",
-                                            tint = MaterialTheme.colorScheme.onSurface
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(25.dp)
                                         )
                                     }
                                 }
@@ -645,7 +647,8 @@ fun FixedHeaderScreen(
                                     Icon(
                                         imageVector = RhythmIcons.Back,
                                         contentDescription = "Back",
-                                        tint = MaterialTheme.colorScheme.onSurface
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(25.dp)
                                     )
                                 }
                             }

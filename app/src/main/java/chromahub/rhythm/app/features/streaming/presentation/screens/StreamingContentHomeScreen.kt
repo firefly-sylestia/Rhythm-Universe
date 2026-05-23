@@ -331,7 +331,8 @@ fun StreamingContentHomeScreen(
                 ) {
                     Icon(
                         imageVector = MaterialSymbolIcon("reorder", filled = true),
-                        contentDescription = stringResource(id = R.string.cd_reorder_home_sections)
+                        contentDescription = stringResource(id = R.string.cd_reorder_home_sections),
+                        modifier = Modifier.size(25.dp)
                     )
                 }
             }
@@ -349,7 +350,8 @@ fun StreamingContentHomeScreen(
             ) {
                 Icon(
                     imageVector = RhythmIcons.Settings,
-                    contentDescription = stringResource(id = R.string.home_settings_cd)
+                    contentDescription = stringResource(id = R.string.home_settings_cd),
+                    modifier = Modifier.size(25.dp)
                 )
             }
         }

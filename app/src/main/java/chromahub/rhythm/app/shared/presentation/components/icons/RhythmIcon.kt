@@ -1,7 +1,7 @@
 package chromahub.rhythm.app.shared.presentation.components.icons
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -15,15 +15,19 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import chromahub.rhythm.app.R
+
+private const val MaterialSymbolGlyphScale = 0.875f
 
 /**
  * Representation of a Material Symbol icon in the Rhythm app.
@@ -105,29 +109,37 @@ fun Icon(
         filled = icon.filled,
         weight = weight,
         grade = grade,
-        opticalSize = size.value
+        opticalSize = size.value * MaterialSymbolGlyphScale
     )
 
-    Box(
-        modifier = modifier
-            .size(size)
-            .semantics(mergeDescendants = true) {
-                if (contentDescription != null) {
-                    this.contentDescription = contentDescription
-                }
-                this.role = Role.Image
-            },
+    BoxWithConstraints(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            if (contentDescription != null) {
+                this.contentDescription = contentDescription
+            }
+            this.role = Role.Image
+        },
         contentAlignment = Alignment.Center
     ) {
+        val slotSize = if (maxWidth != Dp.Infinity && maxHeight != Dp.Infinity) {
+            minOf(maxWidth, maxHeight)
+        } else {
+            size
+        }
+        val glyphSize = slotSize * MaterialSymbolGlyphScale
+
         androidx.compose.material3.Text(
             text = icon.name,
             fontFamily = fontFamily,
-            fontSize = size.value.sp,
+            fontSize = glyphSize.value.sp,
             color = tint,
             textAlign = TextAlign.Center,
             maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Clip,
             style = TextStyle(
-                lineHeight = size.value.sp
+                lineHeight = glyphSize.value.sp,
+                platformStyle = PlatformTextStyle(includeFontPadding = false)
             )
         )
     }

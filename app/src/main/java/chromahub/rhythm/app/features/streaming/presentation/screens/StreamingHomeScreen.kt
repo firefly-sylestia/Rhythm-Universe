@@ -85,7 +85,8 @@ fun StreamingHomeScreen(
             ) {
                 Icon(
                     imageVector = RhythmIcons.Settings,
-                    contentDescription = stringResource(id = R.string.home_settings_cd)
+                    contentDescription = stringResource(id = R.string.home_settings_cd),
+                    modifier = Modifier.size(25.dp)
                 )
             }
         }

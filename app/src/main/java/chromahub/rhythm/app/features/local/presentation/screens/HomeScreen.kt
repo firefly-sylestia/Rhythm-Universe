@@ -504,7 +504,8 @@ fun HomeScreen(
             ) {
                 Icon(
                     imageVector = MaterialSymbolIcon("reorder", filled = true),
-                    contentDescription = context.getString(R.string.cd_reorder_home_sections)
+                    contentDescription = context.getString(R.string.cd_reorder_home_sections),
+                    modifier = Modifier.size(25.dp)
                 )
             }
             ExpressiveFilledIconButton(
@@ -520,7 +521,8 @@ fun HomeScreen(
             ) {
                 Icon(
                     imageVector = RhythmIcons.Settings,
-                    contentDescription = context.getString(R.string.home_settings_cd)
+                    contentDescription = context.getString(R.string.home_settings_cd),
+                    modifier = Modifier.size(25.dp)
                 )
             }
         }
