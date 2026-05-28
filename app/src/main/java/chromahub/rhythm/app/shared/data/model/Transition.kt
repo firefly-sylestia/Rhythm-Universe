@@ -37,4 +37,5 @@ data class TransitionSettings(
     val durationMs: Int = 6000,
     val curveIn: Curve = Curve.S_CURVE,
     val curveOut: Curve = Curve.S_CURVE,
+    val isManualSkip: Boolean = false,
 )

@@ -54,6 +54,10 @@ import com.google.gson.reflect.TypeToken
 import chromahub.rhythm.app.shared.data.model.Playlist
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import chromahub.rhythm.app.shared.data.repository.PlaybackStatsRepository
+import chromahub.rhythm.app.shared.data.repository.StatsTimeRange
+import chromahub.rhythm.app.shared.presentation.screens.settings.rhythmGuardFormatDurationFromMinutes
+import chromahub.rhythm.app.activities.RhythmGuardTimeoutActivity
 
 @OptIn(UnstableApi::class)
 class MediaPlaybackService : MediaLibraryService(), Player.Listener {
@@ -329,6 +333,81 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
                 getString(chromahub.rhythm.app.R.string.service_initializing_controller)
             )
             createController()
+
+            // Rhythm Guard background check loop (every 10 seconds)
+            serviceScope.launch {
+                val statsRepository = PlaybackStatsRepository.getInstance(applicationContext)
+                while (isActive) {
+                    try {
+                        val mode = appSettings.rhythmGuardMode.value
+                        if (mode != AppSettings.RHYTHM_GUARD_MODE_OFF) {
+                            val now = System.currentTimeMillis()
+                            val timeoutUntil = appSettings.rhythmGuardTimeoutUntilMs.value
+                            if (now < timeoutUntil) {
+                                // Timeout is active, ensure playback is paused
+                                if (player.isPlaying) {
+                                    withContext(Dispatchers.Main) {
+                                        player.pause()
+                                    }
+                                }
+                            } else if (player.isPlaying) {
+                                // Check active daily exposure limit
+                                val age = appSettings.rhythmGuardAge.value
+                                val policy = appSettings.getRhythmGuardPolicy(age)
+                                val alertThresholdMinutes = appSettings.rhythmGuardAlertThresholdMinutes.value
+                                val effectiveLimitMinutes = if (mode == AppSettings.RHYTHM_GUARD_MODE_AUTO) {
+                                    policy.recommendedDailyMinutes
+                                } else if (alertThresholdMinutes > 0) {
+                                    alertThresholdMinutes
+                                } else {
+                                    policy.recommendedDailyMinutes
+                                }
+
+                                val todaySummary = runCatching {
+                                    statsRepository.loadSummary(StatsTimeRange.TODAY)
+                                }.getOrNull()
+                                val dbDurationMs = todaySummary?.totalDurationMs ?: 0L
+                                val currentPositionMs = player.currentPosition
+                                val totalMs = dbDurationMs + currentPositionMs
+                                val currentMinutes = (totalMs / 60000L).toInt().coerceAtLeast(0)
+
+                                if (currentMinutes > effectiveLimitMinutes) {
+                                    val warningTimeoutMinutes = appSettings.rhythmGuardWarningTimeoutMinutes.value.coerceIn(1, 180)
+                                    val newTimeoutUntilMs = now + warningTimeoutMinutes * 60_000L
+                                    val formattedToday = rhythmGuardFormatDurationFromMinutes(currentMinutes)
+                                    val formattedLimit = rhythmGuardFormatDurationFromMinutes(effectiveLimitMinutes)
+                                    val timeoutReason = getString(
+                                        chromahub.rhythm.app.R.string.settings_rhythm_guard_timeout_reason_auto,
+                                        formattedToday,
+                                        formattedLimit
+                                    )
+
+                                    appSettings.setRhythmGuardListeningTimeout(
+                                        untilEpochMs = newTimeoutUntilMs,
+                                        reason = timeoutReason,
+                                        startedAtEpochMs = now
+                                    )
+
+                                    withContext(Dispatchers.Main) {
+                                        if (player.isPlaying) {
+                                            player.pause()
+                                        }
+                                        RhythmGuardTimeoutActivity.start(
+                                            context = applicationContext,
+                                            reason = timeoutReason,
+                                            timeoutUntilMs = newTimeoutUntilMs,
+                                            timeoutStartedAtMs = now
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error in Rhythm Guard background loop", e)
+                    }
+                    delay(10000L)
+                }
+            }
 
             updateForegroundNotification(
                 getString(chromahub.rhythm.app.R.string.service_rhythm_music),
@@ -741,15 +820,17 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
                 }
 
                 // 2. Wait for the silent/ducked volume state to propagate and the audio track's buffer to clear
-                // Use a slightly longer delay (200ms) when disabling to ensure the audio buffer is completely drained
-                val drainDelay = if (enabled) 120L else 200L
+                // Use a longer delay (300ms) when disabling to ensure the audio buffer is completely drained
+                val drainDelay = if (enabled) 120L else 300L
                 delay(drainDelay)
                 
                 // 3. Safely toggle the hardware equalizer enabled state while fully silent
                 actualState = setEqualizerEnabledSafe(enabled)
                 
                 // 4. Settle delay to allow Android AudioFlinger / hardware DSP to fully transition
-                delay(45L)
+                // Extend deactivation settle delay to 550ms so driver pops finish in complete silence before volume ramps up
+                val settleDelay = if (enabled) 45L else 550L
+                delay(settleDelay)
                 
                 // 5. Smoothly ramp the volume back up to the original target from 0.0f
                 val startVolume = player.volume
@@ -1432,11 +1513,11 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
             // Prepare the next song
             rhythmPlayerEngine.prepareNext(nextMediaItem)
 
-            // Configure transition settings
-            val crossfadeDurationMs = (appSettings.crossfadeDuration.value * 1000).toInt()
+            // Configure snappy manual skip transition settings (1.0 second crossfade, isManualSkip = true)
             val settings = TransitionSettings(
                 mode = TransitionMode.OVERLAP,
-                durationMs = crossfadeDurationMs,
+                durationMs = 1000,
+                isManualSkip = true
             )
 
             // Set transitionController to manual transitioning state

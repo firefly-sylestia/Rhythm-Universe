@@ -159,6 +159,7 @@ fun RhythmGuardSettingsScreen(onBackClick: () -> Unit) {
     val context = LocalContext.current
     val appSettings = AppSettings.getInstance(context)
     val haptic = LocalHapticFeedback.current
+    val useHoursFormat by appSettings.useHoursInTimeFormat.collectAsState()
 
     val auraMode by appSettings.rhythmGuardMode.collectAsState()
     val auraAge by appSettings.rhythmGuardAge.collectAsState()
@@ -192,29 +193,18 @@ fun RhythmGuardSettingsScreen(onBackClick: () -> Unit) {
         }.getOrNull()
 
         todayExposureMs = todaySummary?.totalDurationMs ?: 0L
-        weeklyAverageSessions = weekSummary?.averageSessionsPerDay
-            ?: rhythmGuardWeeklyAverageSessions(dailyListeningStats)
+        weeklyAverageSessions = weekSummary?.averageSessionsPerDay ?: 0f
     }
 
-    val nowEpochMs by produceState(
-        initialValue = System.currentTimeMillis(),
-        key1 = timeoutUntilMs,
-        key2 = timeoutCooldownUntilMs
-    ) {
-        while (true) {
-            value = System.currentTimeMillis()
-            val timeoutActive = timeoutUntilMs > value
-            val cooldownActive = timeoutCooldownUntilMs > value
-            if (!timeoutActive && !cooldownActive) break
-            delay(1000L)
-        }
-    }
-
+    val nowEpochMs = System.currentTimeMillis()
+    val isRhythmGuardEnabled = auraMode != AppSettings.RHYTHM_GUARD_MODE_OFF
+    val todayExposureMinutes = (todayExposureMs / 60000L).toInt().coerceAtLeast(0)
+    
     val activePolicy = remember(auraAge) { appSettings.getRhythmGuardPolicy(auraAge) }
     val policyTable = remember { appSettings.getRhythmGuardPolicyBands() }
-    val isRhythmGuardEnabled = auraMode != AppSettings.RHYTHM_GUARD_MODE_OFF
     val recommendedVolumeThreshold = activePolicy.maxVolumeThreshold
     val recommendedDailyMinutes = activePolicy.recommendedDailyMinutes
+    
     val effectiveExposureLimitMinutes = if (auraMode == AppSettings.RHYTHM_GUARD_MODE_AUTO) {
         recommendedDailyMinutes
     } else if (alertThresholdMinutes > 0) {
@@ -227,20 +217,21 @@ fun RhythmGuardSettingsScreen(onBackClick: () -> Unit) {
     val currentVolumePercent = (currentSystemVolume * 100f).toInt().coerceIn(0, 100)
     val manualThresholdPercent = (manualVolumeThreshold * 100f).toInt().coerceIn(0, 100)
     val recommendedThresholdPercent = (recommendedVolumeThreshold * 100f).toInt().coerceIn(0, 100)
-    val formattedTotalExposure = remember(todayExposureMs) {
-        rhythmGuardFormatDurationFromMillis(todayExposureMs)
+    
+    val formattedTotalExposure = remember(todayExposureMs, useHoursFormat) {
+        rhythmGuardFormatDurationFromMillis(todayExposureMs, useHoursFormat)
     }
-    val formattedDailyTarget = remember(effectiveExposureLimitMinutes) {
-        rhythmGuardFormatDurationFromMinutes(effectiveExposureLimitMinutes)
+    val formattedDailyTarget = remember(effectiveExposureLimitMinutes, useHoursFormat) {
+        rhythmGuardFormatDurationFromMinutes(effectiveExposureLimitMinutes, useHoursFormat)
     }
-    val formattedTimeout = remember(warningTimeoutMinutes) {
-        rhythmGuardFormatDurationFromMinutes(warningTimeoutMinutes)
+    val formattedTimeout = remember(warningTimeoutMinutes, useHoursFormat) {
+        rhythmGuardFormatDurationFromMinutes(warningTimeoutMinutes, useHoursFormat)
     }
-    val formattedPostTimeoutCooldown = remember(postTimeoutCooldownMinutes) {
-        rhythmGuardFormatDurationFromMinutes(postTimeoutCooldownMinutes)
+    val formattedPostTimeoutCooldown = remember(postTimeoutCooldownMinutes, useHoursFormat) {
+        rhythmGuardFormatDurationFromMinutes(postTimeoutCooldownMinutes, useHoursFormat)
     }
-    val formattedResumeInterval = remember(breakResumeMinutes) {
-        rhythmGuardFormatDurationFromMinutes(breakResumeMinutes)
+    val formattedResumeInterval = remember(breakResumeMinutes, useHoursFormat) {
+        rhythmGuardFormatDurationFromMinutes(breakResumeMinutes, useHoursFormat)
     }
     val activeVolumeThreshold = if (auraMode == AppSettings.RHYTHM_GUARD_MODE_AUTO) {
         recommendedVolumeThreshold
@@ -331,11 +322,11 @@ fun RhythmGuardSettingsScreen(onBackClick: () -> Unit) {
     val guardStatusDetail = when {
         isTimeoutActive -> context.getString(
             R.string.settings_rhythm_guard_state_timeout_remaining,
-            rhythmGuardFormatCountdownFromSeconds(timeoutRemainingSeconds)
+            rhythmGuardFormatCountdownFromSeconds(timeoutRemainingSeconds, useHoursFormat)
         )
         isCooldownActive -> context.getString(
             R.string.settings_rhythm_guard_state_cooldown_remaining,
-            rhythmGuardFormatCountdownFromSeconds(cooldownRemainingSeconds)
+            rhythmGuardFormatCountdownFromSeconds(cooldownRemainingSeconds, useHoursFormat)
         )
         isRhythmGuardEnabled -> context.getString(
             R.string.settings_rhythm_guard_state_safety_score,
@@ -597,7 +588,7 @@ fun RhythmGuardSettingsScreen(onBackClick: () -> Unit) {
                                 text = context.getString(
                                     R.string.settings_rhythm_guard_alert_threshold_title,
                                     if (alertThresholdMinutes > 0) {
-                                        rhythmGuardFormatDurationFromMinutes(alertThresholdMinutes)
+                                        rhythmGuardFormatDurationFromMinutes(alertThresholdMinutes, useHoursFormat)
                                     } else {
                                         context.getString(R.string.settings_rhythm_guard_alert_threshold_policy_default)
                                     }
@@ -615,7 +606,7 @@ fun RhythmGuardSettingsScreen(onBackClick: () -> Unit) {
                                         label = {
                                             Text(
                                                 if (option > 0) {
-                                                    rhythmGuardFormatDurationFromMinutes(option)
+                                                    rhythmGuardFormatDurationFromMinutes(option, useHoursFormat)
                                                 } else {
                                                     context.getString(R.string.settings_rhythm_guard_alert_threshold_policy_default)
                                                 }
@@ -649,7 +640,7 @@ fun RhythmGuardSettingsScreen(onBackClick: () -> Unit) {
                                     FilterChip(
                                         selected = warningTimeoutMinutes == option,
                                         onClick = { appSettings.setRhythmGuardWarningTimeoutMinutes(option) },
-                                        label = { Text(rhythmGuardFormatDurationFromMinutes(option)) }
+                                        label = { Text(rhythmGuardFormatDurationFromMinutes(option, useHoursFormat)) }
                                     )
                                 }
                             }
@@ -678,7 +669,7 @@ fun RhythmGuardSettingsScreen(onBackClick: () -> Unit) {
                                     FilterChip(
                                         selected = postTimeoutCooldownMinutes == option,
                                         onClick = { appSettings.setRhythmGuardPostTimeoutCooldownMinutes(option) },
-                                        label = { Text(rhythmGuardFormatDurationFromMinutes(option)) }
+                                        label = { Text(rhythmGuardFormatDurationFromMinutes(option, useHoursFormat)) }
                                     )
                                 }
                             }
@@ -707,7 +698,7 @@ fun RhythmGuardSettingsScreen(onBackClick: () -> Unit) {
                                     FilterChip(
                                         selected = breakResumeMinutes == option,
                                         onClick = { appSettings.setRhythmGuardBreakResumeMinutes(option) },
-                                        label = { Text(rhythmGuardFormatDurationFromMinutes(option)) }
+                                        label = { Text(rhythmGuardFormatDurationFromMinutes(option, useHoursFormat)) }
                                     )
                                 }
                             }
@@ -1065,8 +1056,11 @@ fun rememberSystemMusicVolumeFraction(context: Context): Float {
 
 
 
-fun rhythmGuardFormatDurationFromMinutes(minutes: Int): String {
+fun rhythmGuardFormatDurationFromMinutes(minutes: Int, useHoursFormat: Boolean = true): String {
     val safeMinutes = minutes.coerceAtLeast(0)
+    if (!useHoursFormat) {
+        return "${safeMinutes}m"
+    }
     val days = safeMinutes / (24 * 60)
     val hours = (safeMinutes % (24 * 60)) / 60
     val mins = safeMinutes % 60
@@ -1084,22 +1078,23 @@ fun rhythmGuardFormatDurationFromMinutes(minutes: Int): String {
 
 
 
-fun rhythmGuardFormatDurationFromMillis(durationMs: Long): String {
-    return rhythmGuardFormatDurationFromMinutes((durationMs / 60000L).toInt())
+fun rhythmGuardFormatDurationFromMillis(durationMs: Long, useHoursFormat: Boolean = true): String {
+    return rhythmGuardFormatDurationFromMinutes((durationMs / 60000L).toInt(), useHoursFormat)
 }
 
 
 
-fun rhythmGuardFormatCountdownFromSeconds(seconds: Long): String {
+fun rhythmGuardFormatCountdownFromSeconds(seconds: Long, useHoursFormat: Boolean = true): String {
     val safeSeconds = seconds.coerceAtLeast(0L)
-    val hours = safeSeconds / 3600L
-    val minutes = (safeSeconds % 3600L) / 60L
+    val totalMinutes = safeSeconds / 60L
     val secs = safeSeconds % 60L
 
-    return if (hours > 0L) {
+    return if (useHoursFormat && totalMinutes >= 60L) {
+        val hours = totalMinutes / 60L
+        val minutes = totalMinutes % 60L
         String.format("%d:%02d:%02d", hours, minutes, secs)
     } else {
-        String.format("%02d:%02d", minutes, secs)
+        String.format("%02d:%02d", totalMinutes, secs)
     }
 }
 

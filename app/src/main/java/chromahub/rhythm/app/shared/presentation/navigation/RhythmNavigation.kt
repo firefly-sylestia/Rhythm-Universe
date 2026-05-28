@@ -293,6 +293,9 @@ private fun RhythmGuardWarningHost(
     val listeningTime by appSettings.listeningTime.collectAsState()
 
     val currentSong by musicViewModel.currentSong.collectAsState()
+    val currentProgress by musicViewModel.progress.collectAsState()
+    val currentDurationMs by musicViewModel.duration.collectAsState()
+    val currentIsPlaying by musicViewModel.isPlaying.collectAsState()
     val currentPlaybackDevice by musicViewModel.currentDevice.collectAsState()
     val currentSystemVolume = rememberSystemMusicVolumeFraction(context)
     var todayExposureMinutes by remember { mutableIntStateOf(0) }
@@ -446,13 +449,18 @@ private fun RhythmGuardWarningHost(
         }
     }
 
-    LaunchedEffect(dailyListeningStats, songsPlayed, listeningTime) {
+    LaunchedEffect(dailyListeningStats, songsPlayed, listeningTime, currentProgress, currentDurationMs, currentIsPlaying) {
         val todaySummary = runCatching {
             playbackStatsRepository.loadSummary(StatsTimeRange.TODAY)
         }.getOrNull()
-        todayExposureMinutes = ((todaySummary?.totalDurationMs ?: 0L) / 60000L)
-            .toInt()
-            .coerceAtLeast(0)
+        val dbDurationMs = todaySummary?.totalDurationMs ?: 0L
+        val activeSessionDurationMs = if (currentIsPlaying && currentDurationMs > 0) {
+            (currentProgress * currentDurationMs).toLong()
+        } else {
+            0L
+        }
+        val totalMs = dbDurationMs + activeSessionDurationMs
+        todayExposureMinutes = (totalMs / 60000L).toInt().coerceAtLeast(0)
     }
 
     LaunchedEffect(auraMode, manualWarningsEnabled, currentSong) {

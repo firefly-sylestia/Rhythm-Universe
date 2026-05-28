@@ -422,7 +422,7 @@ class RhythmPlayerEngine(
      * 6. Releases old player and recreates it fresh
      */
     private suspend fun performOverlapTransition(settings: TransitionSettings) {
-        Log.d(TAG, "Starting crossfade. Duration: ${settings.durationMs}ms")
+        Log.d(TAG, "Starting crossfade. Duration: ${settings.durationMs}ms, isManualSkip: ${settings.isManualSkip}")
 
         if (playerB.mediaItemCount == 0) {
             Log.w(TAG, "Skipping overlap — next player not prepared (count=0)")
@@ -438,45 +438,48 @@ class RhythmPlayerEngine(
         }
 
         var readinessChecks = 0
-        while (playerB.playbackState == Player.STATE_BUFFERING && readinessChecks < 120) {
+        val maxReadinessChecks = if (settings.isManualSkip) 16 else 120 // 400ms max for manual skip
+        while (playerB.playbackState == Player.STATE_BUFFERING && readinessChecks < maxReadinessChecks) {
             delay(25)
             readinessChecks++
         }
 
-        if (playerB.playbackState != Player.STATE_READY) {
+        val incomingReady = playerB.playbackState == Player.STATE_READY
+        if (!incomingReady && !settings.isManualSkip) {
             Log.w(TAG, "Player B not ready for overlap. State=${playerB.playbackState}")
             playerA.volume = 1f
             setPauseAtEndOfMediaItems(false)
             return
         }
 
-        // Start Player B playing at volume 0
-        playerB.volume = 0f
-        playerA.volume = 1f
-        if (!playerA.isPlaying && playerA.playbackState == Player.STATE_READY) {
-            playerA.play()
-        }
+        var isFading = false
 
-        playerB.playWhenReady = true
-        playerB.play()
-
-        Log.d(TAG, "Player B started. Playing=${playerB.isPlaying}, state=${playerB.playbackState}")
-
-        // Wait for Player B to actually start rendering audio
-        var playChecks = 0
-        while (!playerB.isPlaying && playChecks < 80) {
-            delay(25)
-            playChecks++
-        }
-
-        if (!playerB.isPlaying) {
-            Log.e(TAG, "Player B failed to start in time. Aborting crossfade.")
+        if (incomingReady) {
+            // Start Player B playing at volume 0
+            playerB.volume = 0f
             playerA.volume = 1f
-            setPauseAtEndOfMediaItems(false)
-            return
-        }
+            if (!playerA.isPlaying && playerA.playbackState == Player.STATE_READY) {
+                playerA.play()
+            }
 
-        delay(75) // Small stabilization delay
+            playerB.playWhenReady = true
+            playerB.play()
+
+            Log.d(TAG, "Player B started. Playing=${playerB.isPlaying}, state=${playerB.playbackState}")
+
+            // Wait for Player B to actually start rendering audio
+            var playChecks = 0
+            val maxPlayChecks = if (settings.isManualSkip) 16 else 80 // 400ms max for manual skip
+            while (!playerB.isPlaying && playChecks < maxPlayChecks) {
+                delay(25)
+                playChecks++
+            }
+
+            if (playerB.isPlaying) {
+                isFading = true
+                delay(75) // Small stabilization delay
+            }
+        }
 
         // --- SWAP PLAYERS EARLY (Before Fade) ---
         // This makes the UI immediately show the new song
@@ -568,31 +571,41 @@ class RhythmPlayerEngine(
 
         _activeAudioSessionId.value = playerA.audioSessionId
 
-        Log.d(TAG, "Players swapped EARLY. UI should now show next song.")
+        Log.d(TAG, "Players swapped EARLY. UI should now show next song. isFading=$isFading")
 
-        // *** FADE LOOP — shaped volume curves ***
-        val duration = settings.durationMs.toLong().coerceAtLeast(500L)
-        val stepMs = 16L
-        var elapsed = 0L
+        if (isFading) {
+            // *** FADE LOOP — shaped volume curves ***
+            val duration = settings.durationMs.toLong().coerceAtLeast(500L)
+            val stepMs = 16L
+            var elapsed = 0L
 
-        while (elapsed <= duration) {
-            val progress = (elapsed.toFloat() / duration).coerceIn(0f, 1f)
-            val volIn = envelope(progress, settings.curveIn)
-            val volOut = 1f - envelope(progress, settings.curveOut)
+            while (elapsed <= duration) {
+                val progress = (elapsed.toFloat() / duration).coerceIn(0f, 1f)
+                val volIn = envelope(progress, settings.curveIn)
+                val volOut = 1f - envelope(progress, settings.curveOut)
 
-            playerA.volume = volIn
-            playerB.volume = volOut.coerceIn(0f, 1f)
+                playerA.volume = volIn
+                playerB.volume = volOut.coerceIn(0f, 1f)
 
-            if (playerA.playbackState == Player.STATE_ENDED || playerB.playbackState == Player.STATE_ENDED) {
-                Log.w(TAG, "A player ended during crossfade (A=${playerA.playbackState}, B=${playerB.playbackState})")
-                break
+                if (playerA.playbackState == Player.STATE_ENDED || playerB.playbackState == Player.STATE_ENDED) {
+                    Log.w(TAG, "A player ended during crossfade (A=${playerA.playbackState}, B=${playerB.playbackState})")
+                    break
+                }
+
+                delay(stepMs)
+                elapsed += stepMs
             }
-
-            delay(stepMs)
-            elapsed += stepMs
+            Log.d(TAG, "Crossfade loop finished.")
+        } else {
+            Log.d(TAG, "Instant swap without fade (incoming track buffering or failed to play)")
+            playerA.volume = 1f
+            if (playerA.playbackState == Player.STATE_READY) {
+                playerA.play()
+            } else {
+                playerA.playWhenReady = true
+            }
         }
 
-        Log.d(TAG, "Crossfade loop finished.")
         playerB.volume = 0f
         playerA.volume = 1f
 

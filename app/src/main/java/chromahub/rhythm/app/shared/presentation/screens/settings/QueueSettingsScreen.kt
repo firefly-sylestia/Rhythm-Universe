@@ -97,27 +97,27 @@ fun QueueSettingsScreen(onBackClick: () -> Unit) {
                             onToggleChange = { appSettings.setAutoAddToQueue(it) }
                         )
                     )
-                    if (autoAddToQueue) {
-                        add(
-                            SettingItem(
-                                RhythmIcons.Tune,
-                                context.getString(R.string.settings_context_queue_preference),
-                                when (effectiveContextQueuePreference) {
-                                    "ARTIST_FIRST" -> context.getString(R.string.settings_context_pref_artist_first)
-                                    else -> context.getString(R.string.settings_context_pref_genre_first)
-                                },
-                                onClick = { showContextPrefBottomSheet = true }
-                            )
+                    add(
+                        SettingItem(
+                            RhythmIcons.Tune,
+                            context.getString(R.string.settings_context_queue_preference),
+                            when (effectiveContextQueuePreference) {
+                                "ARTIST_FIRST" -> context.getString(R.string.settings_context_pref_artist_first)
+                                else -> context.getString(R.string.settings_context_pref_genre_first)
+                            },
+                            onClick = { showContextPrefBottomSheet = true },
+                            enabled = autoAddToQueue
                         )
-                        add(
-                            SettingItem(
-                                RhythmIcons.Repeat,
-                                context.getString(R.string.settings_context_queue_persistence),
-                                context.getString(R.string.settings_context_queue_persistence_desc),
-                                data = "context_queue_persistence"
-                            )
+                    )
+                    add(
+                        SettingItem(
+                            RhythmIcons.Repeat,
+                            context.getString(R.string.settings_context_queue_persistence),
+                            context.getString(R.string.settings_context_queue_persistence_desc),
+                            data = "context_queue_persistence",
+                            enabled = autoAddToQueue
                         )
-                    }
+                    )
                     add(
                         SettingItem(
                             RhythmIcons.Delete,
@@ -234,7 +234,8 @@ fun QueueSettingsScreen(onBackClick: () -> Unit) {
                                                 persistenceOptions[index].first
                                             )
                                         },
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = item.enabled
                                     )
                                 }
                             }

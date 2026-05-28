@@ -230,6 +230,7 @@ fun PlayerScreen(
             onLyricsSeek = onLyricsSeek,
             onRetryLyrics = onRetryLyrics,
             onShowLyricsEditor = { showLyricsEditorDialog = true },
+            onPickLyricsFile = onPickLyricsFile,
             isMediaLoading = isMediaLoading,
             isSeeking = isSeeking,
             onPlayPause = onPlayPause,

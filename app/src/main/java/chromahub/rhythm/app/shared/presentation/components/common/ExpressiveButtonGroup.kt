@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -59,12 +60,14 @@ fun ExpressiveButtonGroup(
     unselectedButtonColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     selectedContentColor: Color = MaterialTheme.colorScheme.onPrimary,
     unselectedContentColor: Color = MaterialTheme.colorScheme.onSurface,
-    showCheckIcon: Boolean = true
+    showCheckIcon: Boolean = true,
+    enabled: Boolean = true
 ) {
     Row(
         modifier = modifier
             .clip(CircleShape)
-            .background(containerColor, CircleShape),
+            .background(containerColor, CircleShape)
+            .graphicsLayer { alpha = if (enabled) 1f else 0.38f },
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         items.forEachIndexed { index, title ->
@@ -95,7 +98,7 @@ fun ExpressiveButtonGroup(
                     .height(buttonHeight)
                     .clip(shape)
                     .background(buttonColor)
-                    .clickable { onItemClick(index) },
+                    .clickable(enabled = enabled) { onItemClick(index) },
                 contentAlignment = Alignment.Center
             ) {
                 Row(

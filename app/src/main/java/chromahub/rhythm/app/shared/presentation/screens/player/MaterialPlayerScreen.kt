@@ -604,13 +604,9 @@ fun MaterialPlayerScreen(
 
     // Dynamic sizing based on screen dimensions - used for artwork responsiveness
     val albumArtFraction = when {
-        isExtraSmallWidth -> {
-            if (isCompactHeight) 0.82f else 0.90f
-        }
-        isCompactWidth -> {
-            if (isCompactHeight) 0.85f else 0.92f
-        }
-        isCompactHeight -> 0.88f
+        isCompactHeight -> 0.58f
+        isExtraSmallWidth -> 0.90f
+        isCompactWidth -> 0.92f
         isLargeHeight -> 1.0f
         else -> 0.95f
     }
@@ -1496,7 +1492,7 @@ fun MaterialPlayerScreen(
                 // Main content column - optimized spacing to reduce vertical padding
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .padding(
                             horizontal = when {
                                 isExtraSmallWidth -> 4.dp // Extra small width: minimal padding
@@ -1529,7 +1525,8 @@ fun MaterialPlayerScreen(
                     AnimatedVisibility(
                         visible = showAlbumArt,
                         enter = fadeIn() + slideInVertically { it },
-                        exit = fadeOut() + slideOutVertically { it }
+                        exit = fadeOut() + slideOutVertically { it },
+                        modifier = Modifier.weight(1f, fill = false)
                     ) {
                         // State for artwork swipe gestures
                         var artworkOffsetX by remember { mutableStateOf(0f) }
@@ -1546,7 +1543,7 @@ fun MaterialPlayerScreen(
                         
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(if (isTablet) 1.0f else albumArtFraction) // Responsive size based on screen dimensions
+                                .fillMaxHeight(if (isTablet) 1.0f else albumArtFraction) // Responsive size based on screen dimensions
                                 .aspectRatio(1f)
                                 .graphicsLayer {
                                     val currentSwipeProgress = (animatedSwipeOffset / screenHeight).coerceIn(0f, 1f)
@@ -3529,7 +3526,7 @@ fun MaterialPlayerScreen(
                                 tonalElevation = 0.dp,
                                 modifier = if (isCompactWidth) {
                                     Modifier
-                                        .height(if (isCompactHeight) 42.dp else 56.dp)
+                                        .height(if (isCompactHeight) 48.dp else 56.dp)
                                         .weight(1f)
                                 } else {
                                     Modifier.weight(1f)
@@ -3664,8 +3661,8 @@ fun MaterialPlayerScreen(
                                         shape = RoundedCornerShape(28.dp),
                                         color = MaterialTheme.colorScheme.tertiaryContainer,
                                         modifier = Modifier
-                                            .width(if (isExtraSmallWidth) 36.dp else 44.dp)
-                                            .height(if (isCompactHeight) 42.dp else 56.dp)
+                                            .width(if (isExtraSmallWidth) 48.dp else 56.dp)
+                                            .height(if (isCompactHeight) 48.dp else 56.dp)
                                     ) {
                                         Box(
                                             contentAlignment = Alignment.Center,
@@ -3701,7 +3698,7 @@ fun MaterialPlayerScreen(
                                 tonalElevation = 0.dp,
                                 modifier = if (isCompactWidth) {
                                     Modifier
-                                        .height(if (isCompactHeight) 42.dp else 56.dp)
+                                        .height(if (isCompactHeight) 48.dp else 56.dp)
                                         .weight(1f)
                                 } else {
                                     Modifier.weight(1f)
@@ -3841,7 +3838,14 @@ fun MaterialPlayerScreen(
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         Spacer(modifier = Modifier.height(2.dp))
-                        artworkContent()
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            artworkContent()
+                        }
                         controlsContent()
                     }
                     // Bottom buttons (always pinned to bottom)

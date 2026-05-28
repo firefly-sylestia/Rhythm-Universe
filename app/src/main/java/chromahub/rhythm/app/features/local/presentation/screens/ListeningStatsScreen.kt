@@ -74,40 +74,18 @@ fun ListeningStatsScreen(
     val artists by viewModel.artists.collectAsState()
     val ranges = StatsTimeRange.entries
 
-    var selectedRange by remember { mutableStateOf(StatsTimeRange.WEEK) }
-    var statsSummary by remember { mutableStateOf<PlaybackStatsRepository.PlaybackStatsSummary?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    val tabRowState = rememberLazyListState()
     val pagerState = rememberPagerState(
-        initialPage = ranges.indexOf(selectedRange).coerceAtLeast(0),
+        initialPage = 1, // Default to WEEK (index 1)
         pageCount = { ranges.size }
     )
+    val tabRowState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
-    var showContent by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        delay(50)
-        showContent = true
-    }
-
-    LaunchedEffect(selectedRange, songs) {
-        isLoading = true
-        statsSummary = viewModel.loadPlaybackStats(selectedRange)
-        isLoading = false
-    }
+    val appSettings = remember { chromahub.rhythm.app.shared.data.model.AppSettings.getInstance(context) }
+    val useHoursFormat by appSettings.useHoursInTimeFormat.collectAsState()
 
     LaunchedEffect(pagerState.currentPage) {
-        val currentRange = ranges[pagerState.currentPage]
-        if (selectedRange != currentRange) {
-            selectedRange = currentRange
-        }
-    }
-
-    LaunchedEffect(selectedRange) {
-        val index = ranges.indexOf(selectedRange).coerceAtLeast(0)
-        if (pagerState.currentPage != index) {
-            pagerState.animateScrollToPage(index)
-        }
+        val index = pagerState.currentPage
         tabRowState.animateScrollToItem(index)
     }
 
@@ -117,15 +95,16 @@ fun ListeningStatsScreen(
         onBackClick = {
             HapticUtils.performHapticFeedback(context, hapticFeedback, HapticFeedbackType.LongPress)
             navController.popBackStack()
-        }
-        ,
+        },
         headerContent = {
-            // Range Tabs in header
             RhythmTimeRangeTabs(
-                selectedRange = selectedRange,
+                selectedRange = ranges[pagerState.currentPage],
                 onRangeSelected = { range ->
                     HapticUtils.performHapticFeedback(context, hapticFeedback, HapticFeedbackType.TextHandleMove)
-                    selectedRange = range
+                    val index = ranges.indexOf(range).coerceAtLeast(0)
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(index)
+                    }
                 },
                 tabRowState = tabRowState
             )
@@ -140,9 +119,79 @@ fun ListeningStatsScreen(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize()
-            ) { _ ->
-                val pageScrollState = rememberScrollState()
+            ) { page ->
+                StatsPageContent(
+                    range = ranges[page],
+                    songs = songs,
+                    artists = artists,
+                    viewModel = viewModel,
+                    useHoursFormat = useHoursFormat
+                )
+            }
+        }
+    }
+}
 
+// ---------------------------------------------------------------------------
+// Page Content Composable 
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun StatsPageContent(
+    range: StatsTimeRange,
+    songs: List<chromahub.rhythm.app.shared.data.model.Song>,
+    artists: List<Artist>,
+    viewModel: MusicViewModel,
+    useHoursFormat: Boolean
+) {
+    var statsSummary by remember { mutableStateOf<PlaybackStatsRepository.PlaybackStatsSummary?>(null) }
+    var previousSummary by remember { mutableStateOf<PlaybackStatsRepository.PlaybackStatsSummary?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(range, songs) {
+        isLoading = true
+        statsSummary = viewModel.loadPlaybackStats(range)
+        
+        val now = System.currentTimeMillis()
+        val prevNow = when (range) {
+            StatsTimeRange.TODAY -> now - 24L * 60L * 60L * 1000L
+            StatsTimeRange.WEEK -> now - 7L * 24L * 60L * 60L * 1000L
+            StatsTimeRange.MONTH -> now - 30L * 24L * 60L * 60L * 1000L
+            StatsTimeRange.ALL_TIME -> now
+        }
+        previousSummary = if (range != StatsTimeRange.ALL_TIME) {
+            runCatching {
+                viewModel.getPlaybackStatsRepository().loadSummary(range, songs, prevNow)
+            }.getOrNull()
+        } else {
+            null
+        }
+        isLoading = false
+    }
+
+    val pageScrollState = rememberScrollState()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        AnimatedContent(
+            targetState = isLoading,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(200))
+            },
+            label = "statsPageContentTransition"
+        ) { loading ->
+            if (loading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            } else if (statsSummary == null || statsSummary!!.totalPlayCount == 0) {
+                EmptyStatsView()
+            } else {
+                val stats = statsSummary!!
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -150,40 +199,26 @@ fun ListeningStatsScreen(
                         .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    AnimatedContent(
-                        targetState = Pair(isLoading, selectedRange),
-                        transitionSpec = {
-                            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(200))
-                        },
-                        label = "statsContentTransition"
-                    ) { (loading, _) ->
-                        if (loading) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(400.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                            }
-                        } else if (statsSummary == null || statsSummary!!.totalPlayCount == 0) {
-                            EmptyStatsView()
-                        } else {
-                            val stats = statsSummary!!
+                    ListeningOverviewCard(
+                        stats = stats, 
+                        previousStats = previousSummary,
+                        useHoursFormat = useHoursFormat
+                    )
 
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(24.dp)
-                            ) {
-                                ListeningOverviewCard(stats = stats)
+                    CategoryMetricsSection(
+                        stats = stats, 
+                        artists = artists,
+                        useHoursFormat = useHoursFormat
+                    )
 
-                                CategoryMetricsSection(stats = stats, artists = artists)
+                    ListeningHabitsCard(
+                        stats = stats,
+                        useHoursFormat = useHoursFormat
+                    )
 
-                                ListeningHabitsCard(stats = stats)
-
-                                RatingStatsCard(viewModel = viewModel)
-                            }
-                        }
-                    }
+                    RatingStatsCard(viewModel = viewModel)
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }
@@ -216,7 +251,7 @@ private fun RhythmTimeRangeTabs(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         contentPadding = PaddingValues(horizontal = 4.dp)
     ) {
-        itemsIndexed(StatsTimeRange.entries) { index, range ->
+        itemsIndexed(StatsTimeRange.entries, key = { _, range -> "tab_${range.name}" }) { index, range ->
             val isSelected = range == selectedRange
             val title = tabNames[range] ?: range.displayName
 
@@ -243,10 +278,50 @@ private fun RhythmTimeRangeTabs(
 }
 
 @Composable
-private fun ListeningOverviewCard(stats: PlaybackStatsRepository.PlaybackStatsSummary) {
+private fun ListeningOverviewCard(
+    stats: PlaybackStatsRepository.PlaybackStatsSummary,
+    previousStats: PlaybackStatsRepository.PlaybackStatsSummary?,
+    useHoursFormat: Boolean
+) {
     val timeline = stats.timeline.takeLast(3)
-    val leadingEntry = timeline.maxByOrNull { it.playCount }
-    val durationText = formatDurationAsMinutes(stats.totalDurationMs)
+    val durationText = formatDurationAsMinutes(stats.totalDurationMs, useHoursFormat)
+
+    val comparisonText = remember(stats.totalDurationMs, previousStats?.totalDurationMs, stats.range, useHoursFormat) {
+        val currentMs = stats.totalDurationMs
+        val previousMs = previousStats?.totalDurationMs ?: 0L
+        
+        if (stats.range == StatsTimeRange.ALL_TIME || previousStats == null) {
+            "Compared with the previous period"
+        } else {
+            val diffMs = currentMs - previousMs
+            val absDiffMs = kotlin.math.abs(diffMs)
+            
+            val seconds = absDiffMs / 1000
+            val hours = seconds / 3600
+            val minutes = (seconds % 3600) / 60
+            
+            val timeStr = if (useHoursFormat && hours > 0) {
+                if (minutes > 0) "${hours}h ${minutes}m" else "${hours}h"
+            } else {
+                val totalMinutes = seconds / 60
+                if (totalMinutes > 0) "$totalMinutes min" else "less than a minute"
+            }
+            
+            val relation = if (diffMs >= 0) "longer than" else "shorter than"
+            val period = when (stats.range) {
+                StatsTimeRange.TODAY -> "yesterday"
+                StatsTimeRange.WEEK -> "last week"
+                StatsTimeRange.MONTH -> "last month"
+                StatsTimeRange.ALL_TIME -> ""
+            }
+            
+            if (diffMs == 0L) {
+                "Same as $period"
+            } else {
+                "$timeStr $relation $period"
+            }
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -272,11 +347,7 @@ private fun ListeningOverviewCard(stats: PlaybackStatsRepository.PlaybackStatsSu
             }
 
             Text(
-                text = if (stats.range == StatsTimeRange.TODAY && leadingEntry != null) {
-                    "30 minutes longer than yesterday"
-                } else {
-                    "Compared with the previous period"
-                },
+                text = comparisonText,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -339,7 +410,10 @@ private fun ListeningOverviewCard(stats: PlaybackStatsRepository.PlaybackStatsSu
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun TopSongsList(stats: PlaybackStatsRepository.PlaybackStatsSummary) {
+private fun TopSongsList(
+    stats: PlaybackStatsRepository.PlaybackStatsSummary,
+    useHoursFormat: Boolean
+) {
     if (stats.topSongs.isEmpty()) return
 
     val items = stats.topSongs.take(5).mapIndexed { index, song ->
@@ -403,7 +477,7 @@ private fun TopSongsList(stats: PlaybackStatsRepository.PlaybackStatsSummary) {
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
-                        text = formatDuration(song.totalDurationMs),
+                        text = formatDuration(song.totalDurationMs, useHoursFormat),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -465,7 +539,7 @@ private fun TopArtistsList(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(horizontal = 0.dp)
         ) {
-            items(stats.topArtists.take(5)) { artist ->
+            items(stats.topArtists.take(5), key = { it.artist }) { artist ->
                 val libraryArtist = artistByName[artist.artist]
 
                 Column(
@@ -522,7 +596,8 @@ private data class CategoryMetricEntry(
 @Composable
 private fun CategoryMetricsSection(
     stats: PlaybackStatsRepository.PlaybackStatsSummary,
-    artists: List<Artist>
+    artists: List<Artist>,
+    useHoursFormat: Boolean
 ) {
     var selectedDimension by remember { mutableStateOf(CategoryDimension.SONG) }
 
@@ -561,7 +636,7 @@ private fun CategoryMetricsSection(
         }
 
         when (selectedDimension) {
-            CategoryDimension.SONG -> TopSongsList(stats = stats)
+            CategoryDimension.SONG -> TopSongsList(stats = stats, useHoursFormat = useHoursFormat)
             CategoryDimension.ARTIST -> TopArtistsList(stats = stats, artists = artists)
             else -> {
                 val entries = when (selectedDimension) {
@@ -648,7 +723,7 @@ private fun CategoryMetricsSection(
                                     Column(horizontalAlignment = Alignment.End) {
                                         if (entry.durationMs > 0) {
                                             Text(
-                                                text = formatDuration(entry.durationMs),
+                                                text = formatDuration(entry.durationMs, useHoursFormat),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onSurface
@@ -701,7 +776,10 @@ private fun CategoryRankBadge(rank: Int, accentColor: Color, accentOnColor: Colo
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun ListeningHabitsCard(stats: PlaybackStatsRepository.PlaybackStatsSummary) {
+private fun ListeningHabitsCard(
+    stats: PlaybackStatsRepository.PlaybackStatsSummary,
+    useHoursFormat: Boolean
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
@@ -722,7 +800,7 @@ private fun ListeningHabitsCard(stats: PlaybackStatsRepository.PlaybackStatsSumm
                 HabitMetricRow(MaterialSymbolIcon("event_available"), "Active Days", "${stats.activeDays} days")
                 HabitMetricRow(MaterialSymbolIcon("local_fire_department"), "Longest Streak", "${stats.longestStreakDays} days")
                 HabitMetricRow(MaterialSymbolIcon("history"), "Total Sessions", "${stats.totalSessions}")
-                HabitMetricRow(MaterialSymbolIcon("hourglass_empty"), "Avg Session", formatDuration(stats.averageSessionDurationMs))
+                HabitMetricRow(MaterialSymbolIcon("hourglass_empty"), "Avg Session", formatDuration(stats.averageSessionDurationMs, useHoursFormat))
 
                 stats.peakDayOfWeek?.let {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
@@ -943,19 +1021,30 @@ private fun EmptyStatsView() {
     }
 }
 
-private fun formatDuration(ms: Long): String {
+private fun formatDuration(ms: Long, useHoursFormat: Boolean): String {
     val seconds = ms / 1000
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60
 
     return when {
-        hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes}m"
-        else -> "< 1m"
+        useHoursFormat && hours > 0 -> "${hours}h ${minutes}m"
+        else -> {
+            val totalMinutes = seconds / 60
+            if (totalMinutes > 0) "${totalMinutes}m" else "< 1m"
+        }
     }
 }
 
-private fun formatDurationAsMinutes(ms: Long): String {
-    val minutes = (ms / 1000 / 60).coerceAtLeast(1)
-    return "$minutes min"
+private fun formatDurationAsMinutes(ms: Long, useHoursFormat: Boolean): String {
+    val seconds = ms / 1000
+    val totalMinutes = seconds / 60
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+
+    return if (useHoursFormat && hours > 0) {
+        if (minutes > 0) "${hours}h ${minutes}m" else "${hours}h"
+    } else {
+        val displayMin = totalMinutes.coerceAtLeast(1)
+        "$displayMin min"
+    }
 }

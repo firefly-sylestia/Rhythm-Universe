@@ -1285,34 +1285,35 @@ fun ExpressivePlayerControlGroup(
     }
 
     // Container height and padding — scale down for compact-height phones
+    // Container height and padding — scale down for compact-height phones but ensure 48.dp minimum touch target
     val containerHeight = when {
-        isExtraSmallWidth && isCompactHeight -> 52.dp
-        isExtraSmallWidth -> 64.dp
-        isCompactHeight -> 60.dp
-        isCompactWidth -> 72.dp
+        isExtraSmallWidth && isCompactHeight -> 68.dp
+        isExtraSmallWidth -> 72.dp
+        isCompactHeight -> 68.dp
+        isCompactWidth -> 76.dp
         else -> 80.dp
     }
     
     val containerPadding = when {
-        isCompactHeight -> 10.dp
-        isExtraSmallWidth -> 12.dp
-        isCompactWidth -> 16.dp
-        else -> 16.dp
+        isCompactHeight -> 8.dp
+        isExtraSmallWidth -> 10.dp
+        isCompactWidth -> 12.dp
+        else -> 12.dp
     }
     
-    // Button sizes
+    // Button sizes (minimum 48.dp touch target)
     val prevNextSize = when {
-        isExtraSmallWidth && isCompactHeight -> 36.dp
-        isExtraSmallWidth -> 42.dp
-        isCompactHeight -> 40.dp
-        isCompactWidth -> 46.dp
+        isExtraSmallWidth && isCompactHeight -> 48.dp
+        isExtraSmallWidth -> 48.dp
+        isCompactHeight -> 48.dp
+        isCompactWidth -> 48.dp
         else -> 50.dp
     }
     
     val seekButtonSize = when {
-        isExtraSmallWidth && isCompactHeight -> 40.dp
+        isExtraSmallWidth && isCompactHeight -> 48.dp
         isExtraSmallWidth -> 48.dp
-        isCompactHeight -> 46.dp
+        isCompactHeight -> 48.dp
         isCompactWidth -> 54.dp
         else -> 60.dp
     }

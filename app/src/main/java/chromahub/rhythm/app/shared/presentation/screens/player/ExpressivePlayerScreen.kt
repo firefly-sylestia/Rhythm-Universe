@@ -78,6 +78,9 @@ import chromahub.rhythm.app.shared.presentation.components.common.StyledProgress
 import chromahub.rhythm.app.shared.presentation.components.common.ThumbStyle
 import chromahub.rhythm.app.shared.presentation.components.common.WaveSlider
 import chromahub.rhythm.app.shared.presentation.components.common.rememberExpressiveShapeFor
+import chromahub.rhythm.app.shared.presentation.components.icons.MaterialSymbolIcon
+import chromahub.rhythm.app.shared.presentation.components.common.M3CircularLoader
+import androidx.compose.material3.ContainedLoadingIndicator
 import chromahub.rhythm.app.shared.presentation.components.icons.Icon
 import chromahub.rhythm.app.shared.presentation.components.icons.RhythmIcons
 import chromahub.rhythm.app.util.HapticUtils
@@ -99,6 +102,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.produceState
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,6 +128,7 @@ fun ExpressivePlayerScreen(
     onLyricsSeek: ((Long) -> Unit)?,
     onRetryLyrics: () -> Unit,
     onShowLyricsEditor: () -> Unit,
+    onPickLyricsFile: () -> Unit,
     isMediaLoading: Boolean,
     isSeeking: Boolean,
     onPlayPause: () -> Unit,
@@ -177,6 +184,8 @@ fun ExpressivePlayerScreen(
     val playerProgressThumbStyle by appSettings.playerProgressThumbStyle.collectAsState()
     val enhancedSeekingEnabled by appSettings.enhancedSeekingEnabled.collectAsState()
     val playerLyricsTextSize by appSettings.playerLyricsTextSize.collectAsState()
+    val showLyricsTranslation by appSettings.showLyricsTranslation.collectAsState()
+    val showLyricsRomanization by appSettings.showLyricsRomanization.collectAsState()
     var isScrubbing by remember { mutableStateOf(false) }
     var scrubProgress by remember { mutableFloatStateOf(0f) }
     val progressValue = progress().coerceIn(0f, 1f)
@@ -403,38 +412,33 @@ fun ExpressivePlayerScreen(
                 .fillMaxSize()
                 .padding(
                     top = 8.dp,
-                    bottom = 0.dp,
-                    start = if (isCompactWidth) 12.dp else 24.dp,
-                    end = if (isCompactWidth) 12.dp else 24.dp
+                    bottom = 0.dp
                 )
         ) {
             val containerMaxWidth = maxWidth
             val containerMaxHeight = maxHeight
             val isPortraitLocal = containerMaxHeight > containerMaxWidth
 
-            // Adjust proportions dynamically for compact sizes
-            val artworkHeight = if (isPortraitLocal) {
-                if (isCompactHeight) containerMaxHeight * 0.4f else containerMaxHeight * 0.48f
-            } else {
-                containerMaxHeight * 0.65f
-            }
-
             val controlButtonSize = if (isPortraitLocal) {
-                (containerMaxWidth * 0.2f).coerceIn(48.dp, 80.dp)
+                val base = (containerMaxWidth * 0.2f)
+                if (isCompactHeight) base.coerceIn(48.dp, 56.dp) else base.coerceIn(48.dp, 80.dp)
             } else {
-                72.dp
+                if (isCompactHeight) 48.dp else 72.dp
             }
 
             val smallControlSize = if (isPortraitLocal) {
-                (containerMaxWidth * 0.16f).coerceIn(40.dp, 64.dp)
+                val base = (containerMaxWidth * 0.16f)
+                if (isCompactHeight) base.coerceIn(32.dp, 48.dp) else base.coerceIn(40.dp, 64.dp)
             } else {
-                56.dp
+                if (isCompactHeight) 40.dp else 56.dp
             }
 
             Column(
                 modifier = Modifier
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxSize()
+                    .navigationBarsPadding(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Bottom
             ) {
                 var artworkOffsetX by remember { mutableStateOf(0f) }
                 val artworkSwipeThreshold = 140f
@@ -451,107 +455,106 @@ fun ExpressivePlayerScreen(
                     visible = showAlbumArt,
                     enter = fadeIn() + slideInVertically { it / 2 },
                     exit = fadeOut() + slideOutVertically { it / 2 },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(bottom = if (isCompactHeight) 12.dp else 24.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(artworkHeight)
-                                .graphicsLayer {
-                                    scaleX = artworkScale
-                                    scaleY = artworkScale
-                                    shadowElevation = if (isPlaying) 0.dp.toPx() else 0.dp.toPx()
-                                    translationX = artworkTranslationX
-                                    shape = artworkClipShape
-                                    clip = true
-                                }
-                                .pointerInput(showLyrics, lyricsVisible) {
-                                    detectTapGestures(
-                                        onDoubleTap = {
-                                            HapticUtils.performHapticFeedback(
-                                                context,
-                                                haptic,
-                                                HapticFeedbackType.LongPress
-                                            )
-                                            onPlayPause()
-                                        },
-                                        onTap = {
-                                            if (showLyrics) {
-                                                HapticUtils.performHapticFeedback(
-                                                    context,
-                                                    haptic,
-                                                    HapticFeedbackType.TextHandleMove
-                                                )
-                                                onToggleLyrics()
-                                            }
-                                        }
-                                    )
-                                }
-                                .pointerInput(Unit) {
-                                    detectDragGestures(
-                                        onDragEnd = {
-                                            if (artworkOffsetX < -artworkSwipeThreshold) {
-                                                HapticUtils.performHapticFeedback(
-                                                    context,
-                                                    haptic,
-                                                    HapticFeedbackType.LongPress
-                                                )
-                                                onSkipNext()
-                                            } else if (artworkOffsetX > artworkSwipeThreshold) {
+                        if (lyricsVisible) {
+                            RhythmPlayerLyricsPanel(
+                                lyrics = lyrics,
+                                isLoadingLyrics = isLoadingLyrics,
+                                onlineOnlyLyrics = onlineOnlyLyrics,
+                                currentTimeMs = currentTimeMs,
+                                onLyricsSeek = onLyricsSeek,
+                                textSizeMultiplier = playerLyricsTextSize,
+                                onRetryLyrics = onRetryLyrics,
+                                onShowLyricsEditor = onShowLyricsEditor,
+                                onPickLyricsFile = onPickLyricsFile,
+                                showTranslation = showLyricsTranslation,
+                                showRomanization = showLyricsRomanization,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight()
+                                    .padding(horizontal = if (isCompactWidth) 16.dp else 24.dp)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = if (isCompactWidth) 12.dp else 24.dp)
+                                    .fillMaxSize(if (isCompactHeight) 0.55f else 0.88f)
+                                    .aspectRatio(1f)
+                                    .graphicsLayer {
+                                        scaleX = artworkScale
+                                        scaleY = artworkScale
+                                        shadowElevation = if (isPlaying) 0.dp.toPx() else 0.dp.toPx()
+                                        translationX = artworkTranslationX
+                                        shape = artworkClipShape
+                                        clip = true
+                                    }
+                                    .pointerInput(showLyrics, lyricsVisible) {
+                                        detectTapGestures(
+                                            onDoubleTap = {
                                                 HapticUtils.performHapticFeedback(
                                                     context,
                                                     haptic,
                                                     HapticFeedbackType.LongPress
                                                 )
-                                                onSkipPrevious()
+                                                onPlayPause()
+                                            },
+                                            onTap = {
+                                                if (showLyrics) {
+                                                    HapticUtils.performHapticFeedback(
+                                                        context,
+                                                        haptic,
+                                                        HapticFeedbackType.TextHandleMove
+                                                    )
+                                                    onToggleLyrics()
+                                                }
                                             }
-                                            artworkOffsetX = 0f
-                                        },
-                                        onDragCancel = { artworkOffsetX = 0f },
-                                        onDrag = { change, dragAmount ->
-                                            change.consume()
-                                            artworkOffsetX += dragAmount.x
-                                        }
-                                    )
-                                }
-                        ) {
-
-                            AnimatedContent(
-                                targetState = lyricsVisible,
-                                transitionSpec = {
-                                    (fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.95f)) togetherWith
-                                            (fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.95f))
-                                },
-                                label = "LyricsTransition"
-                            ) { isShowingLyrics ->
-                                if (isShowingLyrics) {
-                                    RhythmPlayerLyricsPanel(
-                                        lyrics = lyrics,
-                                        isLoadingLyrics = isLoadingLyrics,
-                                        onlineOnlyLyrics = onlineOnlyLyrics,
-                                        currentTimeMs = currentTimeMs,
-                                        onLyricsSeek = onLyricsSeek,
-                                        textSizeMultiplier = playerLyricsTextSize,
-                                        onRetryLyrics = onRetryLyrics,
-                                        onShowLyricsEditor = onShowLyricsEditor,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } else {
-                                    M3ImageUtils.M3MediaImage(
-                                        data = song?.artworkUri,
-                                        contentDescription = "Album Artwork",
-                                        modifier = Modifier.fillMaxSize(),
-                                        shape = artworkClipShape,
-                                        type = M3PlaceholderType.TRACK,
-                                        name = song?.title,
-                                        expressiveShape = if (lyricsVisible) null else playerArtworkShape
-                                    )
-                                }
+                                        )
+                                    }
+                                    .pointerInput(Unit) {
+                                        detectDragGestures(
+                                            onDragEnd = {
+                                                if (artworkOffsetX < -artworkSwipeThreshold) {
+                                                    HapticUtils.performHapticFeedback(
+                                                        context,
+                                                        haptic,
+                                                        HapticFeedbackType.LongPress
+                                                    )
+                                                    onSkipNext()
+                                                } else if (artworkOffsetX > artworkSwipeThreshold) {
+                                                    HapticUtils.performHapticFeedback(
+                                                        context,
+                                                        haptic,
+                                                        HapticFeedbackType.LongPress
+                                                    )
+                                                    onSkipPrevious()
+                                                }
+                                                artworkOffsetX = 0f
+                                            },
+                                            onDragCancel = { artworkOffsetX = 0f },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                artworkOffsetX += dragAmount.x
+                                            }
+                                        )
+                                    }
+                            ) {
+                                M3ImageUtils.M3MediaImage(
+                                    data = song?.artworkUri,
+                                    contentDescription = "Album Artwork",
+                                    modifier = Modifier.fillMaxSize(),
+                                    shape = artworkClipShape,
+                                    type = M3PlaceholderType.TRACK,
+                                    name = song?.title,
+                                    expressiveShape = playerArtworkShape
+                                )
                             }
                         }
                     }
@@ -565,14 +568,17 @@ fun ExpressivePlayerScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(bottom = if (isCompactHeight) 8.dp else 16.dp),
+                            .padding(
+                                start = if (isCompactWidth) 12.dp else 24.dp,
+                                end = if (isCompactWidth) 12.dp else 24.dp,
+                                bottom = if (isCompactHeight) 8.dp else 16.dp
+                            ),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = if (isCompactHeight) 12.dp else 24.dp),
+                            .padding(bottom = if (isCompactHeight) 8.dp else 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(
@@ -851,8 +857,16 @@ fun ExpressivePlayerScreen(
                     enter = fadeIn() + slideInVertically { it / 2 },
                     exit = fadeOut() + slideOutVertically { it / 2 }
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Spacer(modifier = Modifier.height(if (isCompactHeight) 12.dp else 24.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                start = if (isCompactWidth) 12.dp else 24.dp,
+                                end = if (isCompactWidth) 12.dp else 24.dp
+                            ),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Spacer(modifier = Modifier.height(if (isCompactHeight) 12.dp else 16.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -885,11 +899,11 @@ fun ExpressivePlayerScreen(
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    AutoScrollingTextOnDemand(
+                                     AutoScrollingTextOnDemand(
                                         text = location?.name ?: "Output",
                                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                                         gradientEdgeColor = MaterialTheme.colorScheme.surfaceContainer,
-                                        modifier = Modifier.widthIn(max = 160.dp),
+                                        modifier = Modifier.widthIn(max = if (isCompactWidth) 80.dp else 160.dp),
                                         respectGlobalSetting = true
                                     )
                                 }
@@ -912,11 +926,11 @@ fun ExpressivePlayerScreen(
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    AutoScrollingTextOnDemand(
+                                     AutoScrollingTextOnDemand(
                                         text = queueLabel,
                                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                                         gradientEdgeColor = MaterialTheme.colorScheme.surfaceContainer,
-                                        modifier = Modifier.widthIn(max = 160.dp),
+                                        modifier = Modifier.widthIn(max = if (isCompactWidth) 80.dp else 160.dp),
                                         respectGlobalSetting = true
                                     )
                                 }
@@ -939,6 +953,9 @@ private fun RhythmPlayerLyricsPanel(
     textSizeMultiplier: Float,
     onRetryLyrics: () -> Unit,
     onShowLyricsEditor: () -> Unit,
+    onPickLyricsFile: () -> Unit,
+    showTranslation: Boolean,
+    showRomanization: Boolean,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -952,13 +969,17 @@ private fun RhythmPlayerLyricsPanel(
     ) {
         when {
             isLoadingLyrics -> {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(12.dp))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)
+                ) {
+                    ContainedLoadingIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = context.getString(R.string.player_loading_lyrics),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -1016,7 +1037,7 @@ private fun RhythmPlayerLyricsPanel(
                                     onShowLyricsEditor()
                                 },
                                 isStart = false,
-                                isEnd = true
+                                isEnd = false
                             ) {
                                 Icon(
                                     imageVector = RhythmIcons.Player.Lyrics,
@@ -1026,67 +1047,199 @@ private fun RhythmPlayerLyricsPanel(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Add")
                             }
+                            ExpressiveGroupButton(
+                                onClick = {
+                                    HapticUtils.performHapticFeedback(
+                                        context,
+                                        haptic,
+                                        HapticFeedbackType.LongPress
+                                    )
+                                    onPickLyricsFile()
+                                },
+                                isStart = false,
+                                isEnd = true
+                            ) {
+                                Icon(
+                                    imageVector = MaterialSymbolIcon("file_open", filled = true),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Load")
+                            }
                         }
                     }
                 }
             }
 
             else -> {
-                val wordByWord = lyrics?.getWordByWordLyricsOrNull()
-                val synced = lyrics?.getSyncedLyricsOrNull()
-                val plain = lyrics?.getPlainLyricsOrNull()
+                val wordByWordLyrics = remember(lyrics) {
+                    lyrics?.getWordByWordLyricsOrNull()
+                }
 
-                when {
-                    !wordByWord.isNullOrBlank() -> {
-                        WordByWordLyricsView(
-                            wordByWordLyrics = wordByWord,
-                            currentPlaybackTime = currentTimeMs,
-                            onSeek = onLyricsSeek,
-                            textSizeMultiplier = textSizeMultiplier,
-                            textAlignment = textAlignment,
-                            modifier = Modifier.fillMaxSize()
+                if (wordByWordLyrics != null) {
+                    WordByWordLyricsView(
+                        wordByWordLyrics = wordByWordLyrics,
+                        currentPlaybackTime = currentTimeMs,
+                        modifier = Modifier.fillMaxSize(),
+                        onSeek = onLyricsSeek,
+                        lyricsSource = lyrics?.source,
+                        textSizeMultiplier = textSizeMultiplier,
+                        textAlignment = textAlignment,
+                        showTranslation = showTranslation,
+                        showRomanization = showRomanization
+                    )
+                } else {
+                    val lyricsText = remember(lyrics) {
+                        lyrics?.getBestLyrics() ?: ""
+                    }
+                    val filteredPlainLyricsText = remember(
+                        lyricsText,
+                        showTranslation,
+                        showRomanization
+                    ) {
+                        filterPlainLyricsByPreference(
+                            rawLyrics = lyricsText,
+                            showTranslation = showTranslation,
+                            showRomanization = showRomanization
                         )
                     }
 
-                    !synced.isNullOrBlank() -> {
+                    val likelySyncedLyrics = remember(lyricsText) {
+                        Regex("\\[\\d{1,3}:\\d{2}(?:[.:]\\d{0,3})?]")
+                            .containsMatchIn(lyricsText)
+                    }
+
+                    val parsedLyrics by produceState<List<chromahub.rhythm.app.util.LyricLine>?>(
+                        initialValue = if (likelySyncedLyrics) null else emptyList(),
+                        key1 = lyricsText,
+                        key2 = likelySyncedLyrics
+                    ) {
+                        value = if (!likelySyncedLyrics) {
+                            emptyList()
+                        } else {
+                            withContext(kotlinx.coroutines.Dispatchers.Default) {
+                                chromahub.rhythm.app.util.LyricsParser.parseLyrics(
+                                    lyricsText
+                                )
+                            }
+                        }
+                    }
+
+                    if (parsedLyrics == null) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            M3CircularLoader(
+                                modifier = Modifier.size(28.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                strokeWidth = 2f
+                            )
+                        }
+                    } else if (parsedLyrics?.isNotEmpty() == true) {
                         SyncedLyricsView(
-                            lyrics = synced,
+                            lyrics = lyricsText,
                             currentPlaybackTime = currentTimeMs,
+                            modifier = Modifier.fillMaxSize(),
+                            parsedLyricsInput = parsedLyrics,
                             onSeek = onLyricsSeek,
+                            showTranslation = showTranslation,
+                            showRomanization = showRomanization,
+                            lyricsSource = lyrics?.source,
                             textSizeMultiplier = textSizeMultiplier,
-                            textAlignment = textAlignment,
-                            modifier = Modifier.fillMaxSize()
+                            textAlignment = textAlignment
                         )
-                    }
-
-                    !plain.isNullOrBlank() -> {
+                    } else {
                         val baseStyle = MaterialTheme.typography.bodyLarge
-                        Text(
-                            text = plain,
-                            style = baseStyle.copy(
-                                fontSize = baseStyle.fontSize * textSizeMultiplier,
-                                lineHeight = baseStyle.lineHeight * 1.4f * textSizeMultiplier
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textAlign = textAlignment,
+                        Column(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .verticalScroll(rememberScrollState())
-                                .padding(24.dp)
-                        )
-                    }
+                                .padding(24.dp),
+                            horizontalAlignment = when (textAlignment) {
+                                TextAlign.Start -> Alignment.Start
+                                TextAlign.End -> Alignment.End
+                                else -> Alignment.CenterHorizontally
+                            }
+                        ) {
+                            Text(
+                                text = filteredPlainLyricsText,
+                                style = baseStyle.copy(
+                                    fontSize = baseStyle.fontSize * textSizeMultiplier,
+                                    lineHeight = baseStyle.lineHeight * 1.6f * textSizeMultiplier,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = 0.5.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = textAlignment,
+                                modifier = Modifier.fillMaxWidth()
+                            )
 
-                    else -> {
-                        Text(
-                            text = "No lyrics available for this song.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                            textAlign = textAlignment
-                        )
+                            if (!lyrics?.source.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Text(
+                                    text = "Lyrics by ${lyrics.source}",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Normal,
+                                        letterSpacing = 0.5.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    textAlign = textAlignment,
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
+}
+
+private fun filterPlainLyricsByPreference(
+    rawLyrics: String,
+    showTranslation: Boolean,
+    showRomanization: Boolean
+): String {
+    if (rawLyrics.isBlank()) return rawLyrics
+    if (showTranslation && showRomanization) return rawLyrics
+
+    val filteredLines = mutableListOf<String>()
+    var previousMainLineWasNonAscii = false
+
+    rawLyrics.lineSequence().forEach { line ->
+        val trimmed = line.trim()
+
+        if (trimmed.isEmpty()) {
+            filteredLines += line
+            return@forEach
+        }
+
+        val isBracketTranslation = trimmed.startsWith("(") && trimmed.endsWith(")") && trimmed.length > 2
+        val isBracketRomanization = trimmed.startsWith("[") && trimmed.endsWith("]") && trimmed.length > 2
+        val hasLettersOrDigits = trimmed.any { it.isLetterOrDigit() }
+        val isAsciiOnly = trimmed.all { char ->
+            char.code <= 127 || char.isWhitespace()
+        }
+        val inferredRomanization = hasLettersOrDigits && isAsciiOnly && previousMainLineWasNonAscii
+
+        val shouldHide =
+            (!showTranslation && isBracketTranslation) ||
+                (!showRomanization && (isBracketRomanization || inferredRomanization))
+
+        if (shouldHide) {
+            return@forEach
+        }
+
+        filteredLines += line
+
+        if (!isBracketTranslation && !isBracketRomanization && !inferredRomanization) {
+            previousMainLineWasNonAscii = trimmed.any { it.code > 127 }
+        }
+    }
+
+    return filteredLines.joinToString("\n")
 }
 

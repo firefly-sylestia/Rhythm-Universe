@@ -152,6 +152,7 @@ private fun RhythmGuardTimeoutScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
+    val useHoursFormat by appSettings.useHoursInTimeFormat.collectAsState()
     val timeoutUntilMsState by appSettings.rhythmGuardTimeoutUntilMs.collectAsState()
     val timeoutReasonState by appSettings.rhythmGuardTimeoutReason.collectAsState()
     val timeoutStartedAtMsState by appSettings.rhythmGuardTimeoutStartedAtMs.collectAsState()
@@ -346,7 +347,7 @@ private fun RhythmGuardTimeoutScreen(
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = formatCountdown(remainingSeconds),
+                                        text = formatCountdown(remainingSeconds, useHoursFormat),
                                         style = MaterialTheme.typography.headlineSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
@@ -532,15 +533,16 @@ private fun RhythmGuardTimeoutScreen(
     }
 }
 
-private fun formatCountdown(seconds: Long): String {
+private fun formatCountdown(seconds: Long, useHoursFormat: Boolean): String {
     val safeSeconds = seconds.coerceAtLeast(0L)
-    val hours = safeSeconds / 3600L
-    val minutes = (safeSeconds % 3600L) / 60L
+    val totalMinutes = safeSeconds / 60L
     val secs = safeSeconds % 60L
 
-    return if (hours > 0L) {
+    return if (useHoursFormat && totalMinutes >= 60L) {
+        val hours = totalMinutes / 60L
+        val minutes = totalMinutes % 60L
         String.format("%d:%02d:%02d", hours, minutes, secs)
     } else {
-        String.format("%02d:%02d", minutes, secs)
+        String.format("%02d:%02d", totalMinutes, secs)
     }
 }
