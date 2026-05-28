@@ -293,7 +293,7 @@ fun PlayerScreen(
                 appSettings = appSettings,
                 onNavigateToSettings = {
                     showDeviceOutputSheet = false
-                    navController.navigate(Screen.TunerQueuePlayback.route)
+                    navController.navigate(Screen.TunerPlayback.route)
                 },
                 onNavigateToGoMode = null,
                 onNavigateToEqualizer = {

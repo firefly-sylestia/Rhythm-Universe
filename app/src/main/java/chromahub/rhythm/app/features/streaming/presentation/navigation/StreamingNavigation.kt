@@ -100,7 +100,8 @@ import chromahub.rhythm.app.features.local.presentation.screens.ListeningStatsSc
 import chromahub.rhythm.app.features.local.presentation.screens.PlaylistDetailScreen
 import chromahub.rhythm.app.shared.presentation.screens.player.PlayerScreen
 import chromahub.rhythm.app.shared.presentation.screens.settings.RhythmGuardSettingsScreen
-import chromahub.rhythm.app.shared.presentation.screens.settings.QueuePlaybackSettingsScreen
+import chromahub.rhythm.app.shared.presentation.screens.settings.QueueSettingsScreen
+import chromahub.rhythm.app.shared.presentation.screens.settings.PlaybackSettingsScreen
 import chromahub.rhythm.app.features.local.presentation.viewmodel.MusicViewModel as LocalMusicViewModel
 import chromahub.rhythm.app.features.streaming.domain.model.StreamingArtist
 import chromahub.rhythm.app.features.streaming.domain.model.StreamingAlbum
@@ -132,6 +133,7 @@ import chromahub.rhythm.app.ui.theme.MusicDimensions
 import chromahub.rhythm.app.util.HapticUtils
 import chromahub.rhythm.app.shared.presentation.screens.settings.SettingsScreenWrapper
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 
 private sealed class StreamingScreen(val route: String, val titleRes: Int? = null) {
@@ -176,6 +178,7 @@ fun StreamingNavigation(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val appSettings = remember { AppSettings.getInstance(context) }
+    val miniPlayerThemeId by appSettings.miniPlayerThemeId.collectAsState()
 
     val currentSong by localMusicViewModel.currentSong.collectAsState()
     val isPlaying by localMusicViewModel.isPlaying.collectAsState()
@@ -212,7 +215,7 @@ fun StreamingNavigation(
     val isServiceSetupRoute = currentRoute.startsWith("streaming_service_setup")
     val isPlayerRoute = currentRoute == StreamingScreen.Player.route
     val isEqualizerRoute = currentRoute == Screen.Equalizer.route
-    val isQueuePlaybackRoute = currentRoute == Screen.TunerQueuePlayback.route
+    val isQueuePlaybackRoute = currentRoute == Screen.TunerQueue.route || currentRoute == Screen.TunerPlayback.route
     val isSettingsRoute = currentRoute.contains("settings")
 
     val isHomeRoute = currentRoute == StreamingScreen.Home.route
@@ -263,7 +266,8 @@ fun StreamingNavigation(
     // Calculate miniplayer padding for bottom content alignment
     val miniPlayerBottomPadding by animateDpAsState(
         targetValue = if (showMiniPlayer) {
-            UiConstants.MiniPlayerHeight + 16.dp // Card height + spacing
+            val miniPlayerHeight = if (miniPlayerThemeId == "EXPRESSIVE") 72.dp else 96.dp
+            miniPlayerHeight + 16.dp // Card height + spacing
         } else {
             0.dp
         },
@@ -467,6 +471,18 @@ fun StreamingNavigation(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
+                        .layout { measurable, constraints ->
+                            val heightOffset = 48.dp.roundToPx()
+                            val placeable = measurable.measure(
+                                constraints.copy(
+                                    maxHeight = constraints.maxHeight + heightOffset
+                                )
+                            )
+                            val layoutHeight = (placeable.height - heightOffset).coerceAtLeast(0)
+                            layout(placeable.width, layoutHeight) {
+                                placeable.placeRelative(0, -heightOffset)
+                            }
+                        }
                         .graphicsLayer { alpha = bottomChromeAlpha }
                         .background(
                             brush = Brush.verticalGradient(
@@ -679,6 +695,13 @@ fun StreamingNavigation(
                     onNavigateToArtist = { artist ->
                         navController.navigate(
                             StreamingScreen.ArtistDetail.createRoute(artist.id, artist.name)
+                        ) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToPlaylist = { playlist ->
+                        navController.navigate(
+                            StreamingScreen.PlaylistDetail.createRoute(playlist.id)
                         ) {
                             launchSingleTop = true
                         }
@@ -1806,7 +1829,7 @@ fun StreamingNavigation(
             }
 
             composable(
-                route = Screen.TunerQueuePlayback.route,
+                route = Screen.TunerQueue.route,
                 enterTransition = {
                     fadeIn(animationSpec = tween(300)) +
                         slideInVertically(
@@ -1825,7 +1848,30 @@ fun StreamingNavigation(
                         )
                 }
             ) {
-                QueuePlaybackSettingsScreen(onBackClick = { navController.popBackStack() })
+                QueueSettingsScreen(onBackClick = { navController.popBackStack() })
+            }
+
+            composable(
+                route = Screen.TunerPlayback.route,
+                enterTransition = {
+                    fadeIn(animationSpec = tween(300)) +
+                        slideInVertically(
+                            initialOffsetY = { it / 4 },
+                            animationSpec = tween(350, easing = EaseInOutQuart)
+                        )
+                },
+                exitTransition = {
+                    fadeOut(animationSpec = tween(300))
+                },
+                popExitTransition = {
+                    fadeOut(animationSpec = tween(300)) +
+                        slideOutVertically(
+                            targetOffsetY = { it / 4 },
+                            animationSpec = tween(350, easing = EaseInOutQuart)
+                        )
+                }
+            ) {
+                PlaybackSettingsScreen(onBackClick = { navController.popBackStack() })
             }
 
             composable(

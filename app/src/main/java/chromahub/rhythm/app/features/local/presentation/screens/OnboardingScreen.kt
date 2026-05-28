@@ -74,6 +74,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.input.PasswordVisualTransformation
  
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -126,6 +130,7 @@ import chromahub.rhythm.app.features.local.presentation.screens.onboarding.Permi
 import chromahub.rhythm.app.shared.presentation.viewmodel.AppUpdaterViewModel
 import chromahub.rhythm.app.shared.presentation.viewmodel.AppVersion
 import chromahub.rhythm.app.features.local.presentation.viewmodel.MusicViewModel
+import chromahub.rhythm.app.features.streaming.presentation.viewmodel.StreamingMusicViewModel
 import chromahub.rhythm.app.shared.presentation.viewmodel.ThemeViewModel
 import chromahub.rhythm.app.util.HapticUtils
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -161,6 +166,7 @@ fun OnboardingScreen(
     appSettings: AppSettings,
     musicViewModel: MusicViewModel,
     updaterViewModel: AppUpdaterViewModel = viewModel(),
+    streamingViewModel: StreamingMusicViewModel = viewModel(),
     onFinish: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -178,27 +184,52 @@ fun OnboardingScreen(
     val cardPadding = if (isTablet) 32.dp else 20.dp
 
     // Notification and legacy library setup are removed from the visible flow.
-    val stepIndex = when (currentStep) {
-        OnboardingStep.WELCOME -> 0
-        OnboardingStep.PERMISSIONS -> 1
-        OnboardingStep.RHYTHM_GUARD -> 2
-        OnboardingStep.MEDIA_SCAN -> 3
-        OnboardingStep.UPDATER -> 4
-        OnboardingStep.FULL_TOUR_PROMPT -> 5
-        OnboardingStep.NOTIFICATIONS -> 5
-        OnboardingStep.BACKUP_RESTORE -> 6
-        OnboardingStep.AUDIO_PLAYBACK -> 7
-        OnboardingStep.THEMING -> 8
-        OnboardingStep.GESTURES -> 9
-        OnboardingStep.LIBRARY_SETUP -> 9
-        OnboardingStep.WIDGETS -> 10
-        OnboardingStep.INTEGRATIONS -> 11
-        OnboardingStep.RHYTHM_STATS -> 12
-        OnboardingStep.SETUP_FINISHED -> 13
-        OnboardingStep.COMPLETE -> 14
+    val appMode by appSettings.appMode.collectAsState()
+    val sessions by streamingViewModel.serviceSessions.collectAsState()
+    val streamingService by appSettings.streamingService.collectAsState()
+    val isStreamingServiceConnected = remember(sessions, streamingService) {
+        sessions[streamingService]?.isConnected == true
+    }
+    
+    val visibleSteps = remember(appMode) {
+        val list = mutableListOf<OnboardingStep>()
+        list.add(OnboardingStep.WELCOME)
+        list.add(OnboardingStep.APP_MODE_CHOICE)
+        if (appMode == "STREAMING") {
+            list.add(OnboardingStep.STREAMING_SETUP)
+        } else {
+            list.add(OnboardingStep.PERMISSIONS)
+        }
+        list.add(OnboardingStep.RHYTHM_GUARD)
+        if (appMode != "STREAMING") {
+            list.add(OnboardingStep.MEDIA_SCAN)
+        }
+        list.add(OnboardingStep.UPDATER)
+        list.add(OnboardingStep.FULL_TOUR_PROMPT)
+        list.add(OnboardingStep.BACKUP_RESTORE)
+        list.add(OnboardingStep.AUDIO_PLAYBACK)
+        list.add(OnboardingStep.THEMING)
+        list.add(OnboardingStep.GESTURES)
+        list.add(OnboardingStep.WIDGETS)
+        list.add(OnboardingStep.INTEGRATIONS)
+        list.add(OnboardingStep.RHYTHM_STATS)
+        list.add(OnboardingStep.SETUP_FINISHED)
+        list.add(OnboardingStep.COMPLETE)
+        list
     }
 
-    val totalSteps = 14
+    val stepIndex = remember(currentStep, visibleSteps) {
+        val index = visibleSteps.indexOf(currentStep)
+        if (index >= 0) index else {
+            when (currentStep) {
+                OnboardingStep.NOTIFICATIONS -> visibleSteps.indexOf(OnboardingStep.FULL_TOUR_PROMPT)
+                OnboardingStep.LIBRARY_SETUP -> visibleSteps.indexOf(OnboardingStep.GESTURES)
+                else -> 0
+            }.coerceAtLeast(0)
+        }
+    }
+
+    val totalSteps = remember(visibleSteps) { visibleSteps.size }
 
     // Create pager state
     val pagerState = rememberPagerState(
@@ -220,23 +251,7 @@ fun OnboardingScreen(
 
     // Sync step with pager changes.
     LaunchedEffect(pagerState.currentPage) {
-        val newStep = when (pagerState.currentPage) {
-            0 -> OnboardingStep.WELCOME
-            1 -> OnboardingStep.PERMISSIONS
-            2 -> OnboardingStep.RHYTHM_GUARD
-            3 -> OnboardingStep.MEDIA_SCAN
-            4 -> OnboardingStep.UPDATER
-            5 -> OnboardingStep.FULL_TOUR_PROMPT
-            6 -> OnboardingStep.BACKUP_RESTORE
-            7 -> OnboardingStep.AUDIO_PLAYBACK
-            8 -> OnboardingStep.THEMING
-            9 -> OnboardingStep.GESTURES
-            10 -> OnboardingStep.WIDGETS
-            11 -> OnboardingStep.INTEGRATIONS
-            12 -> OnboardingStep.RHYTHM_STATS
-            13 -> OnboardingStep.SETUP_FINISHED
-            else -> OnboardingStep.COMPLETE
-        }
+        val newStep = visibleSteps.getOrNull(pagerState.currentPage) ?: OnboardingStep.COMPLETE
         if (newStep != currentStep && pagerState.currentPage < stepIndex) {
             onPrevStep()
         } else if (newStep != currentStep && pagerState.currentPage > stepIndex) {
@@ -261,30 +276,14 @@ fun OnboardingScreen(
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = when {
-                    currentStep != OnboardingStep.PERMISSIONS && currentStep != OnboardingStep.GESTURES -> true
+                    currentStep != OnboardingStep.PERMISSIONS && currentStep != OnboardingStep.GESTURES && currentStep != OnboardingStep.STREAMING_SETUP -> true
                     permissionScreenState == PermissionScreenState.PermissionsGranted -> true
                     else -> true // Allow scrolling to let user review info before granting
                 },
                 modifier = Modifier.fillMaxSize(),
                 key = { page -> page } // Add key to preserve page state
             ) { page ->
-                val step = when (page) {
-                    0 -> OnboardingStep.WELCOME
-                    1 -> OnboardingStep.PERMISSIONS
-                    2 -> OnboardingStep.RHYTHM_GUARD
-                    3 -> OnboardingStep.MEDIA_SCAN
-                    4 -> OnboardingStep.UPDATER
-                    5 -> OnboardingStep.FULL_TOUR_PROMPT
-                    6 -> OnboardingStep.BACKUP_RESTORE
-                    7 -> OnboardingStep.AUDIO_PLAYBACK
-                    8 -> OnboardingStep.THEMING
-                    9 -> OnboardingStep.GESTURES
-                    10 -> OnboardingStep.WIDGETS
-                    11 -> OnboardingStep.INTEGRATIONS
-                    12 -> OnboardingStep.RHYTHM_STATS
-                    13 -> OnboardingStep.SETUP_FINISHED
-                    else -> OnboardingStep.COMPLETE
-                }
+                val step = visibleSteps.getOrNull(page) ?: OnboardingStep.COMPLETE
                 // Container for step-specific content - positioned at top within pager page
                 Box(
                     modifier = Modifier
@@ -299,6 +298,164 @@ fun OnboardingScreen(
                             OnboardingStep.WELCOME -> {
                                 // Welcome screen without card
                                 EnhancedWelcomeContent(onNextStep = onNextStep, isTablet = isTablet, contentMaxWidth = contentMaxWidth)
+                            }
+                            OnboardingStep.APP_MODE_CHOICE -> {
+                                EnhancedAppModeChoiceContent(
+                                    appSettings = appSettings,
+                                    isTablet = isTablet,
+                                    backButton = if (stepIndex > 0) {
+                                        {
+                                            val buttonScale = remember { Animatable(1f) }
+                                            OutlinedButton(
+                                                onClick = {
+                                                    scope.launch {
+                                                        buttonScale.animateTo(0.92f, animationSpec = tween(100))
+                                                        buttonScale.animateTo(1f, animationSpec = spring(
+                                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                            stiffness = Spring.StiffnessHigh
+                                                        ))
+                                                    }
+                                                    onPrevStep()
+                                                },
+                                                modifier = Modifier
+                                                    .height(56.dp)
+                                                    .graphicsLayer {
+                                                        scaleX = buttonScale.value
+                                                        scaleY = buttonScale.value
+                                                    },
+                                                shape = RoundedCornerShape(32.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = RhythmIcons.Back,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(context.getString(R.string.onboarding_back), style = MaterialTheme.typography.labelLarge)
+                                            }
+                                        }
+                                    } else null,
+                                    nextButton = {
+                                        val nextButtonScale = remember { Animatable(1f) }
+                                        Button(
+                                            onClick = {
+                                                scope.launch {
+                                                    nextButtonScale.animateTo(0.92f, animationSpec = tween(100))
+                                                    nextButtonScale.animateTo(1f, animationSpec = spring(
+                                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                        stiffness = Spring.StiffnessHigh
+                                                    ))
+                                                }
+                                                HapticUtils.performHapticFeedback(context, haptic, HapticFeedbackType.LongPress)
+                                                onNextStep()
+                                            },
+                                            modifier = Modifier
+                                                .height(56.dp)
+                                                .graphicsLayer {
+                                                    scaleX = nextButtonScale.value
+                                                    scaleY = nextButtonScale.value
+                                                },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                            ),
+                                            shape = RoundedCornerShape(32.dp)
+                                        ) {
+                                            Text(
+                                                context.getString(R.string.onboarding_next),
+                                                style = MaterialTheme.typography.labelLarge.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Icon(
+                                                imageVector = RhythmIcons.Forward,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                            OnboardingStep.STREAMING_SETUP -> {
+                                EnhancedStreamingSetupContent(
+                                    appSettings = appSettings,
+                                    streamingViewModel = streamingViewModel,
+                                    isTablet = isTablet,
+                                    backButton = if (stepIndex > 0) {
+                                        {
+                                            val buttonScale = remember { Animatable(1f) }
+                                            OutlinedButton(
+                                                onClick = {
+                                                    scope.launch {
+                                                        buttonScale.animateTo(0.92f, animationSpec = tween(100))
+                                                        buttonScale.animateTo(1f, animationSpec = spring(
+                                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                            stiffness = Spring.StiffnessHigh
+                                                        ))
+                                                    }
+                                                    onPrevStep()
+                                                },
+                                                modifier = Modifier
+                                                    .height(56.dp)
+                                                    .graphicsLayer {
+                                                        scaleX = buttonScale.value
+                                                        scaleY = buttonScale.value
+                                                    },
+                                                shape = RoundedCornerShape(32.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = RhythmIcons.Back,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(context.getString(R.string.onboarding_back), style = MaterialTheme.typography.labelLarge)
+                                            }
+                                        }
+                                    } else null,
+                                    nextButton = {
+                                        val nextButtonScale = remember { Animatable(1f) }
+                                        Button(
+                                            onClick = {
+                                                scope.launch {
+                                                    nextButtonScale.animateTo(0.92f, animationSpec = tween(100))
+                                                    nextButtonScale.animateTo(1f, animationSpec = spring(
+                                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                        stiffness = Spring.StiffnessHigh
+                                                    ))
+                                                }
+                                                HapticUtils.performHapticFeedback(context, haptic, HapticFeedbackType.LongPress)
+                                                onNextStep()
+                                            },
+                                            enabled = isStreamingServiceConnected,
+                                            modifier = Modifier
+                                                .height(56.dp)
+                                                .graphicsLayer {
+                                                    scaleX = nextButtonScale.value
+                                                    scaleY = nextButtonScale.value
+                                                },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                            ),
+                                            shape = RoundedCornerShape(32.dp)
+                                        ) {
+                                            Text(
+                                                context.getString(R.string.onboarding_next),
+                                                style = MaterialTheme.typography.labelLarge.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Icon(
+                                                imageVector = RhythmIcons.Forward,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                )
                             }
                             OnboardingStep.PERMISSIONS -> {
                                 EnhancedPermissionContent(
@@ -1513,6 +1670,7 @@ fun OnboardingScreen(
                         },
                         enabled = when (currentStep) {
                             OnboardingStep.PERMISSIONS -> !isParentLoading && permissionScreenState != PermissionScreenState.Loading
+                            OnboardingStep.STREAMING_SETUP -> isStreamingServiceConnected
                             else -> true
                         },
                         modifier = Modifier
@@ -9439,5 +9597,805 @@ fun OnboardingTipItem(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onPrimaryContainer
         )
+    }
+}
+
+@Composable
+fun EnhancedAppModeChoiceContent(
+    appSettings: AppSettings,
+    isTablet: Boolean = false,
+    backButton: @Composable (() -> Unit)? = null,
+    nextButton: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val appMode by appSettings.appMode.collectAsState()
+    val scrollState = rememberScrollState()
+
+    var selectedMode by remember { mutableStateOf(appMode) }
+
+    if (isTablet) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(vertical = 32.dp),
+            horizontalArrangement = Arrangement.spacedBy(32.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Left Column
+            Column(
+                horizontalAlignment = Alignment.Start,
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                AnimatedVisibility(visible = true, enter = scaleIn() + fadeIn()) {
+                    OnboardingStepHeaderIcon(
+                        imageVector = MaterialSymbolIcon("music_video", filled = true),
+                        tint = MaterialTheme.colorScheme.primary,
+                        iconSize = 72.dp
+                    )
+                }
+
+                Text(
+                    text = "Choose Your Playback Mode",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                Text(
+                    text = "Select how you'd like to experience your music. You can change this anytime in settings.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 32.dp)
+                )
+
+                AppModeChoiceTipsCard()
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    backButton?.invoke()
+                    nextButton()
+                }
+            }
+
+            // Right Column
+            Column(
+                horizontalAlignment = Alignment.Start,
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                AppModeChoiceSelection(
+                    selectedMode = selectedMode,
+                    onModeSelected = { mode ->
+                        selectedMode = mode
+                        scope.launch { appSettings.setAppMode(mode) }
+                    }
+                )
+            }
+        }
+    } else {
+        // Mobile Column
+        Column(
+            horizontalAlignment = Alignment.Start,
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+        ) {
+            AnimatedVisibility(visible = true, enter = scaleIn() + fadeIn()) {
+                OnboardingStepHeaderIcon(
+                    imageVector = MaterialSymbolIcon("music_video", filled = true),
+                    tint = MaterialTheme.colorScheme.primary,
+                    iconSize = 56.dp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Choose Your Playback Mode",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            Text(
+                text = "Select how you'd like to experience your music. You can change this anytime in settings.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            AppModeChoiceSelection(
+                selectedMode = selectedMode,
+                onModeSelected = { mode ->
+                    selectedMode = mode
+                    scope.launch { appSettings.setAppMode(mode) }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            AppModeChoiceTipsCard()
+        }
+    }
+}
+
+@Composable
+private fun AppModeChoiceSelection(
+    selectedMode: String,
+    onModeSelected: (String) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+
+    // Option 1: Local Mode
+    val isLocalSelected = selectedMode == "LOCAL"
+    val localCardScale = remember { Animatable(1f) }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = localCardScale.value
+                scaleY = localCardScale.value
+            }
+            .clickable {
+                scope.launch {
+                    localCardScale.animateTo(0.97f, animationSpec = tween(80))
+                    localCardScale.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy))
+                }
+                onModeSelected("LOCAL")
+            },
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(
+            width = if (isLocalSelected) 2.dp else 1.dp,
+            color = if (isLocalSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isLocalSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = if (isLocalSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = MaterialSymbolIcon("music_note", filled = true),
+                        contentDescription = null,
+                        tint = if (isLocalSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Local Offline Player",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (isLocalSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Play audio files stored directly on your device. Supports advanced local directory scanning, statistics, and theme matching.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isLocalSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Option 2: Go Mode (Streaming)
+    val isStreamingSelected = selectedMode == "STREAMING"
+    val streamingCardScale = remember { Animatable(1f) }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = streamingCardScale.value
+                scaleY = streamingCardScale.value
+            }
+            .clickable {
+                scope.launch {
+                    streamingCardScale.animateTo(0.97f, animationSpec = tween(80))
+                    streamingCardScale.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy))
+                }
+                onModeSelected("STREAMING")
+            },
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(
+            width = if (isStreamingSelected) 2.dp else 1.dp,
+            color = if (isStreamingSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isStreamingSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = if (isStreamingSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = MaterialSymbolIcon("cloud_queue", filled = true),
+                        contentDescription = null,
+                        tint = if (isStreamingSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Rhythm GO! (Streaming)",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (isStreamingSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Connect to Jellyfin, Subsonic, or Navidrome servers to stream your entire library on the go, with caching support for offline listening.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isStreamingSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppModeChoiceTipsCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = RhythmIcons.Info,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Playback Mode Tips",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OnboardingTipItem(
+                icon = MaterialSymbolIcon("settings"),
+                text = "Switch easily anytime in Settings > Integration."
+            )
+            OnboardingTipItem(
+                icon = MaterialSymbolIcon("folder_open"),
+                text = "Local mode scans and catalogs audio files on your device."
+            )
+            OnboardingTipItem(
+                icon = MaterialSymbolIcon("cloud_sync"),
+                text = "GO Streaming connects via subsonic/jellyfin API server."
+            )
+        }
+    }
+}
+
+@Composable
+fun EnhancedStreamingSetupContent(
+    appSettings: AppSettings,
+    streamingViewModel: StreamingMusicViewModel,
+    isTablet: Boolean = false,
+    backButton: @Composable (() -> Unit)? = null,
+    nextButton: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    val sessions by streamingViewModel.serviceSessions.collectAsState()
+    val isLoading by streamingViewModel.isLoading.collectAsState()
+    val error by streamingViewModel.error.collectAsState()
+
+    var selectedProvider by rememberSaveable { mutableStateOf("subsonic") } // Default to subsonic (Navidrome/Subsonic)
+    
+    val currentSession = sessions[selectedProvider] ?: streamingViewModel.getServiceSession(selectedProvider)
+    val requiresServerUrl = remember(selectedProvider) { selectedProvider == "subsonic" || selectedProvider == "jellyfin" }
+
+    var serverUrl by rememberSaveable(selectedProvider) { mutableStateOf(currentSession.serverUrl) }
+    var username by rememberSaveable(selectedProvider) { mutableStateOf(currentSession.username) }
+    var password by rememberSaveable(selectedProvider) { mutableStateOf("") }
+
+    val isConnected = currentSession.isConnected
+    val canSubmit = username.isNotBlank() && password.isNotBlank() && (!requiresServerUrl || serverUrl.isNotBlank())
+    val scrollState = rememberScrollState()
+
+    if (isTablet) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(vertical = 32.dp),
+            horizontalArrangement = Arrangement.spacedBy(32.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Left Column
+            Column(
+                horizontalAlignment = Alignment.Start,
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                AnimatedVisibility(visible = true, enter = scaleIn() + fadeIn()) {
+                    OnboardingStepHeaderIcon(
+                        imageVector = MaterialSymbolIcon("cloud_queue", filled = true),
+                        tint = MaterialTheme.colorScheme.primary,
+                        iconSize = 72.dp
+                    )
+                }
+
+                Text(
+                    text = "Connect Your Streaming Service",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                Text(
+                    text = "Connect your Subsonic/Navidrome or Jellyfin server to start streaming.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 32.dp)
+                )
+
+                StreamingSetupTipsCard()
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    backButton?.invoke()
+                    nextButton()
+                }
+            }
+
+            // Right Column
+            Column(
+                horizontalAlignment = Alignment.Start,
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                StreamingSetupSelectionAndForm(
+                    selectedProvider = selectedProvider,
+                    onProviderSelected = { selectedProvider = it },
+                    requiresServerUrl = requiresServerUrl,
+                    serverUrl = serverUrl,
+                    onServerUrlChange = { serverUrl = it },
+                    username = username,
+                    onUsernameChange = { username = it },
+                    password = password,
+                    onPasswordChange = { password = it },
+                    isConnected = isConnected,
+                    isLoading = isLoading,
+                    error = error,
+                    canSubmit = canSubmit,
+                    selectedProviderName = selectedProvider,
+                    onConnect = {
+                        appSettings.setStreamingService(selectedProvider)
+                        streamingViewModel.connectService(
+                            serviceId = selectedProvider,
+                            serverUrl = serverUrl,
+                            username = username,
+                            password = password
+                        )
+                    },
+                    onDisconnect = {
+                        streamingViewModel.disconnectService(selectedProvider)
+                    }
+                )
+            }
+        }
+    } else {
+        // Mobile Column
+        Column(
+            horizontalAlignment = Alignment.Start,
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+        ) {
+            AnimatedVisibility(visible = true, enter = scaleIn() + fadeIn()) {
+                OnboardingStepHeaderIcon(
+                    imageVector = MaterialSymbolIcon("cloud_queue", filled = true),
+                    tint = MaterialTheme.colorScheme.primary,
+                    iconSize = 56.dp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Connect Your Streaming Service",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            Text(
+                text = "Connect your Subsonic/Navidrome or Jellyfin server to start streaming.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            StreamingSetupSelectionAndForm(
+                selectedProvider = selectedProvider,
+                onProviderSelected = { selectedProvider = it },
+                requiresServerUrl = requiresServerUrl,
+                serverUrl = serverUrl,
+                onServerUrlChange = { serverUrl = it },
+                username = username,
+                onUsernameChange = { username = it },
+                password = password,
+                onPasswordChange = { password = it },
+                isConnected = isConnected,
+                isLoading = isLoading,
+                error = error,
+                canSubmit = canSubmit,
+                selectedProviderName = selectedProvider,
+                onConnect = {
+                    appSettings.setStreamingService(selectedProvider)
+                    streamingViewModel.connectService(
+                        serviceId = selectedProvider,
+                        serverUrl = serverUrl,
+                        username = username,
+                        password = password
+                    )
+                },
+                onDisconnect = {
+                    streamingViewModel.disconnectService(selectedProvider)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            StreamingSetupTipsCard()
+        }
+    }
+}
+
+@Composable
+private fun StreamingSetupTipsCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = RhythmIcons.Info,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Streaming Setup Tips",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OnboardingTipItem(
+                icon = MaterialSymbolIcon("dns"),
+                text = "Supports Navidrome, gonic, and all subsonic APIs."
+            )
+            OnboardingTipItem(
+                icon = MaterialSymbolIcon("offline_pin"),
+                text = "Enable caching in Settings for offline playback later."
+            )
+            OnboardingTipItem(
+                icon = MaterialSymbolIcon("verified_user"),
+                text = "Connection test ensures server credentials are correct."
+            )
+        }
+    }
+}
+
+@Composable
+private fun StreamingSetupSelectionAndForm(
+    selectedProvider: String,
+    onProviderSelected: (String) -> Unit,
+    requiresServerUrl: Boolean,
+    serverUrl: String,
+    onServerUrlChange: (String) -> Unit,
+    username: String,
+    onUsernameChange: (String) -> Unit,
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    isConnected: Boolean,
+    isLoading: Boolean,
+    error: String?,
+    canSubmit: Boolean,
+    selectedProviderName: String,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+
+    // Service Selection Tabs
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        val subsonicCardScale = remember { Animatable(1f) }
+        val isSubsonic = selectedProvider == "subsonic"
+        Card(
+            modifier = Modifier
+                .weight(1f)
+                .graphicsLayer {
+                    scaleX = subsonicCardScale.value
+                    scaleY = subsonicCardScale.value
+                }
+                .clickable {
+                    scope.launch {
+                        subsonicCardScale.animateTo(0.95f, animationSpec = tween(80))
+                        subsonicCardScale.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy))
+                    }
+                    onProviderSelected("subsonic")
+                },
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(
+                width = if (isSubsonic) 2.dp else 1.dp,
+                color = if (isSubsonic) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+            ),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isSubsonic) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = MaterialSymbolIcon("cloud_queue", filled = true),
+                    tint = if (isSubsonic) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "Subsonic / Navidrome",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (isSubsonic) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+        val jellyfinCardScale = remember { Animatable(1f) }
+        val isJellyfin = selectedProvider == "jellyfin"
+        Card(
+            modifier = Modifier
+                .weight(1f)
+                .graphicsLayer {
+                    scaleX = jellyfinCardScale.value
+                    scaleY = jellyfinCardScale.value
+                }
+                .clickable {
+                    scope.launch {
+                        jellyfinCardScale.animateTo(0.95f, animationSpec = tween(80))
+                        jellyfinCardScale.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy))
+                    }
+                    onProviderSelected("jellyfin")
+                },
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(
+                width = if (isJellyfin) 2.dp else 1.dp,
+                color = if (isJellyfin) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+            ),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isJellyfin) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = MaterialSymbolIcon("video_library", filled = true),
+                    tint = if (isJellyfin) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "Jellyfin Server",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (isJellyfin) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    // Connection Form
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            if (requiresServerUrl) {
+                OutlinedTextField(
+                    value = serverUrl,
+                    onValueChange = onServerUrlChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Server URL") },
+                    placeholder = { Text("https://your-server.com") },
+                    supportingText = { Text("Remember to include http:// or https://") },
+                    singleLine = true,
+                    enabled = !isLoading && !isConnected
+                )
+            }
+
+            OutlinedTextField(
+                value = username,
+                onValueChange = onUsernameChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Username") },
+                placeholder = { Text("Enter server username") },
+                singleLine = true,
+                enabled = !isLoading && !isConnected
+            )
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = onPasswordChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Password") },
+                placeholder = { Text("Enter server password") },
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+                enabled = !isLoading && !isConnected
+            )
+
+            if (isConnected) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f),
+                            RoundedCornerShape(12.dp)
+                        )
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = MaterialSymbolIcon("check_circle", filled = true),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "Successfully Connected!",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            text = "Connected to $selectedProviderName as $username",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+            } else if (error != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                            RoundedCornerShape(12.dp)
+                        )
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = MaterialSymbolIcon("warning", filled = true),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            // Connect/Disconnect Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (isConnected) {
+                    OutlinedButton(
+                        onClick = onDisconnect,
+                        modifier = Modifier.weight(1f),
+                        enabled = !isLoading
+                    ) {
+                        Text("Disconnect")
+                    }
+                } else {
+                    Button(
+                        onClick = onConnect,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading && canSubmit,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Connecting...")
+                        } else {
+                            Text("Connect & Verify")
+                        }
+                    }
+                }
+            }
+        }
     }
 }

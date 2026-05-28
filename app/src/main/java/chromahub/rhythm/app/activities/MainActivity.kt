@@ -620,6 +620,8 @@ class MainActivity : FragmentActivity() {
     private fun getStepName(step: OnboardingStep): String {
         return when (step) {
             OnboardingStep.WELCOME -> "Welcome"
+            OnboardingStep.APP_MODE_CHOICE -> "App Mode Choice"
+            OnboardingStep.STREAMING_SETUP -> "Streaming Setup"
             OnboardingStep.PERMISSIONS -> "Permissions"
             OnboardingStep.RHYTHM_GUARD -> "Rhythm Guard"
             OnboardingStep.UPDATER -> "Updates"

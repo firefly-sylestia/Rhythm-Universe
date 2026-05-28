@@ -946,7 +946,7 @@ fun MaterialPlayerScreen(
             appSettings = appSettings,
             onNavigateToSettings = {
                 showDeviceOutputSheet = false
-                navController.navigate(Screen.TunerQueuePlayback.route)
+                navController.navigate(Screen.TunerPlayback.route)
             },
             onNavigateToGoMode = if (appMode == "STREAMING") {
                 {

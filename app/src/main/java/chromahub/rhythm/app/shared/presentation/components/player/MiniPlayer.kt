@@ -24,9 +24,9 @@ fun MiniPlayer(
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings.getInstance(context) }
-    val playerThemeId by appSettings.playerThemeId.collectAsState()
+    val miniPlayerThemeId by appSettings.miniPlayerThemeId.collectAsState()
 
-    if (playerThemeId == "EXPRESSIVE") {
+    if (miniPlayerThemeId == "EXPRESSIVE") {
         ExpressiveMiniPlayer(
             song = song,
             isPlaying = isPlaying,

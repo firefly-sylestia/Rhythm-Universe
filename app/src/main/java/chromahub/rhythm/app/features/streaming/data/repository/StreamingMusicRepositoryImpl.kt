@@ -71,6 +71,59 @@ class StreamingMusicRepositoryImpl(
     private val artistArtworkCache = LinkedHashMap<String, String>()
     private val providerAlbumCache = LinkedHashMap<String, StreamingAlbum>()
 
+    private val downloadDirectory by lazy {
+        java.io.File(context.filesDir, "streaming_downloads").apply {
+            if (!exists()) {
+                mkdirs()
+            }
+        }
+    }
+
+    private val downloadedSongsMap = LinkedHashMap<String, StreamingSong>()
+    private val gson = com.google.gson.Gson()
+
+    init {
+        loadDownloadedSongsIndex()
+    }
+
+    private fun loadDownloadedSongsIndex() {
+        try {
+            val indexFile = java.io.File(downloadDirectory, "downloaded_songs.json")
+            if (indexFile.exists()) {
+                val json = indexFile.readText()
+                val type = object : com.google.gson.reflect.TypeToken<List<StreamingSong>>() {}.type
+                val list: List<StreamingSong> = gson.fromJson(json, type) ?: emptyList()
+                downloadedSongsMap.clear()
+                list.forEach { song ->
+                    downloadedSongsMap[song.id] = song
+                }
+                downloadedSongsFlow.value = list
+            } else {
+                downloadedSongsMap.clear()
+                downloadedSongsFlow.value = emptyList()
+            }
+        } catch (e: Exception) {
+            Log.e("StreamingMusicRepo", "Error loading downloaded songs index", e)
+        }
+    }
+
+    private fun saveDownloadedSongsIndex() {
+        try {
+            val indexFile = java.io.File(downloadDirectory, "downloaded_songs.json")
+            val list = downloadedSongsMap.values.toList()
+            val json = gson.toJson(list)
+            indexFile.writeText(json)
+            downloadedSongsFlow.value = list
+        } catch (e: Exception) {
+            Log.e("StreamingMusicRepo", "Error saving downloaded songs index", e)
+        }
+    }
+
+    private fun getDownloadFile(songId: String): java.io.File {
+        val safeName = songId.replace(":", "_").replace("/", "_").replace("\\", "_")
+        return java.io.File(downloadDirectory, "$safeName.mp3")
+    }
+
     override val currentService: SourceType
         get() = serviceToSourceType(activeServiceId())
 
@@ -406,6 +459,20 @@ class StreamingMusicRepositoryImpl(
     override suspend fun getStreamingUrl(songId: String): String? {
         val (serviceId, providerId) = decodeSongId(songId) ?: return null
         
+        // 1. If downloaded, return the local downloaded file URI
+        val localFile = getDownloadFile(songId)
+        if (localFile.exists() && localFile.length() > 0 && downloadedSongsMap.containsKey(songId)) {
+            return Uri.fromFile(localFile).toString()
+        }
+
+        // 2. Check if offline mode is enabled - fallback to cache or return null
+        if (appSettings.offlineMode.value) {
+            // In offline mode, only allow cached/downloaded files
+            // If not downloaded, but we have a previously cached stream URL, return it
+            val cached = songCache[songId]
+            return cached?.streamingUrl // May be null if not previously cached
+        }
+
         // Check if streaming is allowed by network settings
         val allowCellular = appSettings.allowCellularStreaming.value
         if (!NetworkUtils.canStream(context, allowCellular)) {
@@ -415,13 +482,6 @@ class StreamingMusicRepositoryImpl(
         // Check if service is connected
         if (!isServiceConnected(serviceId)) {
             return null // Provider is not connected
-        }
-        
-        // Check if offline mode is enabled - fallback to cache or return null
-        if (appSettings.offlineMode.value) {
-            // In offline mode, only allow cached URLs
-            val cached = songCache[songId]
-            return cached?.streamingUrl // May be null if not previously cached
         }
         
         val bitrate = desiredBitrateKbps()
@@ -600,11 +660,106 @@ class StreamingMusicRepositoryImpl(
                 return providerArtists.map { mapProviderArtist(serviceId, it) }
     }
 
-    override suspend fun downloadSong(songId: String): Boolean = false
+    override suspend fun downloadSong(songId: String): Boolean = withContext(Dispatchers.IO) {
+        if (isDownloaded(songId)) return@withContext true
+        
+        val (serviceId, providerId) = decodeSongId(songId) ?: return@withContext false
+        
+        // 1. Resolve stream URL directly bypassing any temporary offline modes or network checks specifically for the download.
+        val bitrate = desiredBitrateKbps()
+        val streamUrl = when (serviceId) {
+            StreamingServiceId.SUBSONIC -> subsonicClient.buildStreamUrl(providerId, bitrate)
+            StreamingServiceId.JELLYFIN -> jellyfinClient.buildStreamUrl(providerId, bitrate)
+            else -> null
+        } ?: return@withContext false
 
-    override suspend fun removeDownload(songId: String): Boolean = false
+        // 2. Fetch the song object to save its metadata
+        val song = songCache[songId]
+            ?: songsFlow.value.filterIsInstance<StreamingSong>().firstOrNull { it.id == songId }
+            ?: likedSongsFlow.value.firstOrNull { it.id == songId }
+            ?: downloadedSongsMap[songId]
+            ?: return@withContext false
 
-    override suspend fun isDownloaded(songId: String): Boolean = false
+        // 3. Download the file using OkHttpClient
+        val client = okhttp3.OkHttpClient()
+        val request = okhttp3.Request.Builder().url(streamUrl).build()
+        
+        val file = getDownloadFile(songId)
+        try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext false
+                val body = response.body ?: return@withContext false
+                
+                body.byteStream().use { inputStream ->
+                    file.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+            }
+            
+            // 4. Download and cache the artwork if present and not a local file
+            var localArtworkPath: String? = null
+            val artworkUri = song.artworkUri
+            if (!artworkUri.isNullOrBlank() && (artworkUri.startsWith("http://") || artworkUri.startsWith("https://"))) {
+                val artworkFile = java.io.File(downloadDirectory, "${songId.replace(":", "_").replace("/", "_").replace("\\", "_")}_art.jpg")
+                val artRequest = okhttp3.Request.Builder().url(artworkUri).build()
+                try {
+                    client.newCall(artRequest).execute().use { response ->
+                        if (response.isSuccessful) {
+                            response.body?.byteStream()?.use { artInput ->
+                                artworkFile.outputStream().use { artOutput ->
+                                    artInput.copyTo(artOutput)
+                                }
+                            }
+                            localArtworkPath = Uri.fromFile(artworkFile).toString()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("StreamingMusicRepo", "Error downloading artwork for song $songId", e)
+                }
+            }
+
+            // 5. Update metadata index
+            val localSongUrl = Uri.fromFile(file).toString()
+            val downloadedSong = song.copy(
+                streamingUrl = localSongUrl,
+                artworkUri = localArtworkPath ?: song.artworkUri
+            )
+            
+            downloadedSongsMap[songId] = downloadedSong
+            saveDownloadedSongsIndex()
+            true
+        } catch (e: Exception) {
+            Log.e("StreamingMusicRepo", "Error downloading song $songId", e)
+            if (file.exists()) {
+                file.delete()
+            }
+            false
+        }
+    }
+
+    override suspend fun removeDownload(songId: String): Boolean = withContext(Dispatchers.IO) {
+        val file = getDownloadFile(songId)
+        val deletedFile = if (file.exists()) file.delete() else true
+        
+        // Also delete downloaded artwork if exists
+        val artworkFile = java.io.File(downloadDirectory, "${songId.replace(":", "_").replace("/", "_").replace("\\", "_")}_art.jpg")
+        if (artworkFile.exists()) {
+            artworkFile.delete()
+        }
+        
+        val removedFromIndex = downloadedSongsMap.remove(songId) != null
+        if (removedFromIndex) {
+            saveDownloadedSongsIndex()
+        }
+        
+        deletedFile || removedFromIndex
+    }
+
+    override suspend fun isDownloaded(songId: String): Boolean = withContext(Dispatchers.IO) {
+        val file = getDownloadFile(songId)
+        file.exists() && file.length() > 0 && downloadedSongsMap.containsKey(songId)
+    }
 
     override fun getDownloadedSongs(): Flow<List<StreamingSong>> = downloadedSongsFlow.asStateFlow()
 

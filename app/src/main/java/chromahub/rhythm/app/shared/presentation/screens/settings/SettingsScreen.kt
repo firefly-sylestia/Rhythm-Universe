@@ -130,7 +130,8 @@ object SettingsRoutes {
     const val EQUALIZER = "equalizer_settings"
     const val SLEEP_TIMER = "sleep_timer_settings"
     const val CRASH_LOG_HISTORY = "crash_log_history_settings"
-    const val QUEUE_PLAYBACK = "queue_playback_settings"
+    const val QUEUE = "queue_settings"
+    const val PLAYBACK = "playback_settings"
     const val LYRICS_SOURCE = "lyrics_source_settings"
     const val WIDGET = "widget_settings"
     const val HOME_SCREEN = "home_screen_settings"
@@ -294,7 +295,8 @@ fun SettingsScreen(
             SettingGroup(
                 title = context.getString(R.string.settings_section_queue_playback),
                 items = buildList {
-                    add(SettingItem(RhythmIcons.Queue, context.getString(R.string.settings_queue_playback_title), context.getString(R.string.settings_queue_playback_desc), onClick = { onNavigateTo(SettingsRoutes.QUEUE_PLAYBACK) }))
+                    add(SettingItem(RhythmIcons.Queue, context.getString(R.string.settings_queue), context.getString(R.string.settings_queue_desc), onClick = { onNavigateTo(SettingsRoutes.QUEUE) }))
+                    add(SettingItem(RhythmIcons.Play, context.getString(R.string.settings_playback), context.getString(R.string.settings_playback_desc), onClick = { onNavigateTo(SettingsRoutes.PLAYBACK) }))
                     // Sleep Timer is available in both LOCAL and STREAMING modes
                     add(SettingItem(RhythmIcons.AccessTime, context.getString(R.string.sleep_timer), context.getString(R.string.sleep_timer_set_control), onClick = { onNavigateTo(SettingsRoutes.SLEEP_TIMER) }))
                 }
@@ -1095,7 +1097,8 @@ fun SettingsScreenWrapper(
                         SettingsRoutes.PLAYER_CUSTOMIZATION -> PlayerCustomizationSettingsScreen(onBackClick = { currentRoute = null })
                         SettingsRoutes.MINIPLAYER_CUSTOMIZATION -> MiniPlayerCustomizationSettingsScreen(onBackClick = { currentRoute = null })
                         SettingsRoutes.CRASH_LOG_HISTORY -> CrashLogHistorySettingsScreen(onBackClick = { currentRoute = null }, appSettings = appSettings)
-                        SettingsRoutes.QUEUE_PLAYBACK -> QueuePlaybackSettingsScreen(onBackClick = { currentRoute = null })
+                        SettingsRoutes.QUEUE -> QueueSettingsScreen(onBackClick = { currentRoute = null })
+                        SettingsRoutes.PLAYBACK -> PlaybackSettingsScreen(onBackClick = { currentRoute = null })
                         SettingsRoutes.LYRICS_SOURCE -> LyricsSourceSettingsScreen(onBackClick = { currentRoute = null })
                         SettingsRoutes.WIDGET -> WidgetSettingsScreen(onBackClick = { currentRoute = null })
                         SettingsRoutes.HOME_SCREEN -> HomeScreenCustomizationSettingsScreen(onBackClick = { currentRoute = null })
@@ -1218,7 +1221,8 @@ fun SettingsScreenWrapper(
                 SettingsRoutes.PLAYER_CUSTOMIZATION -> PlayerCustomizationSettingsScreen(onBackClick = { currentRoute = null })
                 SettingsRoutes.MINIPLAYER_CUSTOMIZATION -> MiniPlayerCustomizationSettingsScreen(onBackClick = { currentRoute = null })
                 SettingsRoutes.CRASH_LOG_HISTORY -> CrashLogHistorySettingsScreen(onBackClick = { currentRoute = null }, appSettings = appSettings)
-                SettingsRoutes.QUEUE_PLAYBACK -> QueuePlaybackSettingsScreen(onBackClick = { currentRoute = null })
+                SettingsRoutes.QUEUE -> QueueSettingsScreen(onBackClick = { currentRoute = null })
+                SettingsRoutes.PLAYBACK -> PlaybackSettingsScreen(onBackClick = { currentRoute = null })
                 SettingsRoutes.LYRICS_SOURCE -> LyricsSourceSettingsScreen(onBackClick = { currentRoute = null })
                 SettingsRoutes.WIDGET -> WidgetSettingsScreen(onBackClick = { currentRoute = null })
                 SettingsRoutes.HOME_SCREEN -> HomeScreenCustomizationSettingsScreen(onBackClick = { currentRoute = null })
@@ -1512,9 +1516,9 @@ fun SettingsTipsRow(
                     SettingsTipData(
                         id = "queue_playback",
                         icon = RhythmIcons.Queue,
-                        title = "Queue Playback",
+                        title = "Queue Settings",
                         text = descs.random(random),
-                        route = SettingsRoutes.QUEUE_PLAYBACK
+                        route = SettingsRoutes.QUEUE
                     )
                 )
             }

@@ -78,6 +78,15 @@
     
     <!-- Settings - Queue & Playback -->
     <string name="settings_queue_playback">Queue and Playback</string>
+    <!-- Settings - Queue -->
+    <string name="settings_queue">Queue</string>
+    <string name="settings_queue_desc">Queue rules, automatic generation, behavior</string>
+    <string name="settings_queue_title">Queue Settings</string>
+
+    <!-- Settings - Playback -->
+    <string name="settings_playback">Playback</string>
+    <string name="settings_playback_desc">Playback states, crossfade, time formatting</string>
+    <string name="settings_playback_title">Playback Settings</string>
     <string name="settings_queue_behavior">Queue Rules and Shuffle</string>
     <string name="settings_use_exoplayer_shuffle">Shuffle Engine</string>
     <string name="settings_use_exoplayer_shuffle_desc">Use the player timeline for shuffle order.</string>

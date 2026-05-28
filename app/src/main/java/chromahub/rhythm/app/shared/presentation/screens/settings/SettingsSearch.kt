@@ -229,7 +229,7 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_system_volume_desc),
             keywords = listOf("volume", "system volume", "audio", "sound", "media volume"),
             icon = RhythmIcons.Player.VolumeUp,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
+            route = SettingsRoutes.PLAYBACK,
             parentScreen = context.getString(R.string.settings_section_queue_playback),
             settingKey = "useSystemVolume"
         ))
@@ -239,7 +239,7 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_resume_on_device_reconnect_desc),
             keywords = listOf("resume", "device", "reconnect", "bluetooth", "headphones", "audio device", "playback"),
             icon = RhythmIcons.Devices.Bluetooth,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
+            route = SettingsRoutes.PLAYBACK,
             parentScreen = context.getString(R.string.settings_section_queue_playback),
             settingKey = "resumeOnDeviceReconnect"
         ))
@@ -264,12 +264,21 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             settingKey = "lyricsSource"
         ))
         add(SearchableSettingItem(
-            id = "queue_playback",
-            title = context.getString(R.string.settings_queue_playback_title),
-            description = context.getString(R.string.settings_queue_playback_desc),
-            keywords = listOf("queue", "playback", "shuffle", "repeat", "auto queue", "playlist"),
+            id = "queue_settings",
+            title = context.getString(R.string.settings_queue_title),
+            description = context.getString(R.string.settings_queue_desc),
+            keywords = listOf("queue", "shuffle", "auto queue", "playlist", "clear", "remember"),
             icon = RhythmIcons.Queue,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
+            route = SettingsRoutes.QUEUE,
+            parentScreen = context.getString(R.string.settings_section_queue_playback)
+        ))
+        add(SearchableSettingItem(
+            id = "playback_settings",
+            title = context.getString(R.string.settings_playback_title),
+            description = context.getString(R.string.settings_playback_desc),
+            keywords = listOf("playback", "repeat", "shuffle", "stop", "gapless", "crossfade", "hours", "duration"),
+            icon = RhythmIcons.Play,
+            route = SettingsRoutes.PLAYBACK,
             parentScreen = context.getString(R.string.settings_section_queue_playback)
         ))
         add(SearchableSettingItem(
@@ -1014,8 +1023,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_use_exoplayer_shuffle_desc),
             keywords = listOf("shuffle", "exoplayer", "random", "playback", "algorithm"),
             icon = RhythmIcons.Shuffle,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback"
+            route = SettingsRoutes.QUEUE,
+            parentScreen = "Queue"
         ))
         add(SearchableSettingItem(
             id = "queue_auto_add",
@@ -1023,8 +1032,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_queue_auto_add_desc),
             keywords = listOf("auto queue", "add", "automatic", "playlist"),
             icon = RhythmIcons.Queue,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.QUEUE,
+            parentScreen = "Queue",
             settingKey = "autoAddToQueue"
         ))
         add(SearchableSettingItem(
@@ -1033,8 +1042,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_queue_clear_on_new_desc),
             keywords = listOf("clear queue", "new song", "replace", "reset"),
             icon = RhythmIcons.Delete,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.QUEUE,
+            parentScreen = "Queue",
             settingKey = "clearQueueOnNewSong"
         ))
         add(SearchableSettingItem(
@@ -1043,8 +1052,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_use_exoplayer_shuffle_desc),
             keywords = listOf("shuffle engine", "exoplayer shuffle", "shuffle timeline", "shuffle mode", "shuffle algorithm"),
             icon = RhythmIcons.Shuffle,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.QUEUE,
+            parentScreen = "Queue",
             settingKey = "shuffleUsesExoplayer"
         ))
         add(SearchableSettingItem(
@@ -1053,8 +1062,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_show_played_queue_songs_desc),
             keywords = listOf("queue", "played", "history", "show", "finished songs", "already played"),
             icon = RhythmIcons.Queue,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.QUEUE,
+            parentScreen = "Queue",
             settingKey = "hidePlayedQueueSongs"
         ))
         add(SearchableSettingItem(
@@ -1063,8 +1072,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_queue_action_dialog_desc),
             keywords = listOf("queue dialog", "ask", "prompt", "action", "replace queue"),
             icon = RhythmIcons.Queue,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.QUEUE,
+            parentScreen = "Queue",
             settingKey = "showQueueDialog"
         ))
         add(SearchableSettingItem(
@@ -1073,8 +1082,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_queue_repeat_persistence_desc),
             keywords = listOf("repeat", "remember", "save", "persistence", "loop"),
             icon = RhythmIcons.Repeat,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.PLAYBACK,
+            parentScreen = "Playback",
             settingKey = "repeatModePersistence"
         ))
         add(SearchableSettingItem(
@@ -1083,8 +1092,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_queue_shuffle_persistence_desc),
             keywords = listOf("shuffle", "remember", "save", "persistence", "random"),
             icon = RhythmIcons.Shuffle,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.PLAYBACK,
+            parentScreen = "Playback",
             settingKey = "shuffleModePersistence"
         ))
         add(SearchableSettingItem(
@@ -1093,8 +1102,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_queue_stop_on_close_desc),
             keywords = listOf("stop", "playback", "close", "exit", "quit"),
             icon = RhythmIcons.Stop,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.PLAYBACK,
+            parentScreen = "Playback",
             settingKey = "stopPlaybackOnAppClose"
         ))
         add(SearchableSettingItem(
@@ -1104,7 +1113,7 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             keywords = listOf("sleep", "timer", "auto stop", "automatic", "fade out", "pause", "bedtime"),
             icon = MaterialSymbolIcon("timer"),
             route = SettingsRoutes.SLEEP_TIMER,
-            parentScreen = "Queue & Playback"
+            parentScreen = "Playback"
         ))
         add(SearchableSettingItem(
             id = "queue_hours_format",
@@ -1112,8 +1121,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_queue_hours_format_desc),
             keywords = listOf("hours", "time", "format", "duration", "display"),
             icon = RhythmIcons.AccessTime,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.PLAYBACK,
+            parentScreen = "Playback",
             settingKey = "useHoursInTimeFormat"
         ))
         add(SearchableSettingItem(
@@ -1122,8 +1131,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_gapless_playback_desc),
             keywords = listOf("gapless", "transition", "silence", "playback", "next track"),
             icon = MaterialSymbolIcon("graphic_eq"),
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.PLAYBACK,
+            parentScreen = "Playback",
             settingKey = "gaplessPlayback"
         ))
         add(SearchableSettingItem(
@@ -1132,8 +1141,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_crossfade_desc),
             keywords = listOf("crossfade", "transition", "fade", "overlap", "smooth", "songs", "playback"),
             icon = MaterialSymbolIcon("linear_scale"),
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.PLAYBACK,
+            parentScreen = "Playback",
             settingKey = "crossfade"
         ))
         add(SearchableSettingItem(
@@ -1142,8 +1151,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_crossfade_repeat_one_desc),
             keywords = listOf("crossfade", "repeat one", "loop one", "transition", "single track"),
             icon = RhythmIcons.Repeat,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.PLAYBACK,
+            parentScreen = "Playback",
             settingKey = "crossfadeRepeatOne"
         ))
         add(SearchableSettingItem(
@@ -1152,8 +1161,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_crossfade_duration_desc, 4.0f),
             keywords = listOf("crossfade", "duration", "seconds", "time", "length", "transition"),
             icon = MaterialSymbolIcon("linear_scale"),
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.PLAYBACK,
+            parentScreen = "Playback",
             settingKey = "crossfadeDuration"
         ))
         add(SearchableSettingItem(
@@ -1162,8 +1171,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_queue_persistence_desc),
             keywords = listOf("queue", "remember", "save", "restore", "persistence", "restart", "app"),
             icon = RhythmIcons.Queue,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.QUEUE,
+            parentScreen = "Queue",
             settingKey = "queuePersistenceEnabled"
         ))
         add(SearchableSettingItem(
@@ -1172,8 +1181,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_playlist_action_dialog_desc),
             keywords = listOf("playlist", "action", "dialog", "click", "behavior", "load", "play"),
             icon = RhythmIcons.Queue,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.QUEUE,
+            parentScreen = "Queue",
             settingKey = "playlistClickBehavior"
         ))
         add(SearchableSettingItem(
@@ -1182,8 +1191,8 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
             description = context.getString(R.string.settings_list_queue_action_dialog_desc),
             keywords = listOf("queue", "play all", "section", "replace", "play next", "add to end", "behavior", "rule"),
             icon = RhythmIcons.Queue,
-            route = SettingsRoutes.QUEUE_PLAYBACK,
-            parentScreen = "Queue & Playback",
+            route = SettingsRoutes.QUEUE,
+            parentScreen = "Queue",
             settingKey = "listQueueActionBehavior"
         ))
         

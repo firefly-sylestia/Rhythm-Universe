@@ -162,6 +162,8 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
     val haptics = LocalHapticFeedback.current
 
     // State variables
+    val playerThemeId by appSettings.playerThemeId.collectAsState()
+    val isExpressiveActive = playerThemeId == "EXPRESSIVE"
     val showLyrics by appSettings.showLyrics.collectAsState()
     val playerShowGradientOverlay by appSettings.playerShowGradientOverlay.collectAsState()
     val playerLyricsTransition by appSettings.playerLyricsTransition.collectAsState()
@@ -201,6 +203,48 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
         ) {
+
+            // Playback Theme Selection Section
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Player Theme",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                )
+                Material3SettingsGroup(
+                    items = listOf(
+                        Material3SettingsItem(
+                            icon = MaterialSymbolIcon("palette"),
+                            title = { Text("Playback Theme") },
+                            description = {
+                                Column {
+                                    Text("Choose between Rhythm Default or Expressive theme")
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    ExpressiveButtonGroup(
+                                        items = listOf(
+                                            "Rhythm",
+                                            "Expressive"
+                                        ),
+                                        selectedIndex = if (playerThemeId == "EXPRESSIVE") 1 else 0,
+                                        onItemClick = { index ->
+                                            HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.LongPress)
+                                            if (index == 1) {
+                                                appSettings.setPlayerThemeId("EXPRESSIVE")
+                                            } else {
+                                                appSettings.setPlayerThemeId("MATERIAL")
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        )
+                    ),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
+            }
 
             // Player Controls Section
             item {
@@ -245,9 +289,10 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                             item = SettingItem(
                                 icon = MaterialSymbolIcon("gradient"),
                                 title = context.getString(R.string.settings_artwork_overlay),
-                                description = context.getString(R.string.settings_artwork_overlay_desc),
+                                description = if (isExpressiveActive) "Not supported by Expressive theme" else context.getString(R.string.settings_artwork_overlay_desc),
                                 toggleState = playerShowGradientOverlay,
-                                onToggleChange = { appSettings.setPlayerShowGradientOverlay(it) }
+                                onToggleChange = { appSettings.setPlayerShowGradientOverlay(it) },
+                                enabled = !isExpressiveActive
                             )
                         ),
                         toMaterial3SettingsItem(
@@ -256,9 +301,10 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                             item = SettingItem(
                                 icon = RhythmIcons.Info,
                                 title = context.getString(R.string.settings_song_info_artwork),
-                                description = context.getString(R.string.settings_song_info_artwork_desc),
+                                description = if (isExpressiveActive) "Not supported by Expressive theme" else context.getString(R.string.settings_song_info_artwork_desc),
                                 toggleState = playerShowSongInfoOnArtwork,
-                                onToggleChange = { appSettings.setPlayerShowSongInfoOnArtwork(it) }
+                                onToggleChange = { appSettings.setPlayerShowSongInfoOnArtwork(it) },
+                                enabled = !isExpressiveActive
                             )
                         ),
                         toMaterial3SettingsItem(
@@ -267,9 +313,10 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                             item = SettingItem(
                                 icon = MaterialSymbolIcon("high_quality"),
                                 title = context.getString(R.string.settings_audio_quality_badges),
-                                description = context.getString(R.string.settings_audio_quality_badges_desc),
+                                description = if (isExpressiveActive) "Not supported by Expressive theme" else context.getString(R.string.settings_audio_quality_badges_desc),
                                 toggleState = playerShowAudioQualityBadges,
-                                onToggleChange = { appSettings.setPlayerShowAudioQualityBadges(it) }
+                                onToggleChange = { appSettings.setPlayerShowAudioQualityBadges(it) },
+                                enabled = !isExpressiveActive
                             )
                         )
                     ),
@@ -449,9 +496,10 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                                 item = SettingItem(
                                     icon = RhythmIcons.Image,
                                     title = context.getString(R.string.settings_show_art_below_lyrics),
-                                    description = context.getString(R.string.settings_show_art_below_lyrics_desc),
+                                    description = if (isExpressiveActive) "Not supported by Expressive theme" else context.getString(R.string.settings_show_art_below_lyrics_desc),
                                     toggleState = playerShowArtBelowLyrics,
-                                    onToggleChange = { appSettings.setPlayerShowArtBelowLyrics(it) }
+                                    onToggleChange = { appSettings.setPlayerShowArtBelowLyrics(it) },
+                                    enabled = !isExpressiveActive
                                 )
                             )
                         )
@@ -460,8 +508,8 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
 
                 Material3SettingsGroup(
                     items = lyricsSettingsItems,
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
             }
             item {
                 Spacer(modifier = Modifier.height(24.dp))
@@ -479,9 +527,10 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                             item = SettingItem(
                                 icon = RhythmIcons.Forward10,
                                 title = context.getString(R.string.settings_seek_buttons),
-                                description = context.getString(R.string.settings_seek_buttons_desc),
+                                description = if (isExpressiveActive) "Not supported by Expressive theme" else context.getString(R.string.settings_seek_buttons_desc),
                                 toggleState = playerShowSeekButtons,
-                                onToggleChange = { appSettings.setPlayerShowSeekButtons(it) }
+                                onToggleChange = { appSettings.setPlayerShowSeekButtons(it) },
+                                enabled = !isExpressiveActive
                             )
                         ),
                         toMaterial3SettingsItem(
@@ -490,12 +539,13 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                             item = SettingItem(
                                 icon = MaterialSymbolIcon("format_align_center"),
                                 title = context.getString(R.string.settings_text_alignment),
-                                description = when(playerTextAlignment) {
+                                description = if (isExpressiveActive) "Not supported by Expressive theme" else when(playerTextAlignment) {
                                     "START" -> context.getString(R.string.settings_left_aligned)
                                     "END" -> context.getString(R.string.settings_right_aligned)
                                     else -> context.getString(R.string.settings_center_aligned)
                                 },
-                                onClick = { showTextAlignmentSheet = true }
+                                onClick = { showTextAlignmentSheet = true },
+                                enabled = !isExpressiveActive
                             )
                         )
                     ),
@@ -578,11 +628,19 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                         toMaterial3SettingsItem(
                             context = context,
                             hapticFeedback = haptics,
-                            item = if (expressiveShapesEnabled) {
+                            item = if (isExpressiveActive) {
                                 SettingItem(
                                     icon = MaterialSymbolIcon("rounded_corner"),
                                     title = "Corner Radius",
-                                    description = "Managed by Expressive Shapes"
+                                    description = "Not supported by Expressive theme",
+                                    enabled = false
+                                )
+                            } else if (expressiveShapesEnabled) {
+                                SettingItem(
+                                    icon = MaterialSymbolIcon("rounded_corner"),
+                                    title = "Corner Radius",
+                                    description = "Managed by Expressive Shapes",
+                                    enabled = false
                                 )
                             } else {
                                 SettingItem(

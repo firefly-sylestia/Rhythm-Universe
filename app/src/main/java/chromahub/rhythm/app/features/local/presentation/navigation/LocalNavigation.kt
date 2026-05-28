@@ -91,6 +91,7 @@ import chromahub.rhythm.app.ui.LocalMiniPlayerPadding
 import chromahub.rhythm.app.ui.UiConstants
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -219,7 +220,8 @@ sealed class Screen(val route: String) {
     object TunerEqualizer : Screen("tuner_equalizer_settings")
     object TunerSleepTimer : Screen("tuner_sleep_timer_settings")
     object TunerCrashLogHistory : Screen("tuner_crash_log_history_settings")
-    object TunerQueuePlayback : Screen("tuner_queue_playback_settings")
+    object TunerQueue : Screen("tuner_queue_settings")
+    object TunerPlayback : Screen("tuner_playback_settings")
     object TunerHomeScreen : Screen("tuner_home_screen_settings")
     
     // Stats Screen
@@ -271,6 +273,7 @@ fun LocalNavigation(
     themeViewModel: ThemeViewModel = viewModel(),
     appSettings: chromahub.rhythm.app.shared.data.model.AppSettings // Add appSettings parameter
 ) {
+    val miniPlayerThemeId by appSettings.miniPlayerThemeId.collectAsState()
     // Update monitoring
     val updaterViewModel: AppUpdaterViewModel = viewModel()
     val updateAvailable by updaterViewModel.updateAvailable.collectAsState()
@@ -447,7 +450,8 @@ fun LocalNavigation(
     // System insets are handled separately via windowInsetsPadding on the bottomBar
     val miniPlayerBottomPadding by animateDpAsState(
         targetValue = if (showMiniPlayer && !isTablet) {
-            UiConstants.MiniPlayerHeight + 16.dp // Card height + spacing
+            val miniPlayerHeight = if (miniPlayerThemeId == "EXPRESSIVE") 72.dp else 96.dp
+            miniPlayerHeight + 16.dp // Card height + spacing
         } else {
             0.dp
         },
@@ -824,6 +828,18 @@ private fun LocalNavigationContent(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
+                        .layout { measurable, constraints ->
+                            val heightOffset = 48.dp.roundToPx()
+                            val placeable = measurable.measure(
+                                constraints.copy(
+                                    maxHeight = constraints.maxHeight + heightOffset
+                                )
+                            )
+                            val layoutHeight = (placeable.height - heightOffset).coerceAtLeast(0)
+                            layout(placeable.width, layoutHeight) {
+                                placeable.placeRelative(0, -heightOffset)
+                            }
+                        }
                         .graphicsLayer { alpha = bottomChromeAlpha }
                         .background(
                             brush = Brush.verticalGradient(
@@ -1626,8 +1642,12 @@ private fun LocalNavigationContent(
                     )
                 }
 
-                composable(Screen.TunerQueuePlayback.route) {
-                    QueuePlaybackSettingsScreen(onBackClick = navigateBackOrToSettings)
+                composable(Screen.TunerQueue.route) {
+                    QueueSettingsScreen(onBackClick = navigateBackOrToSettings)
+                }
+
+                composable(Screen.TunerPlayback.route) {
+                    PlaybackSettingsScreen(onBackClick = navigateBackOrToSettings)
                 }
 
                 composable(Screen.TunerHomeScreen.route) {

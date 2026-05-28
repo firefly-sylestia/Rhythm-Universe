@@ -98,6 +98,8 @@ import chromahub.rhythm.app.util.HapticUtils
 import chromahub.rhythm.app.util.M3ImageUtils
 import kotlinx.coroutines.launch
 import chromahub.rhythm.app.ui.LocalMiniPlayerPadding
+import androidx.compose.ui.platform.LocalConfiguration
+import chromahub.rhythm.app.ui.theme.MusicDimensions
 import kotlin.random.Random
 
 private enum class StreamingLibraryTab(@param:StringRes val titleRes: Int, val icon: chromahub.rhythm.app.shared.presentation.components.icons.MaterialSymbolIcon) {
@@ -248,7 +250,10 @@ fun StreamingLibraryScreen(
 
     // Get miniplayer padding for bottom content alignment
     val miniPlayerBottomPadding = LocalMiniPlayerPadding.current.calculateBottomPadding()
-    val contentBottomPadding = miniPlayerBottomPadding + 24.dp // Add extra space for bottom nav
+    val isTabletLayout = LocalConfiguration.current.screenWidthDp >= 600
+    val baseLibraryBottomPadding = if (isTabletLayout) 16.dp else (MusicDimensions.bottomNavigationHeight + 16.dp)
+    val libraryBottomOverlayPadding = baseLibraryBottomPadding + miniPlayerBottomPadding
+    val contentBottomPadding = 24.dp
 
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     val tabs = StreamingLibraryTab.entries
@@ -651,9 +656,9 @@ fun StreamingLibraryScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .fillMaxSize()
-                        .padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
+                        .padding(start = 10.dp, top = 0.dp, end = 10.dp, bottom = libraryBottomOverlayPadding),
                     shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    color = Color.Transparent,
                     shadowElevation = 0.dp
                 ) {
                 when {

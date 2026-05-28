@@ -692,16 +692,7 @@ fun ThemeCustomizationSettingsScreen(onBackClick: () -> Unit) {
                     )
                 )
             ),
-            SettingGroup(
-                title = "Player Themes",
-                items = listOf(
-                    SettingItem(
-                        MaterialSymbolIcon("palette"),
-                        "Playback Themes",
-                        "Choose between Rhythm Default or Expressive theme"
-                    )
-                )
-            ),
+
             SettingGroup(
                 title = context.getString(R.string.settings_festive_themes),
                 items = buildList {
@@ -809,39 +800,7 @@ fun ThemeCustomizationSettingsScreen(onBackClick: () -> Unit) {
                             }
                         }
                     }
-                    "Player Themes" -> {
-                        buildList {
-                            val playerThemeId by appSettings.playerThemeId.collectAsState()
-                            add(
-                                Material3SettingsItem(
-                                    icon = MaterialSymbolIcon("palette"),
-                                    title = { Text("Playback Themes") },
-                                    description = {
-                                        Column {
-                                            Text("Choose between Rhythm Default or Expressive theme")
-                                            Spacer(modifier = Modifier.height(12.dp))
-                                            ExpressiveButtonGroup(
-                                                items = listOf(
-                                                        "Rhythm",
-                                                    "Expressive"
-                                                ),
-                                                selectedIndex = if (playerThemeId == "EXPRESSIVE") 1 else 0,
-                                                onItemClick = { index ->
-                                                    HapticUtils.performHapticFeedback(context, haptic, HapticFeedbackType.LongPress)
-                                                    if (index == 1) {
-                                                        appSettings.setPlayerThemeId("EXPRESSIVE")
-                                                    } else {
-                                                        appSettings.setPlayerThemeId("MATERIAL")
-                                                    }
-                                                },
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
-                                    }
-                                )
-                            )
-                        }
-                    }
+
                     else -> {
                         group.items.map { item ->
                             toMaterial3SettingsItem(context = context, item = item, hapticFeedback = haptic)

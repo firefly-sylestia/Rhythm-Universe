@@ -2,161 +2,48 @@
 
 package chromahub.rhythm.app.shared.presentation.screens.settings
 
-
 import chromahub.rhythm.app.shared.presentation.components.icons.RhythmIcons
 import chromahub.rhythm.app.shared.presentation.components.icons.MaterialSymbolIcon
 import chromahub.rhythm.app.shared.presentation.components.icons.Icon
 
-import android.app.Activity
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.provider.DocumentsContract
-import android.util.Log
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
-import chromahub.rhythm.app.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.border
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.*
-import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Slider
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import chromahub.rhythm.app.BuildConfig
+import chromahub.rhythm.app.R
 import chromahub.rhythm.app.shared.data.model.AppSettings
-import chromahub.rhythm.app.shared.data.model.Playlist
-import chromahub.rhythm.app.shared.data.model.Song
-import chromahub.rhythm.app.shared.data.repository.PlaybackStatsRepository
-import chromahub.rhythm.app.shared.data.repository.StatsTimeRange
-import chromahub.rhythm.app.util.GsonUtils
 import chromahub.rhythm.app.util.HapticUtils
-import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
-import kotlin.system.exitProcess
 import chromahub.rhythm.app.shared.presentation.components.common.CollapsibleHeaderScreen
-import chromahub.rhythm.app.shared.presentation.components.common.ButtonGroupStyle
-import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveScrollBar
 import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveButtonGroup
-import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveGroupButton
-import chromahub.rhythm.app.shared.presentation.components.bottomsheets.StandardBottomSheetHeader
-import chromahub.rhythm.app.shared.presentation.components.common.StyledProgressBar
-import chromahub.rhythm.app.shared.presentation.components.common.ProgressStyle
-import chromahub.rhythm.app.shared.presentation.components.common.ThumbStyle
-import chromahub.rhythm.app.shared.presentation.components.bottomsheets.LicensesBottomSheet
-import chromahub.rhythm.app.shared.presentation.components.bottomsheets.UpdateBottomSheet
-import chromahub.rhythm.app.ui.utils.LazyListStateSaver
-import chromahub.rhythm.app.features.local.presentation.viewmodel.MusicViewModel
-import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShapeProvider
-import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShapes
-import chromahub.rhythm.app.shared.presentation.components.common.buildSplashBackdropShapes
-import chromahub.rhythm.app.shared.presentation.components.common.SplashBackgroundOrbs
-import chromahub.rhythm.app.shared.presentation.viewmodel.AppUpdaterViewModel
-import chromahub.rhythm.app.shared.presentation.viewmodel.AppVersion
-import chromahub.rhythm.app.ui.theme.getFontPreviewStyle
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.MainScope
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.io.File
-import chromahub.rhythm.app.utils.FontLoader
-import chromahub.rhythm.app.ui.theme.parseCustomColorScheme
-import androidx.compose.ui.viewinterop.AndroidView
-import android.widget.TextView
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.core.text.HtmlCompat
-import chromahub.rhythm.app.shared.presentation.components.common.M3FourColorCircularLoader
-import chromahub.rhythm.app.shared.presentation.components.player.PlayingEqIcon
-import chromahub.rhythm.app.shared.presentation.components.dialogs.CreatePlaylistDialog
-import chromahub.rhythm.app.shared.presentation.components.dialogs.BulkPlaylistExportDialog
-import chromahub.rhythm.app.shared.presentation.components.dialogs.PlaylistImportDialog
-import chromahub.rhythm.app.shared.presentation.components.common.rememberExpressiveShape
-import chromahub.rhythm.app.shared.presentation.components.dialogs.PlaylistOperationProgressDialog
-import chromahub.rhythm.app.shared.presentation.components.dialogs.PlaylistOperationResultDialog
-import chromahub.rhythm.app.shared.presentation.components.dialogs.AppRestartDialog
-import chromahub.rhythm.app.shared.presentation.components.player.PlayerChipOrderBottomSheet
-import chromahub.rhythm.app.features.local.presentation.components.settings.HomeSectionOrderBottomSheet
-import chromahub.rhythm.app.features.local.presentation.components.settings.LibraryTabOrderBottomSheet
 import chromahub.rhythm.app.shared.presentation.components.Material3SettingsGroup
 import chromahub.rhythm.app.shared.presentation.components.Material3SettingsItem
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-import chromahub.rhythm.app.shared.presentation.screens.settings.TunerSettingRow
-import chromahub.rhythm.app.shared.presentation.screens.settings.TunerAnimatedSwitch
-import chromahub.rhythm.app.shared.presentation.screens.settings.TunerSettingCard
-import chromahub.rhythm.app.shared.presentation.screens.settings.SettingItem
-import chromahub.rhythm.app.shared.presentation.screens.settings.SettingGroup
-
-
-// Queue & Playback Settings Screen
 @Composable
-fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
+fun QueueSettingsScreen(onBackClick: () -> Unit) {
     val context = LocalContext.current
     val appSettings = AppSettings.getInstance(context)
     val hapticFeedback = LocalHapticFeedback.current
@@ -174,17 +61,9 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
         "ARTIST_FIRST"
     }
     val showQueueDialog by appSettings.showQueueDialog.collectAsState()
-    val repeatModePersistence by appSettings.repeatModePersistence.collectAsState()
-    val shuffleModePersistence by appSettings.shuffleModePersistence.collectAsState()
-    val queuePersistenceEnabled by appSettings.queuePersistenceEnabled.collectAsState()
     val playlistClickBehavior by appSettings.playlistClickBehavior.collectAsState(initial = "ask")
     val listQueueActionBehavior by appSettings.listQueueActionBehavior.collectAsState(initial = "replace")
-    val useHoursInTimeFormat by appSettings.useHoursInTimeFormat.collectAsState()
-    val gaplessEnabled by appSettings.gaplessPlayback.collectAsState()
-    val crossfadeEnabled by appSettings.crossfade.collectAsState()
-    val crossfadeDuration by appSettings.crossfadeDuration.collectAsState()
-    val crossfadeRepeatOne by appSettings.crossfadeRepeatOne.collectAsState()
-    val stopPlaybackOnAppClose by appSettings.stopPlaybackOnAppClose.collectAsState()
+    val queuePersistenceEnabled by appSettings.queuePersistenceEnabled.collectAsState()
 
     var showPlaylistBehaviorDialog by remember { mutableStateOf(false) }
     var showListQueueBehaviorDialog by remember { mutableStateOf(false) }
@@ -192,7 +71,7 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
     var showContextPrefBottomSheet by remember { mutableStateOf(false) }
 
     CollapsibleHeaderScreen(
-        title = context.getString(R.string.settings_queue_playback),
+        title = context.getString(R.string.settings_queue_title),
         showBackButton = true,
         onBackClick = onBackClick
     ) { modifier ->
@@ -301,73 +180,11 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
                 title = context.getString(R.string.settings_playback_persistence),
                 items = listOf(
                     SettingItem(
-                        RhythmIcons.Repeat,
-                        context.getString(R.string.settings_remember_repeat_mode),
-                        context.getString(R.string.settings_remember_repeat_mode_desc),
-                        toggleState = repeatModePersistence,
-                        onToggleChange = { appSettings.setRepeatModePersistence(it) }
-                    ),
-                    SettingItem(
-                        RhythmIcons.Shuffle,
-                        context.getString(R.string.settings_remember_shuffle_mode),
-                        context.getString(R.string.settings_remember_shuffle_mode_desc),
-                        toggleState = shuffleModePersistence,
-                        onToggleChange = { appSettings.setShuffleModePersistence(it) }
-                    ),
-                    SettingItem(
                         RhythmIcons.Queue,
                         context.getString(R.string.settings_remember_queue),
                         context.getString(R.string.settings_remember_queue_desc),
                         toggleState = queuePersistenceEnabled,
                         onToggleChange = { appSettings.setQueuePersistenceEnabled(it) }
-                    ),
-                    SettingItem(
-                        RhythmIcons.Stop,
-                        context.getString(R.string.settings_stop_playback_on_close),
-                        context.getString(R.string.settings_stop_playback_on_close_desc),
-                        toggleState = stopPlaybackOnAppClose,
-                        onToggleChange = { appSettings.setStopPlaybackOnAppClose(it) }
-                    )
-                )
-            ),
-            SettingGroup(
-                title = context.getString(R.string.settings_audio_effects),
-                items = listOf(
-                    SettingItem(
-                        MaterialSymbolIcon("graphic_eq"),
-                        context.getString(R.string.settings_gapless_playback),
-                        context.getString(R.string.settings_gapless_playback_desc),
-                        toggleState = gaplessEnabled,
-                        onToggleChange = { appSettings.setGaplessPlayback(it) }
-                    ),
-                    SettingItem(
-                        RhythmIcons.Tune,
-                        context.getString(R.string.settings_crossfade),
-                        context.getString(R.string.settings_crossfade_desc),
-                        toggleState = crossfadeEnabled,
-                        onToggleChange = { appSettings.setCrossfade(it) },
-                        // Pass the crossfade duration as extra data for rendering
-                        data = if (crossfadeEnabled) crossfadeDuration else null
-                    ),
-                    SettingItem(
-                        RhythmIcons.Repeat,
-                        context.getString(R.string.settings_crossfade_repeat_one),
-                        context.getString(R.string.settings_crossfade_repeat_one_desc),
-                        toggleState = crossfadeRepeatOne,
-                        onToggleChange = { appSettings.setCrossfadeRepeatOne(it) },
-                        enabled = crossfadeEnabled
-                    )
-                )
-            ),
-            SettingGroup(
-                title = context.getString(R.string.settings_time_display),
-                items = listOf(
-                    SettingItem(
-                        RhythmIcons.AccessTime,
-                        context.getString(R.string.settings_use_hours),
-                        if (useHoursInTimeFormat) context.getString(R.string.settings_use_hours_enabled) else context.getString(R.string.settings_use_hours_disabled),
-                        toggleState = useHoursInTimeFormat,
-                        onToggleChange = { appSettings.setUseHoursInTimeFormat(it) }
                     )
                 )
             )
@@ -381,7 +198,7 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
         ) {
             items(
                 items = settingGroups,
-                key = { "queueplayback_${it.title}" },
+                key = { "queue_${it.title}" },
                 contentType = { "settingGroup" }
             ) { group ->
                 Spacer(modifier = Modifier.height(24.dp))
@@ -393,50 +210,6 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
                         description = {
                             Column {
                                 item.description?.let { desc -> Text(desc) }
-
-                                // Keep crossfade duration slider integrated in this item when enabled.
-                                if (item.data is Float && item.toggleState == true) {
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = context.getString(R.string.settings_crossfade_duration),
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            text = context.getString(R.string.settings_crossfade_duration_desc, crossfadeDuration),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Slider(
-                                        value = crossfadeDuration,
-                                        onValueChange = { appSettings.setCrossfadeDuration(it) },
-                                        valueRange = 0.5f..12f,
-                                        steps = 22,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = context.getString(R.string.settings_crossfade_min),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text = context.getString(R.string.settings_crossfade_max),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
 
                                 if (item.data == "context_queue_persistence") {
                                     val persistenceOptions = listOf(
@@ -517,7 +290,7 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
                 )
             }
 
-            item(key = "queue_playback_bottom_spacer") { Spacer(modifier = Modifier.height(100.dp)) }
+            item(key = "queue_bottom_spacer") { Spacer(modifier = Modifier.height(100.dp)) }
         }
     }
 
@@ -538,13 +311,12 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
         val scope = rememberCoroutineScope()
         val playlistSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        // Animation states
         var showContent by remember { mutableStateOf(false) }
 
         val contentAlpha by animateFloatAsState(
             targetValue = if (showContent) 1f else 0f,
             animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
+                dampingRatio = Spring.DampingRatioNoBouncy,
                 stiffness = Spring.StiffnessLow
             ),
             label = "contentAlpha"
@@ -690,7 +462,6 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
                                 Icon(
                                     imageVector = RhythmIcons.CheckCircle,
                                     contentDescription = context.getString(R.string.ui_selected),
-                                    
                                     modifier = Modifier.size(28.dp)
                                 )
                             }
@@ -777,7 +548,6 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
                                 Icon(
                                     imageVector = RhythmIcons.CheckCircle,
                                     contentDescription = "Selected",
-                                    
                                     modifier = Modifier.size(28.dp)
                                 )
                             }
@@ -864,7 +634,6 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
                                 Icon(
                                     imageVector = RhythmIcons.CheckCircle,
                                     contentDescription = "Selected",
-                                    
                                     modifier = Modifier.size(28.dp)
                                 )
                             }
@@ -1073,7 +842,6 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
         val scope = rememberCoroutineScope()
         val queueSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        // Animation states
         var showContent by remember { mutableStateOf(false) }
 
         val contentAlpha by animateFloatAsState(
@@ -1225,7 +993,6 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
                                 Icon(
                                     imageVector = RhythmIcons.CheckCircle,
                                     contentDescription = "Selected",
-                                    
                                     modifier = Modifier.size(28.dp)
                                 )
                             }
@@ -1312,7 +1079,6 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
                                 Icon(
                                     imageVector = RhythmIcons.CheckCircle,
                                     contentDescription = "Selected",
-                                    
                                     modifier = Modifier.size(28.dp)
                                 )
                             }
@@ -1322,5 +1088,4 @@ fun QueuePlaybackSettingsScreen(onBackClick: () -> Unit) {
             }
         }
     }
-
 }

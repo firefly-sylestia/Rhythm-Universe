@@ -43,6 +43,7 @@ import kotlinx.coroutines.delay
 import androidx.lifecycle.viewmodel.compose.viewModel
 import chromahub.rhythm.app.features.local.presentation.viewmodel.MusicViewModel
 import chromahub.rhythm.app.shared.presentation.viewmodel.AppUpdaterViewModel
+import chromahub.rhythm.app.features.streaming.presentation.viewmodel.StreamingMusicViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
@@ -57,7 +58,8 @@ fun PermissionHandler(
     onSetIsLoading: (Boolean) -> Unit, // Callback to update state
     onSetIsInitializingApp: (Boolean) -> Unit, // Callback to update state
     musicViewModel: MusicViewModel = viewModel(),
-    updaterViewModel: AppUpdaterViewModel = viewModel()
+    updaterViewModel: AppUpdaterViewModel = viewModel(),
+    streamingViewModel: StreamingMusicViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -110,9 +112,9 @@ fun PermissionHandler(
     val essentialPermissions = storagePermissions + bluetoothPermissions + notificationPermissions
     
     // Check if onboarding state is valid - if onboarding is marked complete but permissions are not granted,
-    // reset the onboarding state to force a fresh start
+    // reset the onboarding state to force a fresh start (except in streaming mode where storage permission isn't required)
     LaunchedEffect(Unit) {
-        if (onboardingCompleted) {
+        if (onboardingCompleted && appSettings.appMode.value != "STREAMING") {
             val hasStoragePermissions = storagePermissions.all { permission ->
                 ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
             }
@@ -134,7 +136,7 @@ fun PermissionHandler(
     fun completeOnboardingNow() {
         appSettings.setOnboardingCompleted(true)
         currentOnboardingStep = OnboardingStep.COMPLETE
-        if (!initialMediaScanCompleted) {
+        if (!initialMediaScanCompleted && appSettings.appMode.value != "STREAMING") {
             showMediaScanLoader = true
         }
     }
@@ -145,8 +147,8 @@ fun PermissionHandler(
 
     // Centralized function to evaluate permission status and update onboarding step
     suspend fun evaluatePermissionsAndSetStep() {
-        // Check if we have the essential storage permissions
-        val hasStoragePermissions = storagePermissions.all { permission ->
+        // Check if we have the essential storage permissions (bypass if streaming)
+        val hasStoragePermissions = appSettings.appMode.value == "STREAMING" || storagePermissions.all { permission ->
             permissionsState.permissions.find { it.permission == permission }?.status?.isGranted == true
         }
 
@@ -296,9 +298,18 @@ fun PermissionHandler(
                 currentStep = currentOnboardingStep,
                 musicViewModel = musicViewModel,
                 updaterViewModel = updaterViewModel,
+                streamingViewModel = streamingViewModel,
                 onNextStep = {
                     when (currentOnboardingStep) {
-                        OnboardingStep.WELCOME -> currentOnboardingStep = OnboardingStep.PERMISSIONS
+                        OnboardingStep.WELCOME -> currentOnboardingStep = OnboardingStep.APP_MODE_CHOICE
+                        OnboardingStep.APP_MODE_CHOICE -> {
+                            currentOnboardingStep = if (appSettings.appMode.value == "STREAMING") {
+                                OnboardingStep.STREAMING_SETUP
+                            } else {
+                                OnboardingStep.PERMISSIONS
+                            }
+                        }
+                        OnboardingStep.STREAMING_SETUP -> currentOnboardingStep = OnboardingStep.RHYTHM_GUARD
                         OnboardingStep.PERMISSIONS -> {
                             // Handle based on current permission state
                             when (permissionScreenState) {
@@ -323,7 +334,13 @@ fun PermissionHandler(
                                 }
                             }
                         }
-                        OnboardingStep.RHYTHM_GUARD -> currentOnboardingStep = OnboardingStep.MEDIA_SCAN
+                        OnboardingStep.RHYTHM_GUARD -> {
+                            currentOnboardingStep = if (appSettings.appMode.value == "STREAMING") {
+                                OnboardingStep.UPDATER
+                            } else {
+                                OnboardingStep.MEDIA_SCAN
+                            }
+                        }
                         OnboardingStep.MEDIA_SCAN -> currentOnboardingStep = OnboardingStep.UPDATER
                         OnboardingStep.UPDATER -> currentOnboardingStep = OnboardingStep.FULL_TOUR_PROMPT
                         OnboardingStep.FULL_TOUR_PROMPT -> {
@@ -350,16 +367,28 @@ fun PermissionHandler(
                 },
                 onPrevStep = {
                     when (currentOnboardingStep) {
-                        OnboardingStep.PERMISSIONS -> currentOnboardingStep = OnboardingStep.WELCOME
+                        OnboardingStep.APP_MODE_CHOICE -> currentOnboardingStep = OnboardingStep.WELCOME
+                        OnboardingStep.PERMISSIONS -> currentOnboardingStep = OnboardingStep.APP_MODE_CHOICE
+                        OnboardingStep.STREAMING_SETUP -> currentOnboardingStep = OnboardingStep.APP_MODE_CHOICE
                         OnboardingStep.RHYTHM_GUARD -> {
-                            currentOnboardingStep = OnboardingStep.PERMISSIONS
-                            scope.launch {
-                                onSetIsLoading(false)
-                                evaluatePermissionsAndSetStep()
+                            if (appSettings.appMode.value == "STREAMING") {
+                                currentOnboardingStep = OnboardingStep.STREAMING_SETUP
+                            } else {
+                                currentOnboardingStep = OnboardingStep.PERMISSIONS
+                                scope.launch {
+                                    onSetIsLoading(false)
+                                    evaluatePermissionsAndSetStep()
+                                }
                             }
                         }
                         OnboardingStep.MEDIA_SCAN -> currentOnboardingStep = OnboardingStep.RHYTHM_GUARD
-                        OnboardingStep.UPDATER -> currentOnboardingStep = OnboardingStep.MEDIA_SCAN
+                        OnboardingStep.UPDATER -> {
+                            currentOnboardingStep = if (appSettings.appMode.value == "STREAMING") {
+                                OnboardingStep.RHYTHM_GUARD
+                            } else {
+                                OnboardingStep.MEDIA_SCAN
+                            }
+                        }
                         OnboardingStep.FULL_TOUR_PROMPT -> currentOnboardingStep = OnboardingStep.UPDATER
                         OnboardingStep.NOTIFICATIONS -> currentOnboardingStep = OnboardingStep.FULL_TOUR_PROMPT
                         OnboardingStep.BACKUP_RESTORE -> currentOnboardingStep = OnboardingStep.FULL_TOUR_PROMPT

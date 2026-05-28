@@ -94,6 +94,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -182,6 +185,24 @@ fun ExpressivePlayerScreen(
     val showBuffering = isMediaLoading || isSeeking
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
+
+    // Entry animation states - staggered
+    var showHeader by remember { mutableStateOf(false) }
+    var showAlbumArt by remember { mutableStateOf(false) }
+    var showPlayerControls by remember { mutableStateOf(false) }
+    var showBottomButtons by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(50)
+        showHeader = true
+        delay(100) // 150ms total
+        showAlbumArt = true
+        delay(100) // 250ms total
+        showPlayerControls = true
+        delay(100) // 350ms total
+        showBottomButtons = true
+    }
+
     val artworkClipShape = if (lyricsVisible) {
         RoundedCornerShape(artworkCornerRadius)
     } else {
@@ -315,55 +336,61 @@ fun ExpressivePlayerScreen(
         showBackButton = true,
         onBackClick = onBack,
         actions = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
+            AnimatedVisibility(
+                visible = showHeader,
+                enter = fadeIn() + slideInVertically { -it / 2 },
+                exit = fadeOut() + slideOutVertically { -it / 2 }
             ) {
-                song?.album?.takeIf { it.isNotBlank() }?.let { albumName ->
-                    AutoScrollingTextOnDemand(
-                        text = albumName,
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                        gradientEdgeColor = MaterialTheme.colorScheme.surface,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .widthIn(max = 140.dp)
-                            .clickable { onShowAlbumBottomSheet() },
-                        respectGlobalSetting = true
-                    )
-                }
-                ExpressiveButtonGroup() {
-                    ExpressiveGroupButton(
-                        onClick = onSongInfoClick,
-                        isStart = true,
-                        isEnd = false,
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 10.dp)
-                    ) {
-                        Icon(
-                            imageVector = RhythmIcons.Info,
-                            contentDescription = "Song Info",
-                            modifier = Modifier.size(24.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    song?.album?.takeIf { it.isNotBlank() }?.let { albumName ->
+                        AutoScrollingTextOnDemand(
+                            text = albumName,
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                            gradientEdgeColor = MaterialTheme.colorScheme.surface,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .widthIn(max = 140.dp)
+                                .clickable { onShowAlbumBottomSheet() },
+                            respectGlobalSetting = true
                         )
                     }
-                    ExpressiveGroupButton(
-                        onClick = onMoreClick,
-                        isStart = false,
-                        isEnd = true,
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 10.dp)
-                    ) {
-                        Icon(
-                            imageVector = RhythmIcons.More,
-                            contentDescription = "More",
-                            modifier = Modifier.size(24.dp)
-                        )
+                    ExpressiveButtonGroup() {
+                        ExpressiveGroupButton(
+                            onClick = onSongInfoClick,
+                            isStart = true,
+                            isEnd = false,
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = RhythmIcons.Info,
+                                contentDescription = "Song Info",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        ExpressiveGroupButton(
+                            onClick = onMoreClick,
+                            isStart = false,
+                            isEnd = true,
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = RhythmIcons.More,
+                                contentDescription = "More",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -420,117 +447,128 @@ fun ExpressivePlayerScreen(
                     label = "artworkTranslationX"
                 )
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
+                AnimatedVisibility(
+                    visible = showAlbumArt,
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 },
+                    modifier = Modifier.weight(1f)
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(artworkHeight)
-                            .graphicsLayer {
-                                scaleX = artworkScale
-                                scaleY = artworkScale
-                                shadowElevation = if (isPlaying) 0.dp.toPx() else 0.dp.toPx()
-                                translationX = artworkTranslationX
-                                shape = artworkClipShape
-                                clip = true
-                            }
-                            .pointerInput(showLyrics, lyricsVisible) {
-                                detectTapGestures(
-                                    onDoubleTap = {
-                                        HapticUtils.performHapticFeedback(
-                                            context,
-                                            haptic,
-                                            HapticFeedbackType.LongPress
-                                        )
-                                        onPlayPause()
-                                    },
-                                    onTap = {
-                                        if (showLyrics) {
-                                            HapticUtils.performHapticFeedback(
-                                                context,
-                                                haptic,
-                                                HapticFeedbackType.TextHandleMove
-                                            )
-                                            onToggleLyrics()
-                                        }
-                                    }
-                                )
-                            }
-                            .pointerInput(Unit) {
-                                detectDragGestures(
-                                    onDragEnd = {
-                                        if (artworkOffsetX < -artworkSwipeThreshold) {
-                                            HapticUtils.performHapticFeedback(
-                                                context,
-                                                haptic,
-                                                HapticFeedbackType.LongPress
-                                            )
-                                            onSkipNext()
-                                        } else if (artworkOffsetX > artworkSwipeThreshold) {
-                                            HapticUtils.performHapticFeedback(
-                                                context,
-                                                haptic,
-                                                HapticFeedbackType.LongPress
-                                            )
-                                            onSkipPrevious()
-                                        }
-                                        artworkOffsetX = 0f
-                                    },
-                                    onDragCancel = { artworkOffsetX = 0f },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        artworkOffsetX += dragAmount.x
-                                    }
-                                )
-                            }
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(artworkHeight)
+                                .graphicsLayer {
+                                    scaleX = artworkScale
+                                    scaleY = artworkScale
+                                    shadowElevation = if (isPlaying) 0.dp.toPx() else 0.dp.toPx()
+                                    translationX = artworkTranslationX
+                                    shape = artworkClipShape
+                                    clip = true
+                                }
+                                .pointerInput(showLyrics, lyricsVisible) {
+                                    detectTapGestures(
+                                        onDoubleTap = {
+                                            HapticUtils.performHapticFeedback(
+                                                context,
+                                                haptic,
+                                                HapticFeedbackType.LongPress
+                                            )
+                                            onPlayPause()
+                                        },
+                                        onTap = {
+                                            if (showLyrics) {
+                                                HapticUtils.performHapticFeedback(
+                                                    context,
+                                                    haptic,
+                                                    HapticFeedbackType.TextHandleMove
+                                                )
+                                                onToggleLyrics()
+                                            }
+                                        }
+                                    )
+                                }
+                                .pointerInput(Unit) {
+                                    detectDragGestures(
+                                        onDragEnd = {
+                                            if (artworkOffsetX < -artworkSwipeThreshold) {
+                                                HapticUtils.performHapticFeedback(
+                                                    context,
+                                                    haptic,
+                                                    HapticFeedbackType.LongPress
+                                                )
+                                                onSkipNext()
+                                            } else if (artworkOffsetX > artworkSwipeThreshold) {
+                                                HapticUtils.performHapticFeedback(
+                                                    context,
+                                                    haptic,
+                                                    HapticFeedbackType.LongPress
+                                                )
+                                                onSkipPrevious()
+                                            }
+                                            artworkOffsetX = 0f
+                                        },
+                                        onDragCancel = { artworkOffsetX = 0f },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            artworkOffsetX += dragAmount.x
+                                        }
+                                    )
+                                }
+                        ) {
 
-                        AnimatedContent(
-                            targetState = lyricsVisible,
-                            transitionSpec = {
-                                (fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.95f)) togetherWith
-                                        (fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.95f))
-                            },
-                            label = "LyricsTransition"
-                        ) { isShowingLyrics ->
-                            if (isShowingLyrics) {
-                                RhythmPlayerLyricsPanel(
-                                    lyrics = lyrics,
-                                    isLoadingLyrics = isLoadingLyrics,
-                                    onlineOnlyLyrics = onlineOnlyLyrics,
-                                    currentTimeMs = currentTimeMs,
-                                    onLyricsSeek = onLyricsSeek,
-                                    textSizeMultiplier = playerLyricsTextSize,
-                                    onRetryLyrics = onRetryLyrics,
-                                    onShowLyricsEditor = onShowLyricsEditor,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } else {
-                                M3ImageUtils.M3MediaImage(
-                                    data = song?.artworkUri,
-                                    contentDescription = "Album Artwork",
-                                    modifier = Modifier.fillMaxSize(),
-                                    shape = artworkClipShape,
-                                    type = M3PlaceholderType.TRACK,
-                                    name = song?.title,
-                                    expressiveShape = if (lyricsVisible) null else playerArtworkShape
-                                )
+                            AnimatedContent(
+                                targetState = lyricsVisible,
+                                transitionSpec = {
+                                    (fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.95f)) togetherWith
+                                            (fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.95f))
+                                },
+                                label = "LyricsTransition"
+                            ) { isShowingLyrics ->
+                                if (isShowingLyrics) {
+                                    RhythmPlayerLyricsPanel(
+                                        lyrics = lyrics,
+                                        isLoadingLyrics = isLoadingLyrics,
+                                        onlineOnlyLyrics = onlineOnlyLyrics,
+                                        currentTimeMs = currentTimeMs,
+                                        onLyricsSeek = onLyricsSeek,
+                                        textSizeMultiplier = playerLyricsTextSize,
+                                        onRetryLyrics = onRetryLyrics,
+                                        onShowLyricsEditor = onShowLyricsEditor,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    M3ImageUtils.M3MediaImage(
+                                        data = song?.artworkUri,
+                                        contentDescription = "Album Artwork",
+                                        modifier = Modifier.fillMaxSize(),
+                                        shape = artworkClipShape,
+                                        type = M3PlaceholderType.TRACK,
+                                        name = song?.title,
+                                        expressiveShape = if (lyricsVisible) null else playerArtworkShape
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(bottom = if (isCompactHeight) 8.dp else 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                AnimatedVisibility(
+                    visible = showPlayerControls,
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 }
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(bottom = if (isCompactHeight) 8.dp else 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -805,75 +843,83 @@ fun ExpressivePlayerScreen(
                             }
                         }
                     }
+                }
+                }
 
-                    Spacer(modifier = Modifier.height(if (isCompactHeight) 12.dp else 24.dp))
+                AnimatedVisibility(
+                    visible = showBottomButtons,
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 }
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Spacer(modifier = Modifier.height(if (isCompactHeight) 12.dp else 24.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-
-                        val deviceIcon = when {
-                            location?.id?.startsWith("bt_") == true -> RhythmIcons.BluetoothFilled
-                            location?.id == "wired_headset" -> RhythmIcons.HeadphonesFilled
-                            location?.id == "speaker" -> RhythmIcons.SpeakerFilled
-                            else -> RhythmIcons.Location
-                        }
-                        val queueLabel =
-                            if (queueTotal > 0) "Queue $queuePosition/$queueTotal" else "Queue"
-
-                        Surface(
-                            onClick = onDeviceClick,
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceContainer,
-                            modifier = Modifier.height(48.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            ) {
-                                Icon(
-                                    imageVector = deviceIcon,
-                                    contentDescription = "Device",
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                AutoScrollingTextOnDemand(
-                                    text = location?.name ?: "Output",
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                    gradientEdgeColor = MaterialTheme.colorScheme.surfaceContainer,
-                                    modifier = Modifier.widthIn(max = 160.dp),
-                                    respectGlobalSetting = true
-                                )
+                            val deviceIcon = when {
+                                location?.id?.startsWith("bt_") == true -> RhythmIcons.BluetoothFilled
+                                location?.id == "wired_headset" -> RhythmIcons.HeadphonesFilled
+                                location?.id == "speaker" -> RhythmIcons.SpeakerFilled
+                                else -> RhythmIcons.Location
                             }
-                        }
+                            val queueLabel =
+                                if (queueTotal > 0) "Queue $queuePosition/$queueTotal" else "Queue"
 
-                        Surface(
-                            onClick = onQueueClick,
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceContainer,
-                            modifier = Modifier.height(48.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 16.dp)
+                            Surface(
+                                onClick = onDeviceClick,
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                modifier = Modifier.height(48.dp)
                             ) {
-                                Icon(
-                                    imageVector = RhythmIcons.Queue,
-                                    contentDescription = "Queue",
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                AutoScrollingTextOnDemand(
-                                    text = queueLabel,
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                    gradientEdgeColor = MaterialTheme.colorScheme.surfaceContainer,
-                                    modifier = Modifier.widthIn(max = 160.dp),
-                                    respectGlobalSetting = true
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = deviceIcon,
+                                        contentDescription = "Device",
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    AutoScrollingTextOnDemand(
+                                        text = location?.name ?: "Output",
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                        gradientEdgeColor = MaterialTheme.colorScheme.surfaceContainer,
+                                        modifier = Modifier.widthIn(max = 160.dp),
+                                        respectGlobalSetting = true
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                onClick = onQueueClick,
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                modifier = Modifier.height(48.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = RhythmIcons.Queue,
+                                        contentDescription = "Queue",
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    AutoScrollingTextOnDemand(
+                                        text = queueLabel,
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                        gradientEdgeColor = MaterialTheme.colorScheme.surfaceContainer,
+                                        modifier = Modifier.widthIn(max = 160.dp),
+                                        respectGlobalSetting = true
+                                    )
+                                }
                             }
                         }
                     }
