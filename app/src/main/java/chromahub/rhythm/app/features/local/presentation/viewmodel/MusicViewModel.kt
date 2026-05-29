@@ -1461,9 +1461,15 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 val hasMissingSongs = _songs.value.any { it.artworkUri == null }
                 
-                if ((hasMissingArtists || hasMissingAlbums || hasMissingSongs) && appSettings.autoFetchArtwork.value && appSettings.appleMusicApiEnabled.value) {
+                val shouldFetchArtists = hasMissingArtists && appSettings.deezerApiEnabled.value
+                val shouldFetchAlbumsAndSongs = (hasMissingAlbums || hasMissingSongs) && appSettings.autoFetchArtwork.value && appSettings.ytMusicApiEnabled.value
+
+                if (shouldFetchArtists || shouldFetchAlbumsAndSongs) {
                     _isFetchingArtwork.value = true
-                    fetchArtworkFromInternet()
+                    fetchArtworkFromInternet(
+                        fetchArtists = shouldFetchArtists,
+                        fetchAlbumsAndSongs = shouldFetchAlbumsAndSongs
+                    )
                 } else {
                     Log.d(TAG, "All artist/album/song artworks are present or auto-fetch is disabled, skipping startup internet fetches")
                 }
@@ -1596,9 +1602,15 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 val hasMissingSongs = _songs.value.any { it.artworkUri == null }
                 
-                if ((hasMissingArtists || hasMissingAlbums || hasMissingSongs) && appSettings.autoFetchArtwork.value && appSettings.appleMusicApiEnabled.value) {
+                val shouldFetchArtists = hasMissingArtists && appSettings.deezerApiEnabled.value
+                val shouldFetchAlbumsAndSongs = (hasMissingAlbums || hasMissingSongs) && appSettings.autoFetchArtwork.value && appSettings.ytMusicApiEnabled.value
+
+                if (shouldFetchArtists || shouldFetchAlbumsAndSongs) {
                     _isFetchingArtwork.value = true
-                    fetchArtworkFromInternet()
+                    fetchArtworkFromInternet(
+                        fetchArtists = shouldFetchArtists,
+                        fetchAlbumsAndSongs = shouldFetchAlbumsAndSongs
+                    )
                 } else {
                     Log.d(TAG, "All artist/album/song artworks are present or auto-fetch is disabled, skipping internet fetches")
                 }
@@ -1916,9 +1928,15 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                         }
                         val hasMissingSongs = _songs.value.any { it.artworkUri == null }
                         
-                        if ((hasMissingArtists || hasMissingAlbums || hasMissingSongs) && appSettings.autoFetchArtwork.value && appSettings.appleMusicApiEnabled.value) {
+                        val shouldFetchArtists = hasMissingArtists && appSettings.deezerApiEnabled.value
+                        val shouldFetchAlbumsAndSongs = (hasMissingAlbums || hasMissingSongs) && appSettings.autoFetchArtwork.value && appSettings.ytMusicApiEnabled.value
+
+                        if (shouldFetchArtists || shouldFetchAlbumsAndSongs) {
                             _isFetchingArtwork.value = true
-                            fetchArtworkFromInternet()
+                            fetchArtworkFromInternet(
+                                fetchArtists = shouldFetchArtists,
+                                fetchAlbumsAndSongs = shouldFetchAlbumsAndSongs
+                            )
                         } else {
                             Log.d(TAG, "All artist/album/song artworks are present or auto-fetch is disabled, skipping internet fetches")
                         }
@@ -2501,60 +2519,70 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Fetches artist images and album artwork from the internet for items that don't have them
      */
-    private suspend fun fetchArtworkFromInternet() = withContext(Dispatchers.IO) {
+    private suspend fun fetchArtworkFromInternet(
+        fetchArtists: Boolean = true,
+        fetchAlbumsAndSongs: Boolean = true
+    ) = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Fetching artist images from internet")
-            val missingArtists = _artists.value.filter { it.artworkUri == null }
-            Log.d(TAG, "Found ${missingArtists.size} artists without images out of ${_artists.value.size} total artists")
-            val chunkSize = 10
-            for (batch in missingArtists.chunked(chunkSize)) {
-                val updatedArtists = repository.fetchArtistImages(batch)
-                if (updatedArtists.isNotEmpty()) {
-                    val artistMap = updatedArtists.associateBy { it.id }
-                    _artists.value = _artists.value.map { artist ->
-                        artistMap[artist.id] ?: artist
+            if (fetchArtists) {
+                Log.d(TAG, "Fetching artist images from internet")
+                val missingArtists = _artists.value.filter { it.artworkUri == null }
+                Log.d(TAG, "Found ${missingArtists.size} artists without images out of ${_artists.value.size} total artists")
+                val chunkSize = 10
+                for (batch in missingArtists.chunked(chunkSize)) {
+                    val updatedArtists = repository.fetchArtistImages(batch)
+                    if (updatedArtists.isNotEmpty()) {
+                        val artistMap = updatedArtists.associateBy { it.id }
+                        _artists.value = _artists.value.map { artist ->
+                            artistMap[artist.id] ?: artist
+                        }
+                        Log.d(TAG, "Updated ${updatedArtists.size} artists with images from internet (batch)")
                     }
-                    Log.d(TAG, "Updated ${updatedArtists.size} artists with images from internet (batch)")
+                    // Throttle between batches to avoid hitting API rate limits
+                    delay(1000)
                 }
-                // Throttle between batches to avoid hitting API rate limits
-                delay(1000)
             }
             
-            Log.d(TAG, "Fetching album artwork from internet")
-            val context = getApplication<Application>()
-            
-            // Only fetch for a subset of albums to avoid overwhelming the API
-            // Check for albums with genuinely missing or unreadable cover art URIs
-            val albumsToUpdate = _albums.value.filter { album ->
-                val uri = album.artworkUri
-                uri == null || (uri.toString().startsWith("content://media/external/audio/albumart") && !isContentUriReadable(context, uri))
-            }.take(10)
-            
-            Log.d(TAG, "Found ${albumsToUpdate.size} albums that genuinely need artwork out of ${_albums.value.size} total albums")
-            if (albumsToUpdate.isNotEmpty()) {
-                Log.d(TAG, "Albums to update: ${albumsToUpdate.map { "${it.artist} - ${it.title}" }}")
-                val updatedAlbums = repository.fetchAlbumArtwork(albumsToUpdate)
-                // Update only the albums we fetched, keeping the rest unchanged
-                val albumMap = updatedAlbums.associateBy { it.id }
-                _albums.value = _albums.value.map { 
-                    albumMap[it.id] ?: it 
+            if (fetchAlbumsAndSongs) {
+                Log.d(TAG, "Fetching album artwork from internet")
+                val context = getApplication<Application>()
+                
+                // Only fetch for a subset of albums to avoid overwhelming the API
+                // Check for albums with genuinely missing or unreadable cover art URIs
+                val albumsToUpdate = _albums.value.filter { album ->
+                    val uri = album.artworkUri
+                    uri == null || (uri.toString().startsWith("content://media/external/audio/albumart") && !isContentUriReadable(context, uri))
+                }.take(10)
+                
+                Log.d(TAG, "Found ${albumsToUpdate.size} albums that genuinely need artwork out of ${_albums.value.size} total albums")
+                if (albumsToUpdate.isNotEmpty()) {
+                    Log.d(TAG, "Albums to update: ${albumsToUpdate.map { "${it.artist} - ${it.title}" }}")
+                    val updatedAlbums = repository.fetchAlbumArtwork(albumsToUpdate)
+                    // Update only the albums we fetched, keeping the rest unchanged
+                    val albumMap = updatedAlbums.associateBy { it.id }
+                    _albums.value = _albums.value.map { 
+                        albumMap[it.id] ?: it 
+                    }
+                    Log.d(TAG, "Updated ${updatedAlbums.size} albums with artwork from internet")
+                } else {
+                    Log.d(TAG, "No albums found that need artwork")
                 }
-                Log.d(TAG, "Updated ${updatedAlbums.size} albums with artwork from internet")
-            } else {
-                Log.d(TAG, "No albums found that need artwork")
-            }
 
-            Log.d(TAG, "Fetching track artwork fallback from YouTube Music for songs without art")
-            val songsToUpdate = _songs.value.filter { it.artworkUri == null }.take(40)
-            if (songsToUpdate.isNotEmpty()) {
-                val updatedSongs = repository.fetchTrackArtwork(songsToUpdate)
-                val songMap = updatedSongs.associateBy { it.id }
-                _songs.value = _songs.value.map { song ->
-                    songMap[song.id] ?: song
+                Log.d(TAG, "Fetching track artwork fallback from YouTube Music for songs without art")
+                val songsToUpdate = _songs.value.filter { it.artworkUri == null }.take(40)
+                if (songsToUpdate.isNotEmpty()) {
+                    val updatedSongs = repository.fetchTrackArtwork(songsToUpdate)
+                    val songMap = updatedSongs.associateBy { it.id }
+                    val mergedSongs = _songs.value.map { song ->
+                        songMap[song.id] ?: song
+                    }
+                    _songs.value = mergedSongs
+                    Log.d(TAG, "Updated ${updatedSongs.count { it.artworkUri != null }} songs with fallback artwork")
+                    // Persist the updated songs list so artwork edits survive restarts.
+                    repository.updateAndPersistSongs(mergedSongs)
+                } else {
+                    Log.d(TAG, "No songs found that need fallback artwork")
                 }
-                Log.d(TAG, "Updated ${updatedSongs.count { it.artworkUri != null }} songs with fallback artwork")
-            } else {
-                Log.d(TAG, "No songs found that need fallback artwork")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching artwork from internet", e)

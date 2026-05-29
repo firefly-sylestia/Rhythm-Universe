@@ -2711,6 +2711,24 @@ class MusicRepository(context: Context) {
                 }
             }
 
+            // Persist the updated artists to the Room database cache
+            try {
+                val artistEntities = updatedArtists.map { artist ->
+                    ArtistEntity(
+                        id = artist.id,
+                        name = artist.name,
+                        artworkUri = artist.artworkUri?.toString(),
+                        numberOfAlbums = artist.numberOfAlbums,
+                        numberOfTracks = artist.numberOfTracks,
+                        groupByAlbumArtist = groupByAlbumArtist
+                    )
+                }
+                roomDb.artistDao().insertAll(artistEntities)
+                Log.d(TAG, "Successfully persisted ${artistEntities.size} updated artists to Room")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error persisting updated artists to Room", e)
+            }
+
             updatedArtists
         }
     /**
