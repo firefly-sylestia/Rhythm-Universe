@@ -5,6 +5,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.fillMaxSize
+import chromahub.rhythm.app.shared.presentation.components.lyrics.FullScreenLyricsView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -145,8 +152,10 @@ fun PlayerScreen(
     modifier: Modifier = Modifier
 ) {
     val playerThemeId by appSettings.playerThemeId.collectAsState()
+    var showFullScreenLyrics by remember { mutableStateOf(false) }
 
-    if (playerThemeId == "EXPRESSIVE") {
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (playerThemeId == "EXPRESSIVE") {
         val context = LocalContext.current
         val haptic = LocalHapticFeedback.current
         val useHoursFormat by appSettings.useHoursInTimeFormat.collectAsState()
@@ -278,6 +287,7 @@ fun PlayerScreen(
             onToggleRepeat = onToggleRepeat,
             onToggleLyrics = { showLyricsView = !showLyricsView },
             onSongInfoClick = { showSongInfoSheet = true },
+            onOpenFullScreenLyrics = { showFullScreenLyrics = true },
             onShowAlbumBottomSheet = {
                 currentSongAlbumForSheet?.let { album ->
                     selectedAlbum = album
@@ -784,7 +794,36 @@ fun PlayerScreen(
             musicViewModel = musicViewModel,
             navController = navController,
             isStreamingMode = isStreamingMode,
+            onOpenFullScreenLyrics = { showFullScreenLyrics = true },
             modifier = modifier
         )
     }
+
+    AnimatedVisibility(
+        visible = showFullScreenLyrics,
+        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        val progressValue = progress().coerceIn(0f, 1f)
+        val totalTimeMs = song?.duration ?: 0L
+        val currentTimeMs = (progressValue * totalTimeMs).toLong()
+
+        FullScreenLyricsView(
+            song = song,
+            isPlaying = isPlaying,
+            currentTimeMs = currentTimeMs,
+            lyrics = lyrics,
+            isLoadingLyrics = isLoadingLyrics,
+            onPlayPause = onPlayPause,
+            onSkipNext = onSkipNext,
+            onSkipPrevious = onSkipPrevious,
+            onSeek = onSeek,
+            onLyricsSeek = onLyricsSeek,
+            onRetryLyrics = onRetryLyrics,
+            onClose = { showFullScreenLyrics = false },
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
 }

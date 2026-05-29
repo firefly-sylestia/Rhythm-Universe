@@ -34,7 +34,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -97,6 +99,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -1255,7 +1258,8 @@ fun ExpressivePlayerControlGroup(
     isExtraSmallWidth: Boolean = false,
     isCompactWidth: Boolean = false,
     isCompactHeight: Boolean = false,
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    useGlassEffect: Boolean = false
 ) {
     // Animation state management
     var lastClicked by remember { mutableStateOf<PlaybackButtonType?>(null) }
@@ -1385,6 +1389,8 @@ fun ExpressivePlayerControlGroup(
         label = "playCorner"
     )
 
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
     // Unified background surface
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -1396,8 +1402,9 @@ fun ExpressivePlayerControlGroup(
                 else -> 40.dp
             }
         ),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        tonalElevation = 2.dp
+        color = if (useGlassEffect) (if (isDark) Color.White else Color.Black).copy(alpha = 0.07f) else MaterialTheme.colorScheme.surfaceContainerHighest,
+        border = if (useGlassEffect) BorderStroke(1.dp, (if (isDark) Color.White else Color.Black).copy(alpha = 0.12f)) else null,
+        tonalElevation = if (useGlassEffect) 0.dp else 2.dp
     ) {
         Row(
             modifier = Modifier
@@ -1413,7 +1420,22 @@ fun ExpressivePlayerControlGroup(
                     .weight(prevWeight.coerceAtLeast(0.001f))
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(containerHeight / 2))
-                    .background(MaterialTheme.colorScheme.tertiary)
+                    .background(
+                        if (useGlassEffect) {
+                            (if (isDark) Color.White else Color.Black).copy(alpha = 0.1f)
+                        } else {
+                            MaterialTheme.colorScheme.tertiary
+                        }
+                    )
+                    .then(
+                        if (useGlassEffect) {
+                            Modifier.border(
+                                1.dp,
+                                (if (isDark) Color.White else Color.Black).copy(alpha = 0.12f),
+                                RoundedCornerShape(containerHeight / 2)
+                            )
+                        } else Modifier
+                    )
                     .clickable {
                         lastClicked = PlaybackButtonType.PREVIOUS
                         onPrevious()
@@ -1423,7 +1445,11 @@ fun ExpressivePlayerControlGroup(
                 Icon(
                     imageVector = RhythmIcons.SkipPrevious,
                     contentDescription = "Previous",
-                    tint = MaterialTheme.colorScheme.onTertiary,
+                    tint = if (useGlassEffect) {
+                        if (isDark) Color.White else Color.Black
+                    } else {
+                        MaterialTheme.colorScheme.onTertiary
+                    },
                     modifier = Modifier.size(prevNextSize * 0.5f)
                 )
             }
@@ -1435,7 +1461,22 @@ fun ExpressivePlayerControlGroup(
                         .weight(seekBackWeight.coerceAtLeast(0.001f))
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(containerHeight / 2))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .background(
+                            if (useGlassEffect) {
+                                (if (isDark) Color.White else Color.Black).copy(alpha = 0.08f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerHigh
+                            }
+                        )
+                        .then(
+                            if (useGlassEffect) {
+                                Modifier.border(
+                                    1.dp,
+                                    (if (isDark) Color.White else Color.Black).copy(alpha = 0.10f),
+                                    RoundedCornerShape(containerHeight / 2)
+                                )
+                            } else Modifier
+                        )
                         .clickable {
                             lastClicked = PlaybackButtonType.SEEK_BACK
                             onSeekBack()
@@ -1445,7 +1486,11 @@ fun ExpressivePlayerControlGroup(
                     Icon(
                         imageVector = RhythmIcons.Replay10,
                         contentDescription = "Seek back",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (useGlassEffect) {
+                            (if (isDark) Color.White else Color.Black).copy(alpha = 0.72f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                         modifier = Modifier.size(seekButtonSize * 0.5f)
                     )
                 }
@@ -1469,6 +1514,8 @@ fun ExpressivePlayerControlGroup(
                     isLoading = isLoading,
                     showSeekButtons = showSeekButtons,
                     cornerRadius = playCorner,
+                    useGlassEffect = useGlassEffect,
+                    isDark = isDark,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -1480,7 +1527,22 @@ fun ExpressivePlayerControlGroup(
                         .weight(seekForwardWeight.coerceAtLeast(0.001f))
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(containerHeight / 2))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .background(
+                            if (useGlassEffect) {
+                                (if (isDark) Color.White else Color.Black).copy(alpha = 0.08f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerHigh
+                            }
+                        )
+                        .then(
+                            if (useGlassEffect) {
+                                Modifier.border(
+                                    1.dp,
+                                    (if (isDark) Color.White else Color.Black).copy(alpha = 0.10f),
+                                    RoundedCornerShape(containerHeight / 2)
+                                )
+                            } else Modifier
+                        )
                         .clickable {
                             lastClicked = PlaybackButtonType.SEEK_FORWARD
                             onSeekForward()
@@ -1490,7 +1552,11 @@ fun ExpressivePlayerControlGroup(
                     Icon(
                         imageVector = RhythmIcons.Forward10,
                         contentDescription = "Seek forward",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (useGlassEffect) {
+                            (if (isDark) Color.White else Color.Black).copy(alpha = 0.72f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                         modifier = Modifier.size(seekButtonSize * 0.5f)
                     )
                 }
@@ -1502,7 +1568,22 @@ fun ExpressivePlayerControlGroup(
                     .weight(nextWeight.coerceAtLeast(0.001f))
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(containerHeight / 2))
-                    .background(MaterialTheme.colorScheme.tertiary)
+                    .background(
+                        if (useGlassEffect) {
+                            (if (isDark) Color.White else Color.Black).copy(alpha = 0.1f)
+                        } else {
+                            MaterialTheme.colorScheme.tertiary
+                        }
+                    )
+                    .then(
+                        if (useGlassEffect) {
+                            Modifier.border(
+                                1.dp,
+                                (if (isDark) Color.White else Color.Black).copy(alpha = 0.12f),
+                                RoundedCornerShape(containerHeight / 2)
+                            )
+                        } else Modifier
+                    )
                     .clickable {
                         lastClicked = PlaybackButtonType.NEXT
                         onNext()
@@ -1512,7 +1593,11 @@ fun ExpressivePlayerControlGroup(
                 Icon(
                     imageVector = RhythmIcons.SkipNext,
                     contentDescription = "Next",
-                    tint = MaterialTheme.colorScheme.onTertiary,
+                    tint = if (useGlassEffect) {
+                        if (isDark) Color.White else Color.Black
+                    } else {
+                        MaterialTheme.colorScheme.onTertiary
+                    },
                     modifier = Modifier.size(prevNextSize * 0.5f)
                 )
             }
@@ -1532,6 +1617,8 @@ private fun ExpressiveMorphingPlayPauseButton(
     isLoading: Boolean = false,
     showSeekButtons: Boolean = true,
     cornerRadius: Dp = 26.dp,
+    useGlassEffect: Boolean = false,
+    isDark: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     // Show PAUSE text after 2 seconds when paused
@@ -1568,6 +1655,9 @@ private fun ExpressiveMorphingPlayPauseButton(
         else -> 60.dp
     }
     
+    val buttonBg = if (useGlassEffect) (if (isDark) Color.White else Color.Black) else MaterialTheme.colorScheme.primary
+    val buttonTint = if (useGlassEffect) (if (isDark) Color.Black else Color.White) else MaterialTheme.colorScheme.onPrimary
+    
     if (!showSeekButtons && !isLoading) {
         // Pill button with text when seek buttons disabled
         Box(
@@ -1575,7 +1665,7 @@ private fun ExpressiveMorphingPlayPauseButton(
                 .then(if (modifier == Modifier) Modifier.width(width) else Modifier)
                 .height(height)
                 .clip(RoundedCornerShape(height / 2))
-                .background(MaterialTheme.colorScheme.primary)
+                .background(buttonBg)
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
@@ -1592,7 +1682,7 @@ private fun ExpressiveMorphingPlayPauseButton(
                     Icon(
                         imageVector = if (playing) RhythmIcons.Pause else RhythmIcons.Play,
                         contentDescription = if (playing) "Pause" else "Play",
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = buttonTint,
                         modifier = Modifier.size(if (isExtraSmallWidth) 18.dp else 24.dp)
                     )
                 }
@@ -1606,7 +1696,7 @@ private fun ExpressiveMorphingPlayPauseButton(
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = buttonTint,
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 }
@@ -1618,7 +1708,7 @@ private fun ExpressiveMorphingPlayPauseButton(
             modifier = modifier
                 .then(if (modifier == Modifier) Modifier.size(height) else Modifier.fillMaxWidth().height(height))
                 .clip(RoundedCornerShape(height / 2))
-                .background(MaterialTheme.colorScheme.primary)
+                .background(buttonBg)
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
@@ -1640,8 +1730,8 @@ private fun ExpressiveMorphingPlayPauseButton(
                 ) {
                     M3CircularLoader(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.24f),
+                        color = buttonTint,
+                        trackColor = buttonTint.copy(alpha = 0.24f),
                         strokeWidth = 2f
                     )
                 }
@@ -1653,8 +1743,8 @@ private fun ExpressiveMorphingPlayPauseButton(
                 ) { playing ->
                     Icon(
                         imageVector = if (playing) RhythmIcons.Pause else RhythmIcons.Play,
-                        contentDescription = if (playing) "Pause" else "Play",
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        contentDescription = "Play/Pause",
+                        tint = buttonTint,
                         modifier = Modifier.size(if (isExtraSmallWidth) 20.dp else 24.dp)
                     )
                 }

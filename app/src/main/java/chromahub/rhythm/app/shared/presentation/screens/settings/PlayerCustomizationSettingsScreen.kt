@@ -177,6 +177,7 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
     val playerArtworkCornerRadius by appSettings.playerArtworkCornerRadius.collectAsState()
     val playerShowAudioQualityBadges by appSettings.playerShowAudioQualityBadges.collectAsState()
     val expressiveShapesEnabled by appSettings.expressiveShapesEnabled.collectAsState()
+    val tapLyricsToFullScreen by appSettings.tapLyricsToFullScreen.collectAsState()
 
     // Progress bar settings
     val playerProgressStyle by appSettings.playerProgressStyle.collectAsState()
@@ -350,6 +351,19 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                     )
 
                     if (showLyrics) {
+                        add(
+                            toMaterial3SettingsItem(
+                                context = context,
+                                hapticFeedback = haptics,
+                                item = SettingItem(
+                                    icon = MaterialSymbolIcon("fullscreen", filled = true),
+                                    title = "Tap Lyrics for Immersive View",
+                                    description = "Open a full-screen lyrics screen by tapping the lyrics view",
+                                    toggleState = tapLyricsToFullScreen,
+                                    onToggleChange = { appSettings.setTapLyricsToFullScreen(it) }
+                                )
+                            )
+                        )
                         add(
                             toMaterial3SettingsItem(
                                 context = context,

@@ -148,6 +148,7 @@ fun ExpressivePlayerScreen(
     onBack: () -> Unit,
     location: PlaybackLocation?,
     appSettings: AppSettings,
+    onOpenFullScreenLyrics: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     BackHandler(onBack = onBack)
@@ -187,6 +188,8 @@ fun ExpressivePlayerScreen(
     val showLyricsTranslation by appSettings.showLyricsTranslation.collectAsState()
     val showLyricsRomanization by appSettings.showLyricsRomanization.collectAsState()
     val playerLyricsTransition by appSettings.playerLyricsTransition.collectAsState()
+    val tapLyricsToFullScreen by appSettings.tapLyricsToFullScreen.collectAsState()
+    val onTapLyricsView = if (tapLyricsToFullScreen) onOpenFullScreenLyrics else null
     var isScrubbing by remember { mutableStateOf(false) }
     var scrubProgress by remember { mutableFloatStateOf(0f) }
     val progressValue = progress().coerceIn(0f, 1f)
@@ -493,6 +496,7 @@ fun ExpressivePlayerScreen(
                                     onlineOnlyLyrics = onlineOnlyLyrics,
                                     currentTimeMs = currentTimeMs,
                                     onLyricsSeek = onLyricsSeek,
+                                    onTapLyricsView = onTapLyricsView,
                                     textSizeMultiplier = playerLyricsTextSize,
                                     onRetryLyrics = onRetryLyrics,
                                     onShowLyricsEditor = onShowLyricsEditor,
@@ -973,6 +977,7 @@ private fun RhythmPlayerLyricsPanel(
     onlineOnlyLyrics: Boolean,
     currentTimeMs: Long,
     onLyricsSeek: ((Long) -> Unit)?,
+    onTapLyricsView: (() -> Unit)? = null,
     textSizeMultiplier: Float,
     onRetryLyrics: () -> Unit,
     onShowLyricsEditor: () -> Unit,
@@ -1106,6 +1111,7 @@ private fun RhythmPlayerLyricsPanel(
                         currentPlaybackTime = currentTimeMs,
                         modifier = Modifier.fillMaxSize(),
                         onSeek = onLyricsSeek,
+                        onTapLyricsView = onTapLyricsView,
                         lyricsSource = lyrics?.source,
                         textSizeMultiplier = textSizeMultiplier,
                         textAlignment = textAlignment,
@@ -1168,6 +1174,7 @@ private fun RhythmPlayerLyricsPanel(
                             modifier = Modifier.fillMaxSize(),
                             parsedLyricsInput = parsedLyrics,
                             onSeek = onLyricsSeek,
+                            onTapLyricsView = onTapLyricsView,
                             showTranslation = showTranslation,
                             showRomanization = showRomanization,
                             lyricsSource = lyrics?.source,

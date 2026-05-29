@@ -72,6 +72,21 @@ private val RHYTHM_AURA_POLICY_BANDS = listOf(
 
 private val RHYTHM_GUARD_POLICY_BANDS = RHYTHM_AURA_POLICY_BANDS
 
+
+/**
+ * Priority order for lyrics APIs
+ */
+enum class LyricsApiPriority(val displayName: String) {
+    APPLE_MUSIC_FIRST("Apple Music"),
+    LRCLIB_FIRST("LRCLib");
+
+    companion object {
+        fun fromOrdinal(ordinal: Int): LyricsApiPriority {
+            return values().getOrElse(ordinal) { APPLE_MUSIC_FIRST }
+        }
+    }
+}
+
 /**
  * Singleton class to manage all app settings using SharedPreferences
  */
@@ -110,6 +125,9 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_SHOW_LYRICS_TRANSLATION = "show_lyrics_translation"
         private const val KEY_SHOW_LYRICS_ROMANIZATION = "show_lyrics_romanization"
         private const val KEY_KEEP_SCREEN_ON_LYRICS = "keep_screen_on_lyrics"
+        private const val KEY_TAP_LYRICS_TO_FULL_SCREEN = "tap_lyrics_to_full_screen"
+        private const val KEY_LYRICS_API_PRIORITY = "lyrics_api_priority"
+        private const val KEY_LYRICS_API_FALLBACK_RETRY = "lyrics_api_fallback_retry"
         
         // Theme Settings
         private const val KEY_USE_SYSTEM_THEME = "use_system_theme"
@@ -625,6 +643,17 @@ class AppSettings private constructor(context: Context) {
     
     private val _keepScreenOnLyrics = MutableStateFlow(prefs.getBoolean(KEY_KEEP_SCREEN_ON_LYRICS, false))
     val keepScreenOnLyrics: StateFlow<Boolean> = _keepScreenOnLyrics.asStateFlow()
+    
+    private val _tapLyricsToFullScreen = MutableStateFlow(prefs.getBoolean(KEY_TAP_LYRICS_TO_FULL_SCREEN, true))
+    val tapLyricsToFullScreen: StateFlow<Boolean> = _tapLyricsToFullScreen.asStateFlow()
+
+    private val _lyricsApiPriority = MutableStateFlow(
+        LyricsApiPriority.fromOrdinal(prefs.getInt(KEY_LYRICS_API_PRIORITY, LyricsApiPriority.APPLE_MUSIC_FIRST.ordinal))
+    )
+    val lyricsApiPriority: StateFlow<LyricsApiPriority> = _lyricsApiPriority.asStateFlow()
+
+    private val _lyricsApiFallbackRetry = MutableStateFlow(prefs.getBoolean(KEY_LYRICS_API_FALLBACK_RETRY, true))
+    val lyricsApiFallbackRetry: StateFlow<Boolean> = _lyricsApiFallbackRetry.asStateFlow()
     
     // Theme Settings
     private val _useSystemTheme = MutableStateFlow(prefs.getBoolean(KEY_USE_SYSTEM_THEME, true))
@@ -1889,6 +1918,21 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     fun setKeepScreenOnLyrics(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON_LYRICS, enabled).apply()
         _keepScreenOnLyrics.value = enabled
+    }
+    
+    fun setTapLyricsToFullScreen(enable: Boolean) {
+        prefs.edit().putBoolean(KEY_TAP_LYRICS_TO_FULL_SCREEN, enable).apply()
+        _tapLyricsToFullScreen.value = enable
+    }
+
+    fun setLyricsApiPriority(priority: LyricsApiPriority) {
+        prefs.edit().putInt(KEY_LYRICS_API_PRIORITY, priority.ordinal).apply()
+        _lyricsApiPriority.value = priority
+    }
+
+    fun setLyricsApiFallbackRetry(enable: Boolean) {
+        prefs.edit().putBoolean(KEY_LYRICS_API_FALLBACK_RETRY, enable).apply()
+        _lyricsApiFallbackRetry.value = enable
     }
     
     // Theme Settings Methods
@@ -4315,6 +4359,11 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         
         // Other settings
         _showLyrics.value = prefs.getBoolean(KEY_SHOW_LYRICS, true)
+        _tapLyricsToFullScreen.value = prefs.getBoolean(KEY_TAP_LYRICS_TO_FULL_SCREEN, true)
+        _lyricsApiPriority.value = LyricsApiPriority.fromOrdinal(
+            prefs.getInt(KEY_LYRICS_API_PRIORITY, LyricsApiPriority.APPLE_MUSIC_FIRST.ordinal)
+        )
+        _lyricsApiFallbackRetry.value = prefs.getBoolean(KEY_LYRICS_API_FALLBACK_RETRY, true)
         _onlineOnlyLyrics.value = prefs.getBoolean(KEY_ONLINE_ONLY_LYRICS, true)
         _searchHistory.value = prefs.getString(KEY_SEARCH_HISTORY, null)
         _showKeyboardOnSearchOpen.value = prefs.getBoolean(KEY_SHOW_KEYBOARD_ON_SEARCH_OPEN, true)

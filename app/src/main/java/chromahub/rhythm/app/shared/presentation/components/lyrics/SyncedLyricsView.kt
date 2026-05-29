@@ -113,7 +113,8 @@ fun SyncedLyricsView(
     showRomanization: Boolean = true,
     lyricsSource: String? = null, // Source of lyrics (e.g., "LRCLib", "Embedded", "Local File")
     textSizeMultiplier: Float = 1.0f, // Scale factor for lyrics text size
-    textAlignment: TextAlign = TextAlign.Center // Alignment of lyrics text
+    textAlignment: TextAlign = TextAlign.Center, // Alignment of lyrics text
+    onTapLyricsView: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     // TODO: Apply syncOffset to all timestamp comparisons for manual sync adjustment
@@ -217,7 +218,8 @@ fun SyncedLyricsView(
                             showTranslation = showTranslation,
                             showRomanization = showRomanization,
                             textSizeMultiplier = textSizeMultiplier,
-                            textAlignment = textAlignment
+                            textAlignment = textAlignment,
+                            onTapLyricsView = onTapLyricsView
                         )
                     }
 
@@ -321,7 +323,8 @@ private fun SyncedLyricItem(
     showTranslation: Boolean,
     showRomanization: Boolean,
     textSizeMultiplier: Float = 1.0f,
-    textAlignment: TextAlign = TextAlign.Center
+    textAlignment: TextAlign = TextAlign.Center,
+    onTapLyricsView: (() -> Unit)? = null
 ) {
     val isCurrentLine = currentLineIndex == index
     val isPreviousLine = currentLineIndex == index + 1
@@ -420,7 +423,11 @@ private fun SyncedLyricItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                onSeek?.invoke(line.timestamp)
+                if (onTapLyricsView != null) {
+                    onTapLyricsView()
+                } else {
+                    onSeek?.invoke(line.timestamp)
+                }
             }
             .padding(vertical = 14.dp, horizontal = 20.dp)
             .graphicsLayer {

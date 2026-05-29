@@ -308,6 +308,68 @@ fun LyricsSourceSettingsScreen(onBackClick: () -> Unit) {
                 }
             }
 
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Online API Options",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                )
+
+                val apiPriority by appSettings.lyricsApiPriority.collectAsState()
+                val apiFallback by appSettings.lyricsApiFallbackRetry.collectAsState()
+
+                Material3SettingsGroup(
+                    items = listOf(
+                        Material3SettingsItem(
+                            icon = MaterialSymbolIcon("lyrics"),
+                            title = { Text("Lyrics API Priority") },
+                            description = {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text(
+                                        text = "Choose which online lyrics API to search first",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    ExpressiveButtonGroup(
+                                        items = listOf("Apple Music", "LRCLib"),
+                                        selectedIndex = if (apiPriority == chromahub.rhythm.app.shared.data.model.LyricsApiPriority.APPLE_MUSIC_FIRST) 0 else 1,
+                                        onItemClick = { index ->
+                                            HapticUtils.performHapticFeedback(context, hapticFeedback, HapticFeedbackType.TextHandleMove)
+                                            val newPriority = if (index == 0) {
+                                                chromahub.rhythm.app.shared.data.model.LyricsApiPriority.APPLE_MUSIC_FIRST
+                                            } else {
+                                                chromahub.rhythm.app.shared.data.model.LyricsApiPriority.LRCLIB_FIRST
+                                            }
+                                            appSettings.setLyricsApiPriority(newPriority)
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        ),
+                        toMaterial3SettingsItem(
+                            context = context,
+                            hapticFeedback = hapticFeedback,
+                            item = SettingItem(
+                                icon = MaterialSymbolIcon("compare_arrows"),
+                                title = "Retry using fallbacks",
+                                description = "Attempt fallback APIs if the preferred API fails to return lyrics",
+                                toggleState = apiFallback,
+                                onToggleChange = { appSettings.setLyricsApiFallbackRetry(it) }
+                            )
+                        )
+                    ),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
+            }
+
             // Info Card
             item {
                 Spacer(modifier = Modifier.height(16.dp))

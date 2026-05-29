@@ -59,6 +59,7 @@ import chromahub.rhythm.app.shared.data.model.AppSettings
 import chromahub.rhythm.app.shared.data.model.LyricsSourcePreference
 import chromahub.rhythm.app.shared.data.model.UserAudioDevice
 import chromahub.rhythm.app.shared.data.model.PlaybackLocation
+import chromahub.rhythm.app.shared.data.model.LyricsApiPriority
 import chromahub.rhythm.app.core.domain.model.PlayableItem
 import chromahub.rhythm.app.core.domain.model.SourceType
 import java.lang.ref.WeakReference
@@ -4213,7 +4214,9 @@ class MusicRepository(context: Context) {
     }
 
     private fun canonicalizeForMatch(str: String): String {
-        return str.lowercase()
+        val normalized = java.text.Normalizer.normalize(str.lowercase(), java.text.Normalizer.Form.NFD)
+        val withoutAccents = Regex("\\p{InCombiningDiacriticalMarks}+").replace(normalized, "")
+        return withoutAccents
             .replace(Regex("\\(.*?\\)"), "") // remove parenthetical content
             .replace(Regex("\\[.*?\\]"), "") // remove brackets content
             .replace(Regex("\\b(feat|ft|featuring|and|with|&|vs|prod|by)\\b"), "") // remove collaboration keywords
@@ -4231,118 +4234,160 @@ class MusicRepository(context: Context) {
         var appleMusicBackup: LyricsData? = null
         var lrclibPlainBackup: LyricsData? = null
 
-        // ---- Apple Music Word-by-Word (Priority 1) ----
-        if (NetworkClient.isAppleMusicApiEnabled() && itunesSearchApiService != null && rhythmLyricsApiService != null) {
-            try {
-                val cleanTerm = "$cleanArtist $cleanTitle"
-                    .replace(Regex("[/\\-;,.&]"), " ")
-                    .replace(Regex("\\s+"), " ")
-                    .trim()
-                Log.d(TAG, "Apple Music API: Searching iTunes with term: $cleanTerm")
-                var searchResponse = itunesSearchApiService.searchSongs(term = cleanTerm)
-                if (searchResponse.results.isEmpty()) {
-                    val cleanTitleTerm = cleanTitle
+        val fetchAppleMusic = suspend {
+            if (NetworkClient.isAppleMusicApiEnabled() && itunesSearchApiService != null && rhythmLyricsApiService != null) {
+                try {
+                    val term1 = "$cleanArtist $cleanTitle"
                         .replace(Regex("[/\\-;,.&]"), " ")
                         .replace(Regex("\\s+"), " ")
                         .trim()
-                    searchResponse = itunesSearchApiService.searchSongs(term = cleanTitleTerm)
-                }
-
-                // Find the best match using metadata similarity
-                val bestTrack = searchResponse.results.firstOrNull { result ->
-                    val resultTitleCanon = canonicalizeForMatch(result.trackName ?: "")
-                    val resultArtistCanon = canonicalizeForMatch(result.artistName ?: "")
-                    val targetTitleCanon = canonicalizeForMatch(cleanTitle)
-                    val targetArtistCanon = canonicalizeForMatch(cleanArtist)
-
-                    val titleMatches = resultTitleCanon.contains(targetTitleCanon) || targetTitleCanon.contains(resultTitleCanon)
-                    val artistMatches = resultArtistCanon.contains(targetArtistCanon) || targetArtistCanon.contains(resultArtistCanon)
-                    titleMatches && artistMatches
-                }
-
-                bestTrack?.let { track ->
-                    Log.d(TAG, "Apple Music API: Found matching iTunes track ID: ${track.trackId} (${track.trackName})")
-                    val lyricsResponse = rhythmLyricsApiService.getLyrics(track.trackId.toString())
-                    val content = lyricsResponse.content
+                    Log.d(TAG, "Apple Music API: Searching iTunes with primary term: $term1")
+                    var searchResponse = itunesSearchApiService.searchSongs(term = term1, limit = 30)
                     
-                    if (content != null && content.isNotEmpty()) {
-                        val wordByWordJson = Gson().toJson(content)
-                        val parsedLines = RhythmLyricsParser.parseWordByWordLyrics(wordByWordJson)
-                        val lrc = RhythmLyricsParser.toLRCFormat(parsedLines)
-                        val plain = RhythmLyricsParser.toPlainText(parsedLines)
-
-                        if (lyricsResponse.type == "Syllable") {
-                            Log.d(TAG, "Apple Music API: Syllable (Word-by-word) lyrics found and parsed successfully")
-                            return LyricsData(
-                                plainLyrics = plain,
-                                syncedLyrics = lrc,
-                                wordByWordLyrics = wordByWordJson,
-                                source = "Apple Music"
-                            )
-                        } else {
-                            Log.d(TAG, "Apple Music API: Line-synced or plain lyrics found (non-Syllable), caching as backup")
-                            appleMusicBackup = LyricsData(
-                                plainLyrics = plain,
-                                syncedLyrics = lrc,
-                                wordByWordLyrics = null,
-                                source = "Apple Music"
-                            )
-                        }
+                    if (searchResponse.results.isEmpty()) {
+                        val firstArtist = cleanArtist.split(Regex("[,;&]")).first().trim()
+                        val term2 = "$firstArtist $cleanTitle"
+                            .replace(Regex("[/\\-;,.&]"), " ")
+                            .replace(Regex("\\s+"), " ")
+                            .trim()
+                        Log.d(TAG, "Apple Music API: Searching iTunes with secondary term: $term2")
+                        searchResponse = itunesSearchApiService.searchSongs(term = term2, limit = 30)
                     }
+                    
+                    if (searchResponse.results.isEmpty()) {
+                        val term3 = cleanTitle
+                            .replace(Regex("[/\\-;,.&]"), " ")
+                            .replace(Regex("\\s+"), " ")
+                            .trim()
+                        Log.d(TAG, "Apple Music API: Searching iTunes with tertiary title-only term: $term3")
+                        searchResponse = itunesSearchApiService.searchSongs(term = term3, limit = 50)
+                    }
+
+                    // Find the best match using metadata similarity
+                    val bestTrack = searchResponse.results.firstOrNull { result ->
+                        val resultTitleCanon = canonicalizeForMatch(result.trackName ?: "")
+                        val resultArtistCanon = canonicalizeForMatch(result.artistName ?: "")
+                        val targetTitleCanon = canonicalizeForMatch(cleanTitle)
+                        val targetArtistCanon = canonicalizeForMatch(cleanArtist)
+
+                        val titleMatches = resultTitleCanon.contains(targetTitleCanon) || targetTitleCanon.contains(resultTitleCanon)
+                        val artistMatches = resultArtistCanon.contains(targetArtistCanon) || targetArtistCanon.contains(resultArtistCanon)
+                        titleMatches && artistMatches
+                    }
+
+                    bestTrack?.let { track ->
+                        Log.d(TAG, "Apple Music API: Found matching iTunes track ID: ${track.trackId} (${track.trackName})")
+                        val lyricsResponse = rhythmLyricsApiService.getLyrics(track.trackId.toString())
+                        val content = lyricsResponse.content
+                        
+                        if (content != null && content.isNotEmpty()) {
+                            val wordByWordJson = Gson().toJson(content)
+                            val parsedLines = RhythmLyricsParser.parseWordByWordLyrics(wordByWordJson)
+                            val lrc = RhythmLyricsParser.toLRCFormat(parsedLines)
+                            val plain = RhythmLyricsParser.toPlainText(parsedLines)
+
+                            if (lyricsResponse.type == "Syllable") {
+                                Log.d(TAG, "Apple Music API: Syllable (Word-by-word) lyrics found and parsed successfully")
+                                LyricsData(
+                                    plainLyrics = plain,
+                                    syncedLyrics = lrc,
+                                    wordByWordLyrics = wordByWordJson,
+                                    source = "Apple Music"
+                                )
+                            } else {
+                                Log.d(TAG, "Apple Music API: Line-synced or plain lyrics found (non-Syllable), caching as backup")
+                                appleMusicBackup = LyricsData(
+                                    plainLyrics = plain,
+                                    syncedLyrics = lrc,
+                                    wordByWordLyrics = null,
+                                    source = "Apple Music"
+                                )
+                                null
+                            }
+                        } else null
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Apple Music API fetch failed: ${e.message}", e)
+                    null
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Apple Music API fetch failed: ${e.message}", e)
-            }
+            } else null
         }
 
-        // ---- LRCLib (Priority 2 & 3) ----
-        if (NetworkClient.isLrcLibApiEnabled() && lrclibApiService != null) {
-            try {
-                // Strategy 1: Search by track name and artist name
-                var results = lrclibApiService.searchLyrics(trackName = cleanTitle, artistName = cleanArtist)
+        val fetchLrcLib = suspend {
+            if (NetworkClient.isLrcLibApiEnabled() && lrclibApiService != null) {
+                try {
+                    // Strategy 1: Search by track name and artist name
+                    var results = lrclibApiService.searchLyrics(trackName = cleanTitle, artistName = cleanArtist)
 
-                // If no results, try fallback strategies
-                if (results.isEmpty()) {
-                    // Strategy 2: Search with generic query combining artist and title
-                    val query = "$cleanArtist $cleanTitle"
-                    results = lrclibApiService.searchLyrics(query = query)
-                }
-
-                if (results.isEmpty()) {
-                    // Strategy 3: Try without parenthetical content and with simplified names
-                    val simplifiedArtist = cleanArtist.split(" feat.", " ft.", " featuring").first().trim()
-                    val simplifiedTitle = cleanTitle.split(" feat.", " ft.", " featuring").first().trim()
-                    results = lrclibApiService.searchLyrics(
-                        trackName = simplifiedTitle,
-                        artistName = simplifiedArtist
-                    )
-                }
-
-                // Find the best match - prioritize exact matches, then synced lyrics, then any lyrics
-                val bestMatch = results.firstOrNull { result ->
-                    val artistMatch = result.artistName?.lowercase()?.contains(cleanArtist.lowercase()) == true ||
-                            cleanArtist.lowercase().contains(result.artistName?.lowercase() ?: "")
-                    val titleMatch = result.trackName?.lowercase()?.contains(cleanTitle.lowercase()) == true ||
-                            cleanTitle.lowercase().contains(result.trackName?.lowercase() ?: "")
-
-                    (artistMatch && titleMatch) && result.hasLyrics()
-                } ?: results.firstOrNull { it.hasSyncedLyrics() } // Prefer synced lyrics
-                ?: results.firstOrNull { it.hasLyrics() } // Then any lyrics
-
-                bestMatch?.let { bm ->
-                    val syncedLyrics = bm.getSyncedLyricsOrNull()
-                    val plainLyrics = bm.getPlainLyricsOrNull()
-
-                    if (syncedLyrics != null) {
-                        Log.d(TAG, "LRCLib: Synced lyrics found, returning immediately")
-                        return LyricsData(plainLyrics, syncedLyrics, null, "LRCLib")
-                    } else if (plainLyrics != null) {
-                        Log.d(TAG, "LRCLib: Plain lyrics found, caching as fallback")
-                        lrclibPlainBackup = LyricsData(plainLyrics, null, null, "LRCLib")
+                    // If no results, try fallback strategies
+                    if (results.isEmpty()) {
+                        // Strategy 2: Search with generic query combining artist and title
+                        val query = "$cleanArtist $cleanTitle"
+                        results = lrclibApiService.searchLyrics(query = query)
                     }
+
+                    if (results.isEmpty()) {
+                        // Strategy 3: Try without parenthetical content and with simplified names
+                        val simplifiedArtist = cleanArtist.split(" feat.", " ft.", " featuring").first().trim()
+                        val simplifiedTitle = cleanTitle.split(" feat.", " ft.", " featuring").first().trim()
+                        results = lrclibApiService.searchLyrics(
+                            trackName = simplifiedTitle,
+                            artistName = simplifiedArtist
+                        )
+                    }
+
+                    // Find the best match - prioritize exact matches, then synced lyrics, then any lyrics
+                    val bestMatch = results.firstOrNull { result ->
+                        val artistMatch = result.artistName?.lowercase()?.contains(cleanArtist.lowercase()) == true ||
+                                cleanArtist.lowercase().contains(result.artistName?.lowercase() ?: "")
+                        val titleMatch = result.trackName?.lowercase()?.contains(cleanTitle.lowercase()) == true ||
+                                cleanTitle.lowercase().contains(result.trackName?.lowercase() ?: "")
+
+                        (artistMatch && titleMatch) && result.hasLyrics()
+                    } ?: results.firstOrNull { it.hasSyncedLyrics() } // Prefer synced lyrics
+                    ?: results.firstOrNull { it.hasLyrics() } // Then any lyrics
+
+                    bestMatch?.let { bm ->
+                        val syncedLyrics = bm.getSyncedLyricsOrNull()
+                        val plainLyrics = bm.getPlainLyricsOrNull()
+
+                        if (syncedLyrics != null) {
+                            Log.d(TAG, "LRCLib: Synced lyrics found, returning immediately")
+                            LyricsData(plainLyrics, syncedLyrics, null, "LRCLib")
+                        } else if (plainLyrics != null) {
+                            Log.d(TAG, "LRCLib: Plain lyrics found, caching as fallback")
+                            lrclibPlainBackup = LyricsData(plainLyrics, null, null, "LRCLib")
+                            null
+                        } else null
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "LRCLib lyrics fetch failed: ${e.message}", e)
+                    null
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "LRCLib lyrics fetch failed: ${e.message}", e)
+            } else null
+        }
+
+        val appSettings = AppSettings.getInstance(context)
+        val apiPriority = appSettings.lyricsApiPriority.value
+        val fallbackRetry = appSettings.lyricsApiFallbackRetry.value
+
+        Log.d(TAG, "fetchLyricsFromAPIs: priority=$apiPriority, fallbackRetry=$fallbackRetry")
+
+        if (apiPriority == LyricsApiPriority.APPLE_MUSIC_FIRST) {
+            val amResult = fetchAppleMusic()
+            if (amResult != null) return amResult
+
+            if (fallbackRetry) {
+                val lrcResult = fetchLrcLib()
+                if (lrcResult != null) return lrcResult
+            }
+        } else {
+            val lrcResult = fetchLrcLib()
+            if (lrcResult != null) return lrcResult
+
+            if (fallbackRetry) {
+                val amResult = fetchAppleMusic()
+                if (amResult != null) return amResult
             }
         }
 

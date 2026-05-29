@@ -283,6 +283,7 @@ fun MaterialPlayerScreen(
     musicViewModel: chromahub.rhythm.app.viewmodel.MusicViewModel,
     navController: NavController,
     isStreamingMode: Boolean = false,
+    onOpenFullScreenLyrics: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -317,6 +318,8 @@ fun MaterialPlayerScreen(
     val playerShowSongInfoOnArtwork by appSettingsInstance.playerShowSongInfoOnArtwork.collectAsState()
     val playerArtworkCornerRadius by appSettingsInstance.playerArtworkCornerRadius.collectAsState()
     val playerShowAudioQualityBadges by appSettingsInstance.playerShowAudioQualityBadges.collectAsState()
+    val tapLyricsToFullScreen by appSettingsInstance.tapLyricsToFullScreen.collectAsState()
+    val onTapLyricsView = if (tapLyricsToFullScreen) onOpenFullScreenLyrics else null
     
     // Expressive shape for player artwork display
     val playerArtworkShape = rememberExpressiveShapeFor(
@@ -2121,6 +2124,7 @@ fun MaterialPlayerScreen(
                                                             currentPlaybackTime = currentTimeMs,
                                                             modifier = Modifier.fillMaxSize(),
                                                             onSeek = onLyricsSeek,
+                                                            onTapLyricsView = onTapLyricsView,
                                                             lyricsSource = lyrics?.source,
                                                             textSizeMultiplier = playerLyricsTextSize,
                                                             textAlignment = lyricsTextAlign,
@@ -2185,6 +2189,7 @@ fun MaterialPlayerScreen(
                                                                 modifier = Modifier.fillMaxSize(),
                                                                 parsedLyricsInput = parsedLyrics,
                                                                 onSeek = onLyricsSeek,
+                                                                onTapLyricsView = onTapLyricsView,
                                                                 showTranslation = showLyricsTranslation,
                                                                 showRomanization = showLyricsRomanization,
                                                                 lyricsSource = lyrics?.source,

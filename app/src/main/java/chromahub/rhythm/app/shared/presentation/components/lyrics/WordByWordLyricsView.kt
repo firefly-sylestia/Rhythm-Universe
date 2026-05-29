@@ -110,7 +110,8 @@ fun WordByWordLyricsView(
     textSizeMultiplier: Float = 1.0f, // Scale factor for lyrics text size
     textAlignment: TextAlign = TextAlign.Center, // Alignment of lyrics text
     showTranslation: Boolean = true,
-    showRomanization: Boolean = true
+    showRomanization: Boolean = true,
+    onTapLyricsView: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     // TODO: Apply syncOffset to all timestamp comparisons for manual sync adjustment
@@ -372,7 +373,11 @@ fun WordByWordLyricsView(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    onSeek?.invoke(line.lineTimestamp)
+                                    if (onTapLyricsView != null) {
+                                        onTapLyricsView()
+                                    } else {
+                                        onSeek?.invoke(line.lineTimestamp)
+                                    }
                                 }
                                 .padding(vertical = 12.dp, horizontal = 16.dp)
                                 .graphicsLayer {
