@@ -23,6 +23,7 @@ class RhythmWidgetWorker(
             // Get the current widget state from SharedPreferences
             val prefs = context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
             
+            val songId = prefs.getString(RhythmMusicWidget.KEY_SONG_ID, "") ?: ""
             val songTitle = prefs.getString(RhythmMusicWidget.KEY_SONG_TITLE, "Rhythm") ?: "Rhythm"
             val artistName = prefs.getString(RhythmMusicWidget.KEY_ARTIST_NAME, "") ?: ""
             val albumName = prefs.getString(RhythmMusicWidget.KEY_ALBUM_NAME, "") ?: ""
@@ -38,6 +39,11 @@ class RhythmWidgetWorker(
             
             glanceIds.forEach { glanceId ->
                 updateAppWidgetState(context, glanceId) { prefs ->
+                    if (songId.isNotEmpty()) {
+                        prefs[stringPreferencesKey(RhythmMusicWidget.KEY_SONG_ID)] = songId
+                    } else {
+                        prefs.remove(stringPreferencesKey(RhythmMusicWidget.KEY_SONG_ID))
+                    }
                     prefs[stringPreferencesKey(RhythmMusicWidget.KEY_SONG_TITLE)] = songTitle
                     prefs[stringPreferencesKey(RhythmMusicWidget.KEY_ARTIST_NAME)] = artistName
                     prefs[stringPreferencesKey(RhythmMusicWidget.KEY_ALBUM_NAME)] = albumName

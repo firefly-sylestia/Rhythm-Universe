@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -75,6 +76,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
     
     companion object {
         // Widget state keys
+        const val KEY_SONG_ID = "song_id"
         const val KEY_SONG_TITLE = "song_title"
         const val KEY_ARTIST_NAME = "artist_name"
         const val KEY_ALBUM_NAME = "album_name"
@@ -159,38 +161,51 @@ class RhythmMusicWidget : GlanceAppWidget() {
         
         Box(GlanceModifier.fillMaxSize()) {
             when {
-                // 5x5+ (350+ width x 350+ height): Premium largest size
-                minWidth >= 350 && minHeight >= 350 -> HugeWidgetLayout(baseModifier, data)
+                // Extremely tall & narrow (1 cell wide):
+                minWidth < 100 -> {
+                    when {
+                        minHeight >= 200 -> GabeLayout(baseModifier, data)
+                        minHeight >= 100 -> GabeTwoHeightLayout(baseModifier, data)
+                        else -> OneByOneLayout(baseModifier, data)
+                    }
+                }
                 
-                // 5x4 or 4x5 (350+ width x 280+ height): Tall wide layout
-                minWidth >= 350 && minHeight >= 280 -> ExtraLargeWidgetLayout(baseModifier, data)
+                // Short strip (1 cell tall):
+                minHeight < 100 -> {
+                    when {
+                        minWidth >= 320 -> VeryThinLayout(baseModifier, data)
+                        minWidth >= 220 -> ThinLayout(baseModifier, data)
+                        minWidth >= 110 -> SmallHorizontalLayout(baseModifier, data)
+                        else -> OneByOneLayout(baseModifier, data)
+                    }
+                }
                 
-                // 4x4+ (280+ width x 280+ height): Extra large square
+                // 5x5+ Huge widget (>= 340dp x >= 340dp)
+                minWidth >= 340 && minHeight >= 340 -> HugeWidgetLayout(baseModifier, data)
+                
+                // 5x4 or 4x5 Tall wide widget (>= 340dp x >= 280dp)
+                minWidth >= 340 && minHeight >= 280 -> ExtraLargeWidgetLayout(baseModifier, data)
+                
+                // 4x4+ Extra large widget (>= 280dp x >= 280dp)
                 minWidth >= 280 && minHeight >= 280 -> ExtraLargeWidgetLayout(baseModifier, data)
                 
-                // 5x3 or 4x3 (300+ width x 210+ height): Large horizontal
-                minWidth >= 300 && minHeight >= 210 -> LargeWidgetLayout(baseModifier, data)
+                // 5x3 Extra Large Plus widget (>= 340dp x >= 210dp)
+                minWidth >= 340 && minHeight >= 210 -> ExtraLargePlusWidgetLayout(baseModifier, data)
                 
-                // 3x4 or 4x3 (210+ width x 300+ height): Large vertical
-                minWidth >= 210 && minHeight >= 300 -> LargeWidgetLayout(baseModifier, data)
-                
-                // 3x3 (210+ width x 210+ height): Large square
+                // 3x3 / 4x3 Large horizontal widget (>= 210dp x >= 210dp)
                 minWidth >= 210 && minHeight >= 210 -> LargeWidgetLayout(baseModifier, data)
                 
-                // 5x2 or 4x2 (320+ width x 140+ height): Wide horizontal
+                // 2x3 Tall vertical widget (>= 100dp width & >= 210dp height)
+                minWidth >= 100 && minHeight >= 210 -> VerticalLayout(baseModifier, data)
+                
+                // 5x2 / 4x2 Wide horizontal strip (>= 320dp width & < 210dp height)
                 minWidth >= 320 && minHeight < 210 -> WideLayout(baseModifier, data)
                 
-                // 3x2 (180-320dp width x 100-210dp height): Medium horizontal
-                minWidth >= 180 && minHeight >= 100 && minHeight < 210 && aspectRatio < 1.2f -> MediumWidgetLayout(baseModifier, data)
+                // 3x2 Medium horizontal widget (>= 180dp width & >= 100dp height)
+                minWidth >= 180 && minHeight >= 100 -> MediumWidgetLayout(baseModifier, data)
                 
-                // 2x3 (100-180dp width x 210+ height): Medium vertical
-                minWidth >= 100 && minWidth < 180 && minHeight >= 210 && aspectRatio > 1.5f -> VerticalLayout(baseModifier, data)
-                
-                // 2x2 (100-180dp width x 100-210dp height): Small square
-                minWidth >= 100 && minWidth < 180 && minHeight >= 100 -> SmallWidgetLayout(baseModifier, data)
-                
-                // 3x1 or 2x1 (110-320dp width x 40-100dp height): Extra small horizontal strip
-                minHeight < 100 -> SmallHorizontalLayout(baseModifier, data)
+                // 2x2 Small widget (>= 100dp width & >= 100dp height)
+                minWidth >= 100 && minHeight >= 100 -> SmallWidgetLayout(baseModifier, data)
                 
                 // Default fallback
                 else -> MediumWidgetLayout(baseModifier, data)
@@ -201,12 +216,12 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== 1x1 Layout: Play/Pause only ====================
     @Composable
     private fun OneByOneLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
+        val bgColor = getBgColor(data.widgetTheme)
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(60.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -222,12 +237,12 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Gabe Two Height Layout: Art + Buttons vertical ====================
     @Composable
     private fun GabeTwoHeightLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
+        val bgColor = getBgColor(data.widgetTheme)
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(60.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(16.dp)
         ) {
             Column(
@@ -262,12 +277,12 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Gabe Layout: Art + Prev/Play/Next vertical ====================
     @Composable
     private fun GabeLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
+        val bgColor = getBgColor(data.widgetTheme)
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(60.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(16.dp)
         ) {
             Column(
@@ -305,14 +320,14 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Vertical Layout: Tall widget with centered content ====================
     @Composable
     private fun VerticalLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
-        val textColor = GlanceTheme.colors.onSurface
-        val subtextColor = GlanceTheme.colors.onSurfaceVariant
+        val bgColor = getBgColor(data.widgetTheme)
+        val textColor = getTextColor(data.widgetTheme)
+        val subtextColor = getSubtextColor(data.widgetTheme)
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(32.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(16.dp)
         ) {
             Column(
@@ -406,14 +421,14 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Wide Layout: Very wide horizontal strip ====================
     @Composable
     private fun WideLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
-        val textColor = GlanceTheme.colors.onSurface
-        val subtextColor = GlanceTheme.colors.onSurfaceVariant
+        val bgColor = getBgColor(data.widgetTheme)
+        val textColor = getTextColor(data.widgetTheme)
+        val subtextColor = getSubtextColor(data.widgetTheme)
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(32.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(16.dp)
         ) {
             Row(
@@ -490,16 +505,16 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Small Horizontal: Art + Play (strip) ====================
     @Composable
     private fun SmallHorizontalLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
+        val bgColor = getBgColor(data.widgetTheme)
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(60.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(16.dp)
         ) {
             Row(
-                modifier = GlanceModifier.fillMaxSize().cornerRadius(60.dp),
+                modifier = GlanceModifier.fillMaxSize().cornerRadius(data.cornerRadius.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalAlignment = Alignment.Horizontal.CenterHorizontally
             ) {
@@ -522,19 +537,19 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Very Thin: Art + Title + Play + Next ====================
     @Composable
     private fun VeryThinLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
-        val textColor = GlanceTheme.colors.onSurface
+        val bgColor = getBgColor(data.widgetTheme)
+        val textColor = getTextColor(data.widgetTheme)
         val size = LocalSize.current
         val albumArtSize = size.height - 32.dp
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(60.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(16.dp)
         ) {
             Row(
-                modifier = GlanceModifier.fillMaxSize().cornerRadius(60.dp),
+                modifier = GlanceModifier.fillMaxSize().cornerRadius(data.cornerRadius.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalAlignment = Alignment.Horizontal.CenterHorizontally
             ) {
@@ -576,19 +591,19 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Thin: Full strip with art, info, buttons ====================
     @Composable
     private fun ThinLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
-        val textColor = GlanceTheme.colors.onSurface
+        val bgColor = getBgColor(data.widgetTheme)
+        val textColor = getTextColor(data.widgetTheme)
         val size = LocalSize.current
         val albumArtSize = size.height - 32.dp
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(60.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(16.dp)
         ) {
             Row(
-                modifier = GlanceModifier.fillMaxSize().cornerRadius(60.dp),
+                modifier = GlanceModifier.fillMaxSize().cornerRadius(data.cornerRadius.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalAlignment = Alignment.Horizontal.CenterHorizontally
             ) {
@@ -630,13 +645,13 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Small Widget: Art + Play + Prev/Next ====================
     @Composable
     private fun SmallWidgetLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
+        val bgColor = getBgColor(data.widgetTheme)
         val playButtonCornerRadius = if (data.isPlaying) 20.dp else 60.dp
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(32.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(16.dp)
         ) {
             Column(
@@ -687,15 +702,15 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Medium Widget: Art + Info + Controls row ====================
     @Composable
     private fun MediumWidgetLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
-        val textColor = GlanceTheme.colors.onSurface
-        val subtextColor = GlanceTheme.colors.onSurfaceVariant
+        val bgColor = getBgColor(data.widgetTheme)
+        val textColor = getTextColor(data.widgetTheme)
+        val subtextColor = getSubtextColor(data.widgetTheme)
         val playButtonCornerRadius = if (data.isPlaying) 22.dp else 60.dp
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(32.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(18.dp)
         ) {
             Column(
@@ -771,16 +786,16 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Large Widget: Art row + info + full controls ====================
     @Composable
     private fun LargeWidgetLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
-        val textColor = GlanceTheme.colors.onSurface
-        val subtextColor = GlanceTheme.colors.onSurfaceVariant
+        val bgColor = getBgColor(data.widgetTheme)
+        val textColor = getTextColor(data.widgetTheme)
+        val subtextColor = getSubtextColor(data.widgetTheme)
         val accentColor = GlanceTheme.colors.tertiary
         val playButtonCornerRadius = if (data.isPlaying) 24.dp else 60.dp
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(32.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(20.dp)
         ) {
             Column(
@@ -824,13 +839,14 @@ class RhythmMusicWidget : GlanceAppWidget() {
                         Spacer(GlanceModifier.width(8.dp))
                         FavoriteButton(
                             isFavorite = data.isFavorite,
-                            iconColor = if (data.isFavorite) accentColor else textColor
+                            theme = data.widgetTheme,
+                            cardCornerRadius = data.cornerRadius
                         )
                         Spacer(GlanceModifier.width(4.dp))
                     }
                 }
                 
-                Spacer(GlanceModifier.height(18.dp))
+                Spacer(GlanceModifier.defaultWeight())
                 
                 // Controls row with fixed height to prevent stretching
                 Row(
@@ -856,6 +872,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                         cornerRadius = 28.dp
                     )
                 }
+                Spacer(GlanceModifier.defaultWeight())
             }
         }
     }
@@ -863,16 +880,16 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Extra Large Widget: Full art + info + big controls ====================
     @Composable
     private fun ExtraLargeWidgetLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
-        val textColor = GlanceTheme.colors.onSurface
-        val subtextColor = GlanceTheme.colors.onSurfaceVariant
+        val bgColor = getBgColor(data.widgetTheme)
+        val textColor = getTextColor(data.widgetTheme)
+        val subtextColor = getSubtextColor(data.widgetTheme)
         val separatorColor = GlanceTheme.colors.outline
         val playButtonCornerRadius = if (data.isPlaying) 24.dp else 60.dp
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(32.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(20.dp)
         ) {
             Column(
@@ -886,7 +903,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 ) {
                     AlbumArtImage(
                         artworkUri = data.artworkUri,
-                        size = 76.dp,
+                        size = 106.dp,
                         cornerRadius = 20.dp
                     )
                     Spacer(GlanceModifier.width(18.dp))
@@ -916,13 +933,14 @@ class RhythmMusicWidget : GlanceAppWidget() {
                         Spacer(GlanceModifier.width(8.dp))
                         FavoriteButton(
                             isFavorite = data.isFavorite,
-                            iconColor = if (data.isFavorite) GlanceTheme.colors.tertiary else textColor
+                            theme = data.widgetTheme,
+                            cardCornerRadius = data.cornerRadius
                         )
                         Spacer(GlanceModifier.width(4.dp))
                     }
                 }
                 
-                Spacer(GlanceModifier.height(18.dp))
+                Spacer(GlanceModifier.defaultWeight())
                 
                 // Control buttons with fixed height to prevent excessive stretching
                 Row(
@@ -982,14 +1000,14 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Extra Large Plus Widget: 5x3 widget (350x260) ====================
     @Composable
     private fun ExtraLargePlusWidgetLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
-        val textColor = GlanceTheme.colors.onSurface
+        val bgColor = getBgColor(data.widgetTheme)
+        val textColor = getTextColor(data.widgetTheme)
         val playButtonCornerRadius = if (data.isPlaying) 22.dp else 60.dp
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(28.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(18.dp)
         ) {
             Column(
@@ -1003,7 +1021,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 ) {
                     AlbumArtImage(
                         artworkUri = data.artworkUri,
-                        size = 80.dp,
+                        size = 110.dp,
                         cornerRadius = 18.dp
                     )
                     Spacer(GlanceModifier.width(18.dp))
@@ -1026,16 +1044,17 @@ class RhythmMusicWidget : GlanceAppWidget() {
                         Spacer(GlanceModifier.width(8.dp))
                         FavoriteButton(
                             isFavorite = data.isFavorite,
-                            iconColor = textColor
+                            theme = data.widgetTheme,
+                            cardCornerRadius = data.cornerRadius
                         )
                     }
                 }
                 
-                Spacer(GlanceModifier.height(16.dp))
+                Spacer(GlanceModifier.defaultWeight())
                 
                 // Controls row with larger buttons
                 Row(
-                    modifier = GlanceModifier.defaultWeight().fillMaxWidth().height(64.dp),
+                    modifier = GlanceModifier.fillMaxWidth().height(64.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     PreviousButton(
@@ -1085,14 +1104,14 @@ class RhythmMusicWidget : GlanceAppWidget() {
     // ==================== Huge Widget: 5x5 widget (400x300) ====================
     @Composable
     private fun HugeWidgetLayout(modifier: GlanceModifier, data: WidgetData) {
-        val bgColor = GlanceTheme.colors.surface
-        val textColor = GlanceTheme.colors.onSurface
+        val bgColor = getBgColor(data.widgetTheme)
+        val textColor = getTextColor(data.widgetTheme)
         val playButtonCornerRadius = if (data.isPlaying) 24.dp else 60.dp
         
         Box(
             modifier = modifier
                 .background(bgColor)
-                .cornerRadius(32.dp)
+                .cornerRadius(data.cornerRadius.dp)
                 .padding(20.dp)
         ) {
             Column(
@@ -1106,8 +1125,8 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 ) {
                     AlbumArtImage(
                         artworkUri = data.artworkUri,
-                        size = 96.dp,
-                        cornerRadius = 20.dp
+                        size = 136.dp,
+                        cornerRadius = 24.dp
                     )
                     Spacer(GlanceModifier.width(20.dp))
                     Column(modifier = GlanceModifier.defaultWeight()) {
@@ -1129,16 +1148,17 @@ class RhythmMusicWidget : GlanceAppWidget() {
                         Spacer(GlanceModifier.width(10.dp))
                         FavoriteButton(
                             isFavorite = data.isFavorite,
-                            iconColor = textColor
+                            theme = data.widgetTheme,
+                            cardCornerRadius = data.cornerRadius
                         )
                     }
                 }
                 
-                Spacer(GlanceModifier.height(20.dp))
+                Spacer(GlanceModifier.defaultWeight())
                 
                 // Large controls row
                 Row(
-                    modifier = GlanceModifier.defaultWeight().fillMaxWidth().height(72.dp),
+                    modifier = GlanceModifier.fillMaxWidth().height(72.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     PreviousButton(
@@ -1337,13 +1357,37 @@ class RhythmMusicWidget : GlanceAppWidget() {
     private fun FavoriteButton(
         modifier: GlanceModifier = GlanceModifier,
         isFavorite: Boolean,
-        iconColor: ColorProvider
+        theme: Int,
+        cardCornerRadius: Int
     ) {
+        val bgColor = when (theme) {
+            1 -> ColorProvider(Color(0xFF25232A)) // Solid Dark
+            2 -> ColorProvider(Color(0x33FFFFFF)) // Translucent Dark (white glass)
+            3 -> ColorProvider(Color(0xFF4A3E85)) // Solid Purple
+            else -> GlanceTheme.colors.surfaceVariant // Dynamic Color
+        }
+        
+        val iconColor = if (isFavorite) {
+            when (theme) {
+                3 -> ColorProvider(Color(0xFFFF897A)) // Crimson-peach on purple
+                1, 2 -> ColorProvider(Color(0xFFFFB4AB)) // Soft coral/red in dark theme
+                else -> GlanceTheme.colors.primary // Dynamic theme
+            }
+        } else {
+            when (theme) {
+                3 -> ColorProvider(Color(0xFFE8DEF8)) // Lavender on purple
+                1, 2 -> ColorProvider(Color(0xFFCAC4D0)) // Gray on dark
+                else -> GlanceTheme.colors.onSurfaceVariant // Dynamic theme
+            }
+        }
+        
+        val buttonCornerRadius = (cardCornerRadius * 18 / 28).dp
+        
         Box(
             modifier = modifier
                 .size(36.dp)
-                .cornerRadius(18.dp)
-                .background(GlanceTheme.colors.surfaceVariant)
+                .cornerRadius(buttonCornerRadius)
+                .background(bgColor)
                 .clickable(actionRunCallback<ToggleFavoriteAction>()),
             contentAlignment = Alignment.Center
         ) {
@@ -1355,6 +1399,34 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 modifier = GlanceModifier.size(20.dp),
                 colorFilter = ColorFilter.tint(iconColor)
             )
+        }
+    }
+    
+    @Composable
+    private fun getBgColor(theme: Int): ColorProvider {
+        return when (theme) {
+            1 -> ColorProvider(Color(0xFF131215)) // Solid Dark
+            2 -> ColorProvider(Color(0xD9131215)) // Translucent Dark
+            3 -> ColorProvider(Color(0xFF2D235C)) // Solid Purple
+            else -> GlanceTheme.colors.surface // Dynamic
+        }
+    }
+    
+    @Composable
+    private fun getTextColor(theme: Int): ColorProvider {
+        return when (theme) {
+            3 -> ColorProvider(Color(0xFFFFFFFF)) // White on Purple
+            1, 2 -> ColorProvider(Color(0xFFE6E1E5)) // Light on Dark
+            else -> GlanceTheme.colors.onSurface
+        }
+    }
+    
+    @Composable
+    private fun getSubtextColor(theme: Int): ColorProvider {
+        return when (theme) {
+            3 -> ColorProvider(Color(0xFFE8DEF8)) // Lavender on Purple
+            1, 2 -> ColorProvider(Color(0xFFCAC4D0)) // Gray on Dark
+            else -> GlanceTheme.colors.onSurfaceVariant
         }
     }
     
@@ -1379,7 +1451,8 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 showArtist = appSettings?.widgetShowArtist?.value ?: true,
                 showAlbum = appSettings?.widgetShowAlbum?.value ?: true,
                 showFavoriteButton = appSettings?.widgetShowFavoriteButton?.value ?: true,
-                cornerRadius = appSettings?.widgetCornerRadius?.value ?: 28
+                cornerRadius = appSettings?.widgetCornerRadius?.value ?: 28,
+                widgetTheme = appSettings?.widgetTheme?.value ?: 0
             )
         } catch (e: Exception) {
             android.util.Log.e("RhythmMusicWidget", "Error getting widget data", e)
@@ -1392,7 +1465,8 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 artworkUri = null,
                 hasPrevious = false,
                 hasNext = false,
-                isFavorite = false
+                isFavorite = false,
+                widgetTheme = 0
             )
         }
     }
@@ -1414,5 +1488,6 @@ data class WidgetData(
     val showArtist: Boolean = true,
     val showAlbum: Boolean = true,
     val showFavoriteButton: Boolean = true,
-    val cornerRadius: Int = 28
+    val cornerRadius: Int = 28,
+    val widgetTheme: Int = 0
 )

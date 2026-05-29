@@ -39,11 +39,13 @@ object GlanceWidgetUpdater {
         val prefs = context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
         prefs.edit().apply {
             if (song != null) {
+                putString(RhythmMusicWidget.KEY_SONG_ID, song.id)
                 putString(RhythmMusicWidget.KEY_SONG_TITLE, song.title)
                 putString(RhythmMusicWidget.KEY_ARTIST_NAME, song.artist)
                 putString(RhythmMusicWidget.KEY_ALBUM_NAME, song.album)
                 putString(RhythmMusicWidget.KEY_ARTWORK_URI, song.artworkUri?.toString())
             } else {
+                putString(RhythmMusicWidget.KEY_SONG_ID, "")
                 putString(RhythmMusicWidget.KEY_SONG_TITLE, "Rhythm")
                 putString(RhythmMusicWidget.KEY_ARTIST_NAME, "")
                 putString(RhythmMusicWidget.KEY_ALBUM_NAME, "")
@@ -65,6 +67,7 @@ object GlanceWidgetUpdater {
                 glanceIds.forEach { glanceId ->
                     updateAppWidgetState(context, glanceId) { prefs ->
                         if (song != null) {
+                            prefs[stringPreferencesKey(RhythmMusicWidget.KEY_SONG_ID)] = song.id
                             prefs[stringPreferencesKey(RhythmMusicWidget.KEY_SONG_TITLE)] = song.title
                             prefs[stringPreferencesKey(RhythmMusicWidget.KEY_ARTIST_NAME)] = song.artist
                             prefs[stringPreferencesKey(RhythmMusicWidget.KEY_ALBUM_NAME)] = song.album
@@ -72,6 +75,7 @@ object GlanceWidgetUpdater {
                                 prefs[stringPreferencesKey(RhythmMusicWidget.KEY_ARTWORK_URI)] = it.toString()
                             }
                         } else {
+                            prefs.remove(stringPreferencesKey(RhythmMusicWidget.KEY_SONG_ID))
                             prefs[stringPreferencesKey(RhythmMusicWidget.KEY_SONG_TITLE)] = "Rhythm"
                             prefs[stringPreferencesKey(RhythmMusicWidget.KEY_ARTIST_NAME)] = ""
                             prefs[stringPreferencesKey(RhythmMusicWidget.KEY_ALBUM_NAME)] = ""

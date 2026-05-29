@@ -8,6 +8,7 @@ import chromahub.rhythm.app.infrastructure.widget.glance.GlanceWidgetUpdater
 object WidgetUpdater {
     
     private const val PREFS_FILE = "widget_prefs"
+    private const val KEY_SONG_ID = "song_id"
     private const val KEY_IS_PLAYING = "is_playing"
     private const val KEY_SONG_TITLE = "song_title"
     private const val KEY_ARTIST_NAME = "artist_name"
@@ -24,11 +25,13 @@ object WidgetUpdater {
         val editor = prefs.edit()
         
         if (song != null) {
+            editor.putString(KEY_SONG_ID, song.id)
             editor.putString(KEY_SONG_TITLE, song.title)
             editor.putString(KEY_ARTIST_NAME, song.artist)
             editor.putString("album_name", song.album)
             editor.putString("artwork_uri", song.artworkUri?.toString())
         } else {
+            editor.putString(KEY_SONG_ID, "")
             editor.putString(KEY_SONG_TITLE, "Rhythm")
             editor.putString(KEY_ARTIST_NAME, "")
             editor.putString("album_name", "")

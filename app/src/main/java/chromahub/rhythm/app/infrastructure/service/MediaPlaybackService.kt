@@ -51,6 +51,7 @@ import androidx.core.app.NotificationCompat
 import androidx.media3.common.AudioAttributes as ExoAudioAttributes
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import chromahub.rhythm.app.util.GsonUtils
 import chromahub.rhythm.app.shared.data.model.Playlist
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -988,7 +989,7 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
             if (favoriteSongsJson != null && favoriteSongsJson.isNotEmpty()) {
                 try {
                     val type = object : TypeToken<Set<String>>() {}.type
-                    val favoriteSongs: Set<String> = Gson().fromJson(favoriteSongsJson, type)
+                    val favoriteSongs: Set<String> = GsonUtils.gson.fromJson(favoriteSongsJson, type)
                     favoriteSongs.contains(currentMediaItem.mediaId)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error parsing favorite songs", e)
@@ -1004,13 +1005,20 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
     
     private fun toggleCurrentSongFavorite() {
         val currentMediaItem = player.currentMediaItem
-        if (currentMediaItem != null) {
+        val songId = currentMediaItem?.mediaId ?: run {
+            // FALLBACK: Read song_id from widget preferences if player has no active song
+            val prefs = getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
+            val id = prefs.getString("song_id", null)
+            if (id.isNullOrEmpty()) null else id
+        }
+
+        if (songId != null) {
             try {
                 val favoriteSongsJson = appSettings.favoriteSongs.value
                 val currentFavorites = if (favoriteSongsJson != null && favoriteSongsJson.isNotEmpty()) {
                     try {
                         val type = object : TypeToken<Set<String>>() {}.type
-                        Gson().fromJson<Set<String>>(favoriteSongsJson, type).toMutableSet()
+                        GsonUtils.gson.fromJson<Set<String>>(favoriteSongsJson, type).toMutableSet()
                     } catch (e: Exception) {
                         Log.e(TAG, "Error parsing favorite songs", e)
                         mutableSetOf<String>()
@@ -1019,8 +1027,6 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
                     mutableSetOf<String>()
                 }
 
-                val songId = currentMediaItem.mediaId
-                val song = convertMediaItemToSong(currentMediaItem)
                 val isAdding = !currentFavorites.contains(songId)
 
                 if (isAdding) {
@@ -1031,7 +1037,29 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
                     Log.d(TAG, "Removed song from favorites via widget/notification: $songId")
                 }
 
-                appSettings.setFavoriteSongs(Gson().toJson(currentFavorites))
+                appSettings.setFavoriteSongs(GsonUtils.gson.toJson(currentFavorites))
+                
+                // Fetch song details from mediaItem or construct fallback Song using preferences
+                val song = if (currentMediaItem != null) {
+                    convertMediaItemToSong(currentMediaItem)
+                } else {
+                    val prefs = getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
+                    Song(
+                        id = songId,
+                        title = prefs.getString("song_title", "Rhythm") ?: "Rhythm",
+                        artist = prefs.getString("artist_name", "") ?: "",
+                        album = prefs.getString("album_name", "") ?: "",
+                        uri = Uri.EMPTY,
+                        artworkUri = prefs.getString("artwork_uri", null)?.let { 
+                            try { Uri.parse(it) } catch (_: Exception) { null } 
+                        },
+                        duration = 0L,
+                        trackNumber = 0,
+                        year = 0,
+                        genre = "",
+                        albumId = ""
+                    )
+                }
                 updateFavoritesPlaylist(songId = songId, song = song, isAdding = isAdding)
 
                 val notifyIntent = Intent("chromahub.rhythm.app.action.FAVORITE_CHANGED")
@@ -1051,7 +1079,7 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
             if (playlistsJson.isNullOrEmpty()) return
             
             val type = object : TypeToken<List<Playlist>>() {}.type
-            val playlists: MutableList<Playlist> = Gson().fromJson(playlistsJson, type)
+            val playlists: MutableList<Playlist> = GsonUtils.gson.fromJson(playlistsJson, type)
             
             val favoritesPlaylist = playlists.find { it.id == "1" && it.name == "Liked" } ?: return
             val existingSongs = favoritesPlaylist.songs
@@ -1069,7 +1097,7 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
             )
 
             val updatedPlaylists = playlists.map { if (it.id == "1") updatedPlaylist else it }
-            appSettings.setPlaylists(Gson().toJson(updatedPlaylists))
+            appSettings.setPlaylists(GsonUtils.gson.toJson(updatedPlaylists))
             Log.d(TAG, "Updated Liked playlist: ${if (isAdding) "added" else "removed"} song $songId")
         } catch (e: Exception) {
             Log.e(TAG, "Error updating favorites playlist", e)
@@ -1407,7 +1435,49 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
             ACTION_TOGGLE_FAVORITE -> {
                 Log.d(TAG, "Widget toggle favorite action")
                 toggleCurrentSongFavorite()
-                updateWidgetFromMediaItem(player.currentMediaItem)
+                val currentMediaItem = player.currentMediaItem
+                if (currentMediaItem != null) {
+                    updateWidgetFromMediaItem(currentMediaItem)
+                } else {
+                    // Update only the favorite state in the widget without clearing it!
+                    val prefs = getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
+                    val songId = prefs.getString("song_id", null)
+                    if (songId != null && songId.isNotEmpty()) {
+                        val favoriteSongsJson = appSettings.favoriteSongs.value
+                        val currentFavorites = if (favoriteSongsJson != null && favoriteSongsJson.isNotEmpty()) {
+                            try {
+                                val type = object : TypeToken<Set<String>>() {}.type
+                                GsonUtils.gson.fromJson<Set<String>>(favoriteSongsJson, type)
+                            } catch (e: Exception) {
+                                emptySet()
+                            }
+                        } else {
+                            emptySet()
+                        }
+                        val isFavorite = currentFavorites.contains(songId)
+                        
+                        val song = Song(
+                            id = songId,
+                            title = prefs.getString("song_title", "Rhythm") ?: "Rhythm",
+                            artist = prefs.getString("artist_name", "") ?: "",
+                            album = prefs.getString("album_name", "") ?: "",
+                            uri = Uri.EMPTY,
+                            artworkUri = prefs.getString("artwork_uri", null)?.let { 
+                                try { Uri.parse(it) } catch (_: Exception) { null }
+                            },
+                            duration = 0L,
+                            trackNumber = 0,
+                            year = 0,
+                            genre = "",
+                            albumId = ""
+                        )
+                        val isPlaying = prefs.getBoolean("is_playing", false)
+                        val hasPrevious = prefs.getBoolean("has_previous", false)
+                        val hasNext = prefs.getBoolean("has_next", false)
+                        
+                        WidgetUpdater.updateWidget(this, song, isPlaying, hasPrevious, hasNext, isFavorite)
+                    }
+                }
             }
             ACTION_MUTE -> {
                 Log.d(TAG, "Mute action")
@@ -1455,19 +1525,31 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
         }
     }
 
+    private var lastGlobalSkipTime = 0L
+    private val GLOBAL_SKIP_DEBOUNCE_MS = 600L
+
     private fun skipWithCrossfade(toNext: Boolean): Boolean {
         try {
             if (!appSettings.crossfade.value || !appSettings.crossfadeOnSkip.value) {
                 return false
             }
 
+            // Rate-limiting check to prevent ExoPlayer looper lockup under rapid spam clicks
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastGlobalSkipTime < GLOBAL_SKIP_DEBOUNCE_MS) {
+                Log.d(TAG, "Ignored rapid skipWithCrossfade to prevent lockup. Falling back to standard skip.")
+                return false
+            }
+            lastGlobalSkipTime = currentTime
+
             if (rhythmPlayerEngine.isTransitionRunning()) {
-                Log.d(TAG, "Transition is running during skip request. Force completing it first.")
+                Log.d(TAG, "Transition is running during skip request. Force completing it first and falling back to standard skip.")
                 if (::transitionController.isInitialized) {
                     transitionController.cancelPendingTransition()
                 } else {
                     rhythmPlayerEngine.cancelNext()
                 }
+                return false
             }
 
             val playerToUse = rhythmPlayerEngine.masterPlayer
@@ -1983,6 +2065,9 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
     }
     
     private fun updateWidgetFromMediaItem(mediaItem: MediaItem?) {
+        if (!appSettings.widgetAutoUpdate.value) {
+            return
+        }
         if (mediaItem != null) {
             val song = convertMediaItemToSong(mediaItem)
             if (song != null) {

@@ -14,6 +14,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.delay
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,8 +54,10 @@ fun WidgetSettingsScreen(
     val showFavoriteButton by appSettings.widgetShowFavoriteButton.collectAsState()
     val cornerRadius by appSettings.widgetCornerRadius.collectAsState()
     val autoUpdate by appSettings.widgetAutoUpdate.collectAsState()
+    val widgetTheme by appSettings.widgetTheme.collectAsState()
     
     var showCornerRadiusSheet by remember { mutableStateOf(false) }
+    var showWidgetThemeSheet by remember { mutableStateOf(false) }
 
     fun buildToggleSettingsItem(
         icon: MaterialSymbolIcon,
@@ -219,6 +227,31 @@ fun WidgetSettingsScreen(
                             onClick = {
                                 HapticUtils.performHapticFeedback(context, hapticFeedback, HapticFeedbackType.TextHandleMove)
                                 showCornerRadiusSheet = true
+                            }
+                        ),
+                        Material3SettingsItem(
+                            icon = MaterialSymbolIcon("palette"),
+                            title = { Text("Widget Theme") },
+                            description = {
+                                Text(
+                                    when (widgetTheme) {
+                                        1 -> "Solid Dark"
+                                        2 -> "Translucent Dark"
+                                        3 -> "Solid Purple"
+                                        else -> "Dynamic Color"
+                                    } + " (Glance widgets only)"
+                                )
+                            },
+                            trailingContent = {
+                                Icon(
+                                    imageVector = RhythmIcons.Forward,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            onClick = {
+                                HapticUtils.performHapticFeedback(context, hapticFeedback, HapticFeedbackType.TextHandleMove)
+                                showWidgetThemeSheet = true
                             }
                         )
                     ),
@@ -397,6 +430,188 @@ fun WidgetSettingsScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        }
+        
+        // Widget Theme Selection Sheet
+        if (showWidgetThemeSheet) {
+            val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            
+            // Animation states
+            var showContent by remember { mutableStateOf(false) }
+            val contentAlpha by animateFloatAsState(
+                targetValue = if (showContent) 1f else 0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "contentAlpha"
+            )
+
+            LaunchedEffect(Unit) {
+                delay(100)
+                showContent = true
+            }
+
+            val themes = listOf(
+                Triple(0, "Dynamic Color (System)", "Adapts dynamically to device wallpaper palette and system accent tones"),
+                Triple(1, "Solid Dark", "Deep flat charcoal backdrop, optimal for premium OLED dark screen styling"),
+                Triple(2, "Translucent Dark", "Sleek translucent glass floating elegantly over home screen wallpapers"),
+                Triple(3, "Solid Purple (Signature)", "Signature deep violet backdrop with signature accent tints and highlights")
+            )
+            
+            ModalBottomSheet(
+                onDismissRequest = { showWidgetThemeSheet = false },
+                sheetState = sheetState,
+                dragHandle = { 
+                    BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.primary)
+                },
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 24.dp)
+                        .graphicsLayer(alpha = contentAlpha)
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 0.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = "Widget Theme",
+                                style = MaterialTheme.typography.displayMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = 6.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        shape = CircleShape
+                                    )
+                            ) {
+                                Text(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    text = "Personalize home screen widgets",
+                                    overflow = TextOverflow.Ellipsis,
+                                    maxLines = 1,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        themes.forEach { (value, name, desc) ->
+                            val isSelected = widgetTheme == value
+                            val icon = when (value) {
+                                1 -> MaterialSymbolIcon("dark_mode", filled = true)
+                                2 -> MaterialSymbolIcon("opacity")
+                                3 -> MaterialSymbolIcon("palette")
+                                else -> MaterialSymbolIcon("auto_awesome")
+                            }
+                            
+                            Card(
+                                onClick = {
+                                    HapticUtils.performHapticFeedback(context, hapticFeedback, HapticFeedbackType.TextHandleMove)
+                                    appSettings.setWidgetTheme(value)
+                                    updateAllWidgets(context)
+                                    showWidgetThemeSheet = false
+                                },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected)
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    else
+                                        MaterialTheme.colorScheme.surfaceContainerHigh
+                                ),
+                                shape = RoundedCornerShape(16.dp),
+                                border = if (isSelected) {
+                                    BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                } else {
+                                    null
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = if (isSelected)
+                                            MaterialTheme.colorScheme.primary
+                                        else
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.size(44.dp)
+                                    ) {
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier = Modifier.fillMaxSize()
+                                        ) {
+                                            Icon(
+                                                imageVector = icon,
+                                                contentDescription = null,
+                                                tint = if (isSelected)
+                                                    MaterialTheme.colorScheme.onPrimary
+                                                else
+                                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.width(16.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (isSelected)
+                                                MaterialTheme.colorScheme.onPrimaryContainer
+                                            else
+                                                MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = desc,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (isSelected)
+                                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                            else
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = RhythmIcons.CheckCircle,
+                                            contentDescription = "Selected",
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     

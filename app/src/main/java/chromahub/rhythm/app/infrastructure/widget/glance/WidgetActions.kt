@@ -11,6 +11,9 @@ import androidx.glance.appwidget.updateAll
 import chromahub.rhythm.app.activities.MainActivity
 import chromahub.rhythm.app.infrastructure.service.MediaPlaybackService
 import kotlinx.coroutines.delay
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.glance.appwidget.state.updateAppWidgetState
+
 
 private fun hasActiveSongSnapshot(context: Context): Boolean {
     val prefs = context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
@@ -119,10 +122,29 @@ class ToggleFavoriteAction : ActionCallback {
             return
         }
 
+        // OPTIMISTIC UPDATE: Toggle the state immediately in SharedPreferences and Glance Datastore
+        try {
+            val prefs = context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
+            val currentFavorite = prefs.getBoolean(RhythmMusicWidget.KEY_IS_FAVORITE, false)
+            val newFavorite = !currentFavorite
+            
+            // 1. SharedPreferences
+            prefs.edit().putBoolean(RhythmMusicWidget.KEY_IS_FAVORITE, newFavorite).apply()
+            
+            // 2. Glance Datastore
+            updateAppWidgetState(context, glanceId) { glancePrefs ->
+                glancePrefs[booleanPreferencesKey(RhythmMusicWidget.KEY_IS_FAVORITE)] = newFavorite
+            }
+            RhythmMusicWidget().update(context, glanceId)
+            Log.d("WidgetAction", "Optimistic favorite toggle: $newFavorite")
+        } catch (e: Exception) {
+            Log.e("WidgetAction", "Error during optimistic favorite toggle", e)
+        }
+
         dispatchServiceAction(context, MediaPlaybackService.ACTION_TOGGLE_FAVORITE)
         
         // Trigger immediate widget update after short delay for state change
-        delay(200)
+        delay(150)
         try { RhythmMusicWidget().updateAll(context) } catch (_: Exception) {}
     }
 }

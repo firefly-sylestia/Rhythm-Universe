@@ -404,6 +404,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_WIDGET_CORNER_RADIUS = "widget_corner_radius"
         private const val KEY_WIDGET_AUTO_UPDATE = "widget_auto_update"
         private const val KEY_WIDGET_SHOW_FAVORITE_BUTTON = "widget_show_favorite_button"
+        private const val KEY_WIDGET_THEME = "widget_theme"
         
         // Global Header Settings
         private const val KEY_HEADER_COLLAPSE_BEHAVIOR = "header_collapse_behavior" // 0=Normal, 1=Always Collapsed (applies to all screens)
@@ -4472,6 +4473,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         _widgetCornerRadius.value = prefs.getInt(KEY_WIDGET_CORNER_RADIUS, 28)
         _widgetAutoUpdate.value = prefs.getBoolean(KEY_WIDGET_AUTO_UPDATE, true)
         _widgetShowFavoriteButton.value = prefs.getBoolean(KEY_WIDGET_SHOW_FAVORITE_BUTTON, true)
+        _widgetTheme.value = prefs.getInt(KEY_WIDGET_THEME, 0)
         
         // Player Screen Customization Settings
         _playerShowGradientOverlay.value = prefs.getBoolean(KEY_PLAYER_SHOW_GRADIENT_OVERLAY, true)
@@ -4534,6 +4536,13 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     fun setWidgetShowFavoriteButton(value: Boolean) {
         _widgetShowFavoriteButton.value = value
         prefs.edit().putBoolean(KEY_WIDGET_SHOW_FAVORITE_BUTTON, value).apply()
+    }
+    
+    private val _widgetTheme = MutableStateFlow(prefs.getInt(KEY_WIDGET_THEME, 0))
+    val widgetTheme: StateFlow<Int> = _widgetTheme.asStateFlow()
+    fun setWidgetTheme(value: Int) {
+        _widgetTheme.value = value
+        prefs.edit().putInt(KEY_WIDGET_THEME, value).apply()
     }
     
     // ==================== Global Header Settings ====================
