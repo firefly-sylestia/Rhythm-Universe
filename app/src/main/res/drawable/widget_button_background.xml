@@ -2,9 +2,10 @@
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
     android:color="?android:colorControlHighlight">
     <item>
-        <shape android:shape="oval">
+        <shape android:shape="rectangle">
             <!-- Android 16 expressive button background -->
             <solid android:color="@color/widget_secondary_container_dark" />
+            <corners android:radius="16dp" />
         </shape>
     </item>
 </ripple>

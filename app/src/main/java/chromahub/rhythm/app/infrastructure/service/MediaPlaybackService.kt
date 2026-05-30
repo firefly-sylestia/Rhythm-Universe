@@ -375,7 +375,28 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
                                 val totalMs = dbDurationMs + currentPositionMs
                                 val currentMinutes = (totalMs / 60000L).toInt().coerceAtLeast(0)
 
-                                if (currentMinutes > effectiveLimitMinutes) {
+                                // If listening minutes are below the daily limit (e.g., new day), reset the next allowed limit
+                                if (currentMinutes <= effectiveLimitMinutes) {
+                                    if (appSettings.rhythmGuardNextAllowedLimitMinutes.value != 0) {
+                                        appSettings.setRhythmGuardNextAllowedLimitMinutes(0)
+                                    }
+                                }
+
+                                // If a cooldown was active and has just ended, set the next allowed limit to allow 15 minutes of additional listening
+                                if (cooldownUntil > 0L) {
+                                    val nextLimit = currentMinutes + 15
+                                    appSettings.setRhythmGuardNextAllowedLimitMinutes(nextLimit)
+                                    appSettings.clearRhythmGuardTimeoutCooldown()
+                                }
+
+                                val nextAllowedLimit = appSettings.rhythmGuardNextAllowedLimitMinutes.value
+                                val activeLimit = if (nextAllowedLimit > effectiveLimitMinutes) {
+                                    nextAllowedLimit
+                                } else {
+                                    effectiveLimitMinutes
+                                }
+
+                                if (currentMinutes > activeLimit) {
                                     val warningTimeoutMinutes = appSettings.rhythmGuardWarningTimeoutMinutes.value.coerceIn(1, 180)
                                     val newTimeoutUntilMs = now + warningTimeoutMinutes * 60_000L
                                     val formattedToday = rhythmGuardFormatDurationFromMinutes(currentMinutes)

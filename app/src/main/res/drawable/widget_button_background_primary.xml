@@ -2,9 +2,10 @@
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
     android:color="?android:colorPrimary">
     <item>
-        <shape android:shape="oval">
+        <shape android:shape="rectangle">
             <!-- Android 16 expressive primary button with vibrant color -->
             <solid android:color="@color/widget_primary_dark" />
+            <corners android:radius="20dp" />
         </shape>
     </item>
 </ripple>

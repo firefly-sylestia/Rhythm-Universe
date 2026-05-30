@@ -83,6 +83,12 @@ import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveCard
 import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShapes
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import chromahub.rhythm.app.shared.presentation.components.common.RhythmGuardCard
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -591,7 +597,7 @@ fun StreamingContentHomeScreen(
                                             subtitle = stringResource(id = R.string.settings_rhythm_guard_list_desc)
                                         )
 
-                                        StreamingRhythmGuardCard(
+                                        RhythmGuardCard(
                                             rhythmGuardMode = rhythmGuardMode,
                                             rhythmGuardRecommendedMinutes = rhythmGuardRecommendedMinutes,
                                             todayListeningMinutes = todayListeningMinutes,
@@ -1162,100 +1168,7 @@ private fun StreamingGreetingWidgetCard(
     }
 }
 
-@Composable
-private fun StreamingRhythmGuardCard(
-    rhythmGuardMode: String,
-    rhythmGuardRecommendedMinutes: Int,
-    todayListeningMinutes: Int,
-    isGuardTimeoutActive: Boolean,
-    guardTimeoutRemainingMs: Long,
-    onCardClick: () -> Unit
-) {
-    val guardModeLabel = rhythmGuardModeDisplayName(rhythmGuardMode)
-    val guardSnapshotLabel = if (todayListeningMinutes > rhythmGuardRecommendedMinutes) {
-        stringResource(id = R.string.settings_rhythm_guard_snapshot_widget_above_limit)
-    } else {
-        stringResource(id = R.string.settings_rhythm_guard_snapshot_widget_within_limit)
-    }
-    val guardStateSummary = if (isGuardTimeoutActive) {
-        stringResource(
-            id = R.string.streaming_home_guard_break_active,
-            formatCompactDuration(guardTimeoutRemainingMs)
-        )
-    } else {
-        guardSnapshotLabel
-    }
 
-    Card(
-        onClick = onCardClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        elevation = noShadowCardElevation()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = RhythmIcons.Security,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = if (isGuardTimeoutActive) {
-                        MaterialTheme.colorScheme.errorContainer
-                    } else {
-                        MaterialTheme.colorScheme.primaryContainer
-                    }
-                ) {
-                    Text(
-                        text = guardModeLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (isGuardTimeoutActive) {
-                            MaterialTheme.colorScheme.onErrorContainer
-                        } else {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        },
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                    )
-                }
-            }
-
-            Text(
-                text = stringResource(
-                    id = R.string.streaming_home_guard_exposure,
-                    todayListeningMinutes,
-                    rhythmGuardRecommendedMinutes
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = guardStateSummary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun StreamingRhythmStatsCard(
@@ -1367,7 +1280,7 @@ private fun StreamingRhythmStatsCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 private fun StreamingRecommendationsCarousel(
     songs: List<StreamingSong>,
@@ -1394,13 +1307,27 @@ private fun StreamingRecommendationsCarousel(
         }
     }
 
+    val context = LocalContext.current
+    val windowSizeClass = calculateWindowSizeClass(context as android.app.Activity)
+    val widthSizeClass = windowSizeClass.widthSizeClass
+    val heightSizeClass = windowSizeClass.heightSizeClass
+
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
+
+    val headerHeight = when (heightSizeClass) {
+        WindowHeightSizeClass.Compact -> 280.dp
+        else -> when (widthSizeClass) {
+            WindowWidthSizeClass.Medium -> 500.dp
+            WindowWidthSizeClass.Expanded -> 600.dp
+            else -> screenWidth
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(280.dp)
+            .height(headerHeight)
     ) {
         HorizontalUncontainedCarousel(
             state = carouselState,
@@ -1888,7 +1815,7 @@ private fun normalizeStreamingSectionId(sectionId: String): String {
     return when (sectionId.trim()) {
         "STATS" -> STREAMING_SECTION_RHYTHM_STATS
         "RECOMMENDED" -> STREAMING_SECTION_DISCOVER
-        "PLAYLISTS" -> STREAMING_SECTION_DISCOVER
+        "PLAYLISTS" -> STREAMING_SECTION_PLAYLISTS
         else -> sectionId.trim()
     }
 }

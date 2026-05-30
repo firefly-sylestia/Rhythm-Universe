@@ -164,6 +164,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_PREFER_SONG_ARTWORK = "prefer_song_artwork" // Prefer per-song embedded artwork over shared album art
         private const val KEY_IGNORE_MEDIASTORE_COVERS = "ignore_mediastore_covers" // Legacy key kept for migration compatibility
         private const val KEY_LOSSLESS_ARTWORK = "lossless_artwork" // Show cover art without downscaling/compression
+        private const val KEY_SHOW_LIBRARY_SECTION_HEADERS = "show_library_section_headers"
         
         // Audio Device Settings
         private const val KEY_LAST_AUDIO_DEVICE = "last_audio_device"
@@ -222,6 +223,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_RHYTHM_GUARD_TIMEOUT_REASON = "rhythm_guard_timeout_reason"
         private const val KEY_RHYTHM_GUARD_TIMEOUT_STARTED_AT_MS = "rhythm_guard_timeout_started_at_ms"
         private const val KEY_RHYTHM_GUARD_TIMEOUT_COOLDOWN_UNTIL_MS = "rhythm_guard_timeout_cooldown_until_ms"
+        private const val KEY_RHYTHM_GUARD_NEXT_ALLOWED_LIMIT_MINUTES = "rhythm_guard_next_allowed_limit_minutes"
 
         // Legacy keys kept for migration compatibility.
         private const val KEY_RHYTHM_AURA_MODE = "rhythm_aura_mode"
@@ -449,7 +451,6 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_HOME_DISCOVER_AUTO_SCROLL = "home_discover_auto_scroll"
         private const val KEY_HOME_DISCOVER_AUTO_SCROLL_INTERVAL = "home_discover_auto_scroll_interval"
         private const val KEY_HOME_DISCOVER_ITEM_COUNT = "home_discover_item_count"
-        private const val KEY_HOME_CAROUSEL_HEIGHT = "home_carousel_height"
         private const val KEY_HOME_DISCOVER_CAROUSEL_STYLE = "home_discover_carousel_style" // 0=Default (2 side peeks), 1=Hero (1 side peek)
         private const val KEY_HOME_DISCOVER_SHOW_ALBUM_NAME = "home_discover_show_album_name"
         private const val KEY_HOME_DISCOVER_SHOW_ARTIST_NAME = "home_discover_show_artist_name"
@@ -821,6 +822,10 @@ class AppSettings private constructor(context: Context) {
     // Lossless Artwork - Show cover art as-is without compression
     private val _losslessArtwork = MutableStateFlow(prefs.getBoolean(KEY_LOSSLESS_ARTWORK, false))
     val losslessArtwork: StateFlow<Boolean> = _losslessArtwork.asStateFlow()
+
+    // Show Library Section Headers
+    private val _showLibrarySectionHeaders = MutableStateFlow(prefs.getBoolean(KEY_SHOW_LIBRARY_SECTION_HEADERS, true))
+    val showLibrarySectionHeaders: StateFlow<Boolean> = _showLibrarySectionHeaders.asStateFlow()
     
     // Alphabet Bar Settings
     private val _showAlphabetBar = MutableStateFlow(prefs.getBoolean(KEY_SHOW_ALPHABET_BAR, false))
@@ -1138,6 +1143,15 @@ class AppSettings private constructor(context: Context) {
         safeLong(KEY_RHYTHM_GUARD_TIMEOUT_COOLDOWN_UNTIL_MS, 0L).coerceAtLeast(0L)
     )
     val rhythmGuardTimeoutCooldownUntilMs: StateFlow<Long> = _rhythmGuardTimeoutCooldownUntilMs.asStateFlow()
+    
+    private val _rhythmGuardNextAllowedLimitMinutes = MutableStateFlow(
+        prefs.getInt(KEY_RHYTHM_GUARD_NEXT_ALLOWED_LIMIT_MINUTES, 0)
+    )
+    val rhythmGuardNextAllowedLimitMinutes: StateFlow<Int> = _rhythmGuardNextAllowedLimitMinutes.asStateFlow()
+    fun setRhythmGuardNextAllowedLimitMinutes(value: Int) {
+        _rhythmGuardNextAllowedLimitMinutes.value = value
+        prefs.edit().putInt(KEY_RHYTHM_GUARD_NEXT_ALLOWED_LIMIT_MINUTES, value).apply()
+    }
     
     private val _uniqueArtists = MutableStateFlow(prefs.getInt(KEY_UNIQUE_ARTISTS, 0))
     val uniqueArtists: StateFlow<Int> = _uniqueArtists.asStateFlow()
@@ -2161,6 +2175,11 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         }
     }
 
+    fun setShowLibrarySectionHeaders(enable: Boolean) {
+        prefs.edit().putBoolean(KEY_SHOW_LIBRARY_SECTION_HEADERS, enable).apply()
+        _showLibrarySectionHeaders.value = enable
+    }
+
     fun requestFullMediaRescanOnNextLaunch(reason: String = "unspecified") {
         prefs.edit()
             .putBoolean(KEY_PENDING_FULL_MEDIA_RESCAN, true)
@@ -2668,6 +2687,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
             .putLong(KEY_RHYTHM_GUARD_TIMEOUT_UNTIL_MS, safeUntil)
             .putString(KEY_RHYTHM_GUARD_TIMEOUT_REASON, safeReason)
             .putLong(KEY_RHYTHM_GUARD_TIMEOUT_STARTED_AT_MS, safeStartedAt)
+            .putInt(KEY_RHYTHM_GUARD_NEXT_ALLOWED_LIMIT_MINUTES, 0)
 
         if (safeUntil > 0L) {
             editor.putLong(KEY_RHYTHM_GUARD_TIMEOUT_COOLDOWN_UNTIL_MS, 0L)
@@ -2677,6 +2697,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         _rhythmGuardTimeoutUntilMs.value = safeUntil
         _rhythmGuardTimeoutReason.value = safeReason
         _rhythmGuardTimeoutStartedAtMs.value = safeStartedAt
+        _rhythmGuardNextAllowedLimitMinutes.value = 0
         if (safeUntil > 0L) {
             _rhythmGuardTimeoutCooldownUntilMs.value = 0L
         }
@@ -3798,7 +3819,8 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         return key == KEY_RHYTHM_GUARD_TIMEOUT_UNTIL_MS ||
             key == KEY_RHYTHM_GUARD_TIMEOUT_REASON ||
             key == KEY_RHYTHM_GUARD_TIMEOUT_STARTED_AT_MS ||
-            key == KEY_RHYTHM_GUARD_TIMEOUT_COOLDOWN_UNTIL_MS
+            key == KEY_RHYTHM_GUARD_TIMEOUT_COOLDOWN_UNTIL_MS ||
+            key == KEY_RHYTHM_GUARD_NEXT_ALLOWED_LIMIT_MINUTES
     }
 
     private fun isStatsAndRhythmGuardBackupKey(key: String): Boolean {
@@ -4346,6 +4368,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         }
         _albumBottomSheetDiscFilter.value = prefs.getInt(KEY_ALBUM_BOTTOM_SHEET_DISC_FILTER, 0).coerceAtLeast(0)
         _albumBottomSheetGradientBlur.value = prefs.getBoolean(KEY_ALBUM_BOTTOM_SHEET_GRADIENT_BLUR, true)
+        _showLibrarySectionHeaders.value = prefs.getBoolean(KEY_SHOW_LIBRARY_SECTION_HEADERS, true)
         
         // Audio Device Settings
         _lastAudioDevice.value = prefs.getString(KEY_LAST_AUDIO_DEVICE, null)
@@ -4402,6 +4425,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         _rhythmGuardTimeoutReason.value = prefs.getString(KEY_RHYTHM_GUARD_TIMEOUT_REASON, null).orEmpty()
         _rhythmGuardTimeoutStartedAtMs.value = safeLong(KEY_RHYTHM_GUARD_TIMEOUT_STARTED_AT_MS, 0L).coerceAtLeast(0L)
         _rhythmGuardTimeoutCooldownUntilMs.value = safeLong(KEY_RHYTHM_GUARD_TIMEOUT_COOLDOWN_UNTIL_MS, 0L).coerceAtLeast(0L)
+        _rhythmGuardNextAllowedLimitMinutes.value = prefs.getInt(KEY_RHYTHM_GUARD_NEXT_ALLOWED_LIMIT_MINUTES, 0)
         
         // Enhanced User Preferences
         _favoriteGenres.value = try {
@@ -5078,14 +5102,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         prefs.edit().putBoolean(KEY_HOME_SHOW_PLAY_BUTTONS, value).apply()
     }
     
-    private val _homeCarouselHeight = MutableStateFlow(prefs.getInt(KEY_HOME_CAROUSEL_HEIGHT, 260))
-    val homeCarouselHeight: StateFlow<Int> = _homeCarouselHeight.asStateFlow()
-    fun setHomeCarouselHeight(value: Int) {
-        if (value in 180..320) {
-            _homeCarouselHeight.value = value
-            prefs.edit().putInt(KEY_HOME_CAROUSEL_HEIGHT, value).apply()
-        }
-    }
+
     
     // Carousel Style: 0=Default (CenteredHero, 2 side peeks), 1=Hero (Uncontained, 1 side peek)
     private val _homeDiscoverCarouselStyle = MutableStateFlow(prefs.getInt(KEY_HOME_DISCOVER_CAROUSEL_STYLE, 0))
@@ -5157,7 +5174,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     
     // Default section order for home screen
     private val defaultHomeSectionOrder = listOf(
-        "DISCOVER", "RECENTLY_PLAYED", "ARTISTS",
+        "DISCOVER", "RECENTLY_PLAYED", "ARTISTS", "RHYTHM_GUARD",
         "NEW_RELEASES", "RECENTLY_ADDED", "RECOMMENDED", "STATS", "MOOD"
     )
     private val _homeSectionOrder = MutableStateFlow(
@@ -5175,7 +5192,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     }
 
     private val defaultStreamingHomeSectionOrder = listOf(
-        "DISCOVER", "RECENTLY_PLAYED", "ARTISTS", "RHYTHM_GUARD", "RHYTHM_STATS", "NEW_RELEASES"
+        "DISCOVER", "RECENTLY_PLAYED", "ARTISTS", "PLAYLISTS", "RHYTHM_GUARD", "RHYTHM_STATS", "NEW_RELEASES"
     )
 
     private fun normalizeStreamingHomeSectionOrder(rawSections: List<String>): List<String> {
@@ -5184,7 +5201,6 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
             .map {
                 when (it) {
                     "STATS" -> "RHYTHM_STATS"
-                    "PLAYLISTS" -> "DISCOVER"
                     "RECOMMENDED" -> "DISCOVER"
                     "GREETING" -> "DISCOVER"
                     else -> it

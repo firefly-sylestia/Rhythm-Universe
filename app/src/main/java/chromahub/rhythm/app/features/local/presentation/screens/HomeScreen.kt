@@ -118,6 +118,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
+import chromahub.rhythm.app.shared.presentation.components.common.RhythmGuardCard
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import chromahub.rhythm.app.shared.presentation.components.common.CollapsibleHeaderScreen
@@ -615,6 +616,30 @@ private fun ModernScrollableContent(
     val recentlyAddedCount by appSettings.homeRecentlyAddedCount.collectAsState()
     val recommendedCount by appSettings.homeRecommendedCount.collectAsState()
 
+    // Rhythm Guard States (pulled up from LazyColumn block)
+    val rhythmGuardMode by appSettings.rhythmGuardMode.collectAsState()
+    val rhythmGuardAge by appSettings.rhythmGuardAge.collectAsState()
+    val rhythmGuardAlertThresholdMinutes by appSettings.rhythmGuardAlertThresholdMinutes.collectAsState()
+    val rhythmGuardTimeoutUntilMs by appSettings.rhythmGuardTimeoutUntilMs.collectAsState()
+    val dailyListeningStats by appSettings.dailyListeningStats.collectAsState()
+    val persistedSongsPlayed by appSettings.songsPlayed.collectAsState()
+    val listeningTimeMs by appSettings.listeningTime.collectAsState()
+
+    val rhythmGuardPolicy = remember(rhythmGuardAge) { appSettings.getRhythmGuardPolicy(rhythmGuardAge) }
+    val rhythmGuardRecommendedMinutes = when (rhythmGuardMode) {
+        AppSettings.RHYTHM_GUARD_MODE_MANUAL -> rhythmGuardAlertThresholdMinutes
+            .takeIf { it > 0 }
+            ?: rhythmGuardPolicy.recommendedDailyMinutes
+        else -> rhythmGuardPolicy.recommendedDailyMinutes
+    }
+    val todayListeningMinutes = remember(dailyListeningStats, persistedSongsPlayed, listeningTimeMs) {
+        appSettings.estimateRhythmGuardTodayListeningMinutes(
+            dailyListeningStats = dailyListeningStats,
+            songsPlayed = persistedSongsPlayed,
+            listeningTimeMs = listeningTimeMs
+        )
+    }
+
     // Discover widget card content visibility settings
     val discoverShowAlbumName by appSettings.homeDiscoverShowAlbumName.collectAsState()
     val discoverShowArtistName by appSettings.homeDiscoverShowArtistName.collectAsState()
@@ -1014,6 +1039,31 @@ private fun ModernScrollableContent(
                                             musicViewModel.playSongs(songsToPlay)
                                         }
                                     )
+                                }
+                            }
+                        }
+                    }
+                    "RHYTHM_GUARD" -> {
+                        if (rhythmGuardMode != AppSettings.RHYTHM_GUARD_MODE_OFF) {
+                            val rhythmGuardTimeoutRemainingMs = (rhythmGuardTimeoutUntilMs - System.currentTimeMillis()).coerceAtLeast(0L)
+                            val isRhythmGuardTimeoutActive = rhythmGuardTimeoutRemainingMs > 0L
+
+                            item(key = "section_rhythm_guard") {
+                                Box(modifier = Modifier.padding(horizontal = horizontalPadding)) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                        ModernSectionTitle(
+                                            title = stringResource(id = R.string.settings_rhythm_guard),
+                                            subtitle = stringResource(id = R.string.settings_rhythm_guard_list_desc)
+                                        )
+                                        RhythmGuardCard(
+                                            rhythmGuardMode = rhythmGuardMode,
+                                            rhythmGuardRecommendedMinutes = rhythmGuardRecommendedMinutes,
+                                            todayListeningMinutes = todayListeningMinutes,
+                                            isGuardTimeoutActive = isRhythmGuardTimeoutActive,
+                                            guardTimeoutRemainingMs = rhythmGuardTimeoutRemainingMs,
+                                            onCardClick = onNavigateToStats
+                                        )
+                                    }
                                 }
                             }
                         }

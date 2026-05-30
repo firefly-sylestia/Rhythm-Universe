@@ -49,6 +49,8 @@ import androidx.glance.unit.ColorProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.size.Size
@@ -59,8 +61,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import chromahub.rhythm.app.activities.MainActivity
 import chromahub.rhythm.app.R
-import androidx.glance.appwidget.ImageProvider
-import androidx.compose.ui.res.stringResource
+import androidx.glance.appwidget.state.getAppWidgetState
 
 /**
  * Modern Glance-based Music Widget with Material 3 Expressive Design
@@ -111,6 +112,14 @@ class RhythmMusicWidget : GlanceAppWidget() {
             fun put(key: String, bitmap: Bitmap) { if (get(key) == null) cache.put(key, bitmap) }
             fun keyFor(data: ByteArray): String = data.contentHashCode().toString()
         }
+
+        fun cacheBitmap(uri: String, bitmap: Bitmap) {
+            AlbumArtCache.put(uri, bitmap)
+        }
+
+        fun getCachedBitmap(uri: String): Bitmap? {
+            return AlbumArtCache.get(uri)
+        }
     }
     
     // Use preferences-based state definition for reactive updates
@@ -127,9 +136,42 @@ class RhythmMusicWidget : GlanceAppWidget() {
         }
         
         provideContent {
-            val prefs = currentState<Preferences>()
+            val currentPrefs = currentState<Preferences>()
+            val artworkUriString = currentPrefs[stringPreferencesKey(KEY_ARTWORK_URI)]
+            
+            // Resolve bitmap instantly from cache or asynchronously load it
+            var bitmap by remember(artworkUriString) {
+                mutableStateOf<Bitmap?>(artworkUriString?.let { getCachedBitmap(it) })
+            }
+            
+            if (bitmap == null && !artworkUriString.isNullOrBlank()) {
+                val glanceContext = LocalContext.current
+                LaunchedEffect(artworkUriString) {
+                    try {
+                        val loaded = withContext(Dispatchers.IO) {
+                            val imageLoader = ImageLoader(glanceContext)
+                            val request = ImageRequest.Builder(glanceContext)
+                                .data(artworkUriString)
+                                .size(Size(150, 150))
+                                .build()
+                            val result = imageLoader.execute(request)
+                            val loadedBmp = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                            if (loadedBmp != null) {
+                                cacheBitmap(artworkUriString, loadedBmp)
+                            }
+                            loadedBmp
+                        }
+                        if (loaded != null) {
+                            bitmap = loaded
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("RhythmMusicWidget", "Error fetching bitmap in content", e)
+                    }
+                }
+            }
+            
             val widgetData = try {
-                getWidgetData(prefs, appSettings)
+                getWidgetData(currentPrefs, appSettings).copy(preloadedBitmap = bitmap)
             } catch (e: Exception) {
                 android.util.Log.e("RhythmMusicWidget", "Widget data error, using fallback", e)
                 WidgetData(
@@ -140,7 +182,8 @@ class RhythmMusicWidget : GlanceAppWidget() {
                     artworkUri = null,
                     hasPrevious = false,
                     hasNext = false,
-                    isFavorite = false
+                    isFavorite = false,
+                    preloadedBitmap = null
                 )
             }
             val currentSize = LocalSize.current
@@ -253,7 +296,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
             ) {
                 AlbumArtImage(
                     modifier = GlanceModifier.defaultWeight().height(48.dp),
-                    artworkUri = data.artworkUri,
+                    preloadedBitmap = data.preloadedBitmap,
                     cornerRadius = 64.dp
                 )
                 Spacer(GlanceModifier.height(14.dp))
@@ -293,7 +336,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
             ) {
                 AlbumArtImage(
                     modifier = GlanceModifier.defaultWeight().fillMaxWidth().height(48.dp),
-                    artworkUri = data.artworkUri,
+                    preloadedBitmap = data.preloadedBitmap,
                     cornerRadius = 64.dp
                 )
                 Spacer(GlanceModifier.height(14.dp))
@@ -339,7 +382,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 // Album Art
                 AlbumArtImage(
                     modifier = GlanceModifier.size(120.dp),
-                    artworkUri = data.artworkUri,
+                    preloadedBitmap = data.preloadedBitmap,
                     cornerRadius = 20.dp
                 )
                 
@@ -439,7 +482,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 // Album Art
                 AlbumArtImage(
                     modifier = GlanceModifier.size(64.dp),
-                    artworkUri = data.artworkUri,
+                    preloadedBitmap = data.preloadedBitmap,
                     cornerRadius = 16.dp
                 )
                 
@@ -521,7 +564,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
             ) {
                 AlbumArtImage(
                     modifier = GlanceModifier.padding(vertical = 6.dp),
-                    artworkUri = data.artworkUri,
+                    preloadedBitmap = data.preloadedBitmap,
                     size = 48.dp,
                     cornerRadius = 64.dp
                 )
@@ -556,7 +599,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
             ) {
                 AlbumArtImage(
                     modifier = GlanceModifier.size(albumArtSize),
-                    artworkUri = data.artworkUri,
+                    preloadedBitmap = data.preloadedBitmap,
                     cornerRadius = 60.dp
                 )
                 Spacer(GlanceModifier.width(10.dp))
@@ -610,7 +653,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
             ) {
                 AlbumArtImage(
                     modifier = GlanceModifier.size(albumArtSize),
-                    artworkUri = data.artworkUri,
+                    preloadedBitmap = data.preloadedBitmap,
                     cornerRadius = 60.dp
                 )
                 Spacer(GlanceModifier.width(14.dp))
@@ -666,7 +709,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 ) {
                     AlbumArtImage(
                         modifier = GlanceModifier.fillMaxSize(),
-                        artworkUri = data.artworkUri,
+                        preloadedBitmap = data.preloadedBitmap,
                         cornerRadius = 20.dp
                     )
                 }
@@ -725,7 +768,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AlbumArtImage(
-                        artworkUri = data.artworkUri,
+                        preloadedBitmap = data.preloadedBitmap,
                         size = 84.dp,
                         cornerRadius = 18.dp
                     )
@@ -809,7 +852,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                     modifier = GlanceModifier.fillMaxWidth()
                 ) {
                     AlbumArtImage(
-                        artworkUri = data.artworkUri,
+                        preloadedBitmap = data.preloadedBitmap,
                         size = 72.dp,
                         cornerRadius = 20.dp
                     )
@@ -824,10 +867,18 @@ class RhythmMusicWidget : GlanceAppWidget() {
                             ),
                             maxLines = 2
                         )
-                        Spacer(GlanceModifier.height(6.dp))
-                        if (data.showArtist && data.artistName.isNotEmpty()) {
+                        val subText = buildString {
+                            if (data.showArtist && data.artistName.isNotEmpty()) {
+                                append(data.artistName)
+                            }
+                            if (data.showAlbum && data.albumName.isNotEmpty()) {
+                                if (isNotEmpty()) append(" • ")
+                                append(data.albumName)
+                            }
+                        }
+                        if (subText.isNotEmpty()) {
                             Text(
-                                text = data.artistName,
+                                text = subText,
                                 style = TextStyle(
                                     fontSize = 15.sp, 
                                     color = subtextColor
@@ -878,13 +929,11 @@ class RhythmMusicWidget : GlanceAppWidget() {
         }
     }
     
-    // ==================== Extra Large Widget: Full art + info + big controls ====================
     @Composable
     private fun ExtraLargeWidgetLayout(modifier: GlanceModifier, data: WidgetData) {
         val bgColor = getBgColor(data.widgetTheme)
         val textColor = getTextColor(data.widgetTheme)
         val subtextColor = getSubtextColor(data.widgetTheme)
-        val separatorColor = GlanceTheme.colors.outline
         val playButtonCornerRadius = if (data.isPlaying) 24.dp else 60.dp
         
         Box(
@@ -903,7 +952,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                     modifier = GlanceModifier.fillMaxWidth()
                 ) {
                     AlbumArtImage(
-                        artworkUri = data.artworkUri,
+                        preloadedBitmap = data.preloadedBitmap,
                         size = 106.dp,
                         cornerRadius = 20.dp
                     )
@@ -918,15 +967,24 @@ class RhythmMusicWidget : GlanceAppWidget() {
                             ),
                             maxLines = 2
                         )
-                        Spacer(GlanceModifier.height(8.dp))
-                        if (data.showArtist && data.artistName.isNotEmpty()) {
+                        val subText = buildString {
+                            if (data.showArtist && data.artistName.isNotEmpty()) {
+                                append(data.artistName)
+                            }
+                            if (data.showAlbum && data.albumName.isNotEmpty()) {
+                                if (isNotEmpty()) append(" • ")
+                                append(data.albumName)
+                            }
+                        }
+                        if (subText.isNotEmpty()) {
+                            Spacer(GlanceModifier.height(8.dp))
                             Text(
-                                text = data.artistName,
+                                text = subText,
                                 style = TextStyle(
-                                    fontSize = 17.sp, 
+                                    fontSize = 16.sp, 
                                     color = subtextColor
                                 ),
-                                maxLines = 1
+                                maxLines = 2
                             )
                         }
                     }
@@ -968,37 +1026,11 @@ class RhythmMusicWidget : GlanceAppWidget() {
                     )
                 }
                 
-                // Flexible spacer that grows as needed
                 Spacer(GlanceModifier.defaultWeight())
-                
-                // Elegant separator line
-                Box(
-                    modifier = GlanceModifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 32.dp)
-                        .background(separatorColor)
-                        .height(1.dp)
-                        .cornerRadius(60.dp)
-                ) {}
-                
-                Spacer(GlanceModifier.height(14.dp))
-                
-                // Album info at bottom
-                if (data.showAlbum && data.albumName.isNotEmpty()) {
-                    Text(
-                        text = data.albumName,
-                        style = TextStyle(
-                            fontSize = 15.sp, 
-                            color = subtextColor
-                        ),
-                        maxLines = 1
-                    )
-                }
             }
         }
     }
     
-    // ==================== Extra Large Plus Widget: 5x3 widget (350x260) ====================
     @Composable
     private fun ExtraLargePlusWidgetLayout(modifier: GlanceModifier, data: WidgetData) {
         val bgColor = getBgColor(data.widgetTheme)
@@ -1021,7 +1053,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                     modifier = GlanceModifier.fillMaxWidth()
                 ) {
                     AlbumArtImage(
-                        artworkUri = data.artworkUri,
+                        preloadedBitmap = data.preloadedBitmap,
                         size = 110.dp,
                         cornerRadius = 18.dp
                     )
@@ -1032,12 +1064,21 @@ class RhythmMusicWidget : GlanceAppWidget() {
                             style = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold, color = textColor),
                             maxLines = 2
                         )
-                        if (data.showArtist) {
-                            Spacer(GlanceModifier.height(4.dp))
+                        val subText = buildString {
+                            if (data.showArtist && data.artistName.isNotEmpty()) {
+                                append(data.artistName)
+                            }
+                            if (data.showAlbum && data.albumName.isNotEmpty()) {
+                                if (isNotEmpty()) append(" • ")
+                                append(data.albumName)
+                            }
+                        }
+                        if (subText.isNotEmpty()) {
+                            Spacer(GlanceModifier.height(6.dp))
                             Text(
-                                text = data.artistName,
-                                style = TextStyle(fontSize = 17.sp, color = textColor),
-                                maxLines = 1
+                                text = subText,
+                                style = TextStyle(fontSize = 17.sp, color = getSubtextColor(data.widgetTheme)),
+                                maxLines = 2
                             )
                         }
                     }
@@ -1077,32 +1118,10 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 }
                 
                 Spacer(GlanceModifier.defaultWeight())
-                
-                // Separator line
-                Box(
-                    modifier = GlanceModifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 40.dp)
-                        .background(GlanceTheme.colors.onSurfaceVariant)
-                        .height(2.dp)
-                        .cornerRadius(60.dp)
-                ) {}
-                
-                Spacer(GlanceModifier.height(14.dp))
-                
-                // Album info at bottom
-                if (data.showAlbum && data.albumName.isNotEmpty()) {
-                    Text(
-                        text = data.albumName,
-                        style = TextStyle(fontSize = 15.sp, color = textColor),
-                        maxLines = 1
-                    )
-                }
             }
         }
     }
     
-    // ==================== Huge Widget: 5x5 widget (400x300) ====================
     @Composable
     private fun HugeWidgetLayout(modifier: GlanceModifier, data: WidgetData) {
         val bgColor = getBgColor(data.widgetTheme)
@@ -1125,7 +1144,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                     modifier = GlanceModifier.fillMaxWidth()
                 ) {
                     AlbumArtImage(
-                        artworkUri = data.artworkUri,
+                        preloadedBitmap = data.preloadedBitmap,
                         size = 136.dp,
                         cornerRadius = 24.dp
                     )
@@ -1136,11 +1155,20 @@ class RhythmMusicWidget : GlanceAppWidget() {
                             style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold, color = textColor),
                             maxLines = 2
                         )
-                        if (data.showArtist) {
-                            Spacer(GlanceModifier.height(6.dp))
+                        val subText = buildString {
+                            if (data.showArtist && data.artistName.isNotEmpty()) {
+                                append(data.artistName)
+                            }
+                            if (data.showAlbum && data.albumName.isNotEmpty()) {
+                                if (isNotEmpty()) append(" • ")
+                                append(data.albumName)
+                            }
+                        }
+                        if (subText.isNotEmpty()) {
+                            Spacer(GlanceModifier.height(8.dp))
                             Text(
-                                text = data.artistName,
-                                style = TextStyle(fontSize = 18.sp, color = textColor),
+                                text = subText,
+                                style = TextStyle(fontSize = 18.sp, color = getSubtextColor(data.widgetTheme)),
                                 maxLines = 2
                             )
                         }
@@ -1181,27 +1209,6 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 }
                 
                 Spacer(GlanceModifier.defaultWeight())
-                
-                // Separator line
-                Box(
-                    modifier = GlanceModifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 50.dp)
-                        .background(GlanceTheme.colors.onSurfaceVariant)
-                        .height(2.dp)
-                        .cornerRadius(60.dp)
-                ) {}
-                
-                Spacer(GlanceModifier.height(16.dp))
-                
-                // Album info at bottom with larger text
-                if (data.showAlbum && data.albumName.isNotEmpty()) {
-                    Text(
-                        text = data.albumName,
-                        style = TextStyle(fontSize = 16.sp, color = textColor),
-                        maxLines = 2
-                    )
-                }
             }
         }
     }
@@ -1211,34 +1218,10 @@ class RhythmMusicWidget : GlanceAppWidget() {
     @Composable
     private fun AlbumArtImage(
         modifier: GlanceModifier = GlanceModifier,
-        artworkUri: android.net.Uri?,
+        preloadedBitmap: Bitmap?,
         size: Dp? = null,
         cornerRadius: Dp = 20.dp
     ) {
-        val context = LocalContext.current
-        val bitmap = remember(artworkUri) { mutableStateOf<Bitmap?>(null) }
-        
-        LaunchedEffect(artworkUri) {
-            if (artworkUri != null) {
-                try {
-                    val loadedBitmap = withContext(Dispatchers.IO) {
-                        val imageLoader = ImageLoader(context)
-                        val request = ImageRequest.Builder(context)
-                            .data(artworkUri)
-                            .size(Size(300, 300))
-                            .build()
-                        val result = imageLoader.execute(request)
-                        (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                    }
-                    bitmap.value = loadedBitmap
-                } catch (e: Exception) {
-                    bitmap.value = null
-                }
-            } else {
-                bitmap.value = null
-            }
-        }
-        
         val sizingModifier = if (size != null) modifier.size(size) else modifier
         val placeholderSizeDp = if (size != null) {
             val raw = size.value * 0.6f
@@ -1248,10 +1231,10 @@ class RhythmMusicWidget : GlanceAppWidget() {
         }
         
         Box(modifier = sizingModifier) {
-            if (bitmap.value != null) {
+            if (preloadedBitmap != null) {
                 Image(
-                    provider = ImageProvider(bitmap.value!!),
-                    contentDescription = stringResource(R.string.settings_shapes_album_art),
+                    provider = ImageProvider(preloadedBitmap),
+                    contentDescription = LocalContext.current.getString(R.string.settings_shapes_album_art),
                     modifier = GlanceModifier.fillMaxSize().cornerRadius(cornerRadius),
                     contentScale = ContentScale.Crop
                 )
@@ -1273,7 +1256,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
         ) {
             Image(
                 provider = ImageProvider(R.drawable.ic_music_note),
-                contentDescription = stringResource(R.string.rhythmmusicwidget_album_art_placeholder),
+                contentDescription = LocalContext.current.getString(R.string.rhythmmusicwidget_album_art_placeholder),
                 modifier = GlanceModifier.size(placeholderSize),
                 contentScale = ContentScale.Fit,
                 colorFilter = ColorFilter.tint(GlanceTheme.colors.onPrimaryContainer)
@@ -1323,7 +1306,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
         ) {
             Image(
                 provider = ImageProvider(R.drawable.ic_skip_next),
-                contentDescription = stringResource(R.string.onboarding_next),
+                contentDescription = LocalContext.current.getString(R.string.onboarding_next),
                 modifier = GlanceModifier.size(iconSize),
                 colorFilter = ColorFilter.tint(iconColor)
             )
@@ -1347,7 +1330,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
         ) {
             Image(
                 provider = ImageProvider(R.drawable.ic_skip_previous),
-                contentDescription = stringResource(R.string.animatedplaybackcontrols_previous),
+                contentDescription = LocalContext.current.getString(R.string.animatedplaybackcontrols_previous),
                 modifier = GlanceModifier.size(iconSize),
                 colorFilter = ColorFilter.tint(iconColor)
             )
@@ -1396,7 +1379,7 @@ class RhythmMusicWidget : GlanceAppWidget() {
                 provider = ImageProvider(
                     if (isFavorite) R.drawable.ic_favorite_filled else R.drawable.ic_favorite_border
                 ),
-                contentDescription = stringResource(R.string.player_chip_favorite),
+                contentDescription = LocalContext.current.getString(R.string.player_chip_favorite),
                 modifier = GlanceModifier.size(20.dp),
                 colorFilter = ColorFilter.tint(iconColor)
             )
@@ -1490,5 +1473,6 @@ data class WidgetData(
     val showAlbum: Boolean = true,
     val showFavoriteButton: Boolean = true,
     val cornerRadius: Int = 28,
-    val widgetTheme: Int = 0
+    val widgetTheme: Int = 0,
+    val preloadedBitmap: Bitmap? = null
 )

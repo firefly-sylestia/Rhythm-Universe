@@ -14,6 +14,10 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import coil.ImageLoader
+import coil.request.ImageRequest
+import coil.size.Size
+import kotlinx.coroutines.withContext
 
 /**
  * Utility object for updating the Glance-based widget
@@ -61,6 +65,27 @@ object GlanceWidgetUpdater {
         // Update Glance widget state directly using Glance state system
         scope.launch {
             try {
+                // Preload bitmap in background if artworkUri exists
+                val artworkUri = song?.artworkUri?.toString()
+                if (!artworkUri.isNullOrBlank()) {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            val imageLoader = ImageLoader(context)
+                            val request = ImageRequest.Builder(context)
+                                .data(artworkUri)
+                                .size(Size(150, 150))
+                                .build()
+                            val result = imageLoader.execute(request)
+                            val loaded = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                            if (loaded != null) {
+                                RhythmMusicWidget.cacheBitmap(artworkUri, loaded)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("GlanceWidgetUpdater", "Error preloading bitmap in updater", e)
+                    }
+                }
+
                 val manager = GlanceAppWidgetManager(context)
                 val glanceIds = manager.getGlanceIds(RhythmMusicWidget::class.java)
                 

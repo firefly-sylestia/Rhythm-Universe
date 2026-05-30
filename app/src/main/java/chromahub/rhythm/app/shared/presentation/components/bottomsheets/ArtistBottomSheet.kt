@@ -219,16 +219,16 @@ fun ArtistBottomSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            dragHandle = { BottomSheetDefaults.DragHandle() },
+            dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             modifier = Modifier
-                .fillMaxHeight(0.95f)
+                .fillMaxHeight()
                 .imePadding()
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 120.dp)
+                contentPadding = PaddingValues(bottom = 32.dp)
             ) {
                 item {
                     Box(
@@ -254,6 +254,23 @@ fun ArtistBottomSheet(
                                     .blur(20.dp)
                                     .graphicsLayer { alpha = 0.25f }
                             )
+                        }
+
+                        // Drag handle with animation
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.TopCenter)
+                                .padding(top = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                modifier = Modifier
+                                    .width(40.dp)
+                                    .height(4.dp),
+                                shape = RoundedCornerShape(2.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            ) {}
                         }
 
                         Box(

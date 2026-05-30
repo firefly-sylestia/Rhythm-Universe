@@ -87,6 +87,7 @@ fun HomeSectionOrderBottomSheet(
     val showRecentlyAdded by appSettings.homeShowRecentlyAdded.collectAsState()
     val showRecommended by appSettings.homeShowRecommended.collectAsState()
     val showListeningStats by appSettings.homeShowListeningStats.collectAsState()
+    val rhythmGuardMode by appSettings.rhythmGuardMode.collectAsState()
     
     // Fixed sections: DISCOVER always first (not reorderable)
     val fixedSections = setOf("GREETING", "DISCOVER", "MOOD")
@@ -100,6 +101,7 @@ fun HomeSectionOrderBottomSheet(
                 "NEW_RELEASES" to showNewReleases,
                 "RECENTLY_ADDED" to showRecentlyAdded,
                 "RECOMMENDED" to showRecommended,
+                "RHYTHM_GUARD" to (rhythmGuardMode != AppSettings.RHYTHM_GUARD_MODE_OFF),
                 "STATS" to showListeningStats
             )
         )
@@ -118,6 +120,7 @@ fun HomeSectionOrderBottomSheet(
             "NEW_RELEASES" -> Pair("New Releases", MaterialSymbolIcon("new_releases"))
             "RECENTLY_ADDED" -> Pair("Recently Added", RhythmIcons.Music.Album)
             "RECOMMENDED" -> Pair("Recommended", MaterialSymbolIcon("recommend"))
+            "RHYTHM_GUARD" -> Pair("Rhythm Guard", RhythmIcons.Security)
             "STATS" -> Pair("Listening Stats", MaterialSymbolIcon("insert_chart"))
             else -> Pair(sectionId, RhythmIcons.Music.Song)
         }
@@ -345,8 +348,14 @@ fun HomeSectionOrderBottomSheet(
                                         return@IconButton
                                     }
                                     HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.TextHandleMove)
-                                    visibilityMap = visibilityMap.toMutableMap().apply {
-                                        this[sectionId] = !isVisible
+                                    if (sectionId == "RHYTHM_GUARD") {
+                                        appSettings.setRhythmGuardMode(
+                                            if (isVisible) AppSettings.RHYTHM_GUARD_MODE_OFF else AppSettings.RHYTHM_GUARD_MODE_AUTO
+                                        )
+                                    } else {
+                                        visibilityMap = visibilityMap.toMutableMap().apply {
+                                            this[sectionId] = !isVisible
+                                        }
                                     }
                                 },
                                 modifier = Modifier.size(40.dp)
@@ -435,7 +444,7 @@ fun HomeSectionOrderBottomSheet(
                     onClick = {
                         HapticUtils.performHapticFeedback(context, haptics, HapticFeedbackType.LongPress)
                         val defaultOrder = listOf(
-                            "RECENTLY_PLAYED", "ARTISTS",
+                            "RECENTLY_PLAYED", "ARTISTS", "RHYTHM_GUARD",
                             "NEW_RELEASES", "RECENTLY_ADDED", "RECOMMENDED", "STATS"
                         )
                         reorderableList = defaultOrder
@@ -443,6 +452,7 @@ fun HomeSectionOrderBottomSheet(
                             "RECENTLY_PLAYED" to true,
                             "DISCOVER" to true,
                             "ARTISTS" to true,
+                            "RHYTHM_GUARD" to true,
                             "NEW_RELEASES" to true,
                             "RECENTLY_ADDED" to true,
                             "RECOMMENDED" to true,
@@ -479,6 +489,11 @@ fun HomeSectionOrderBottomSheet(
                         appSettings.setHomeShowRecentlyAdded(visibilityMap["RECENTLY_ADDED"] ?: true)
                         appSettings.setHomeShowRecommended(visibilityMap["RECOMMENDED"] ?: true)
                         appSettings.setHomeShowListeningStats(visibilityMap["STATS"] ?: true)
+                        
+                        val rhythmGuardVisible = visibilityMap["RHYTHM_GUARD"] ?: true
+                        appSettings.setRhythmGuardMode(
+                            if (rhythmGuardVisible) AppSettings.RHYTHM_GUARD_MODE_AUTO else AppSettings.RHYTHM_GUARD_MODE_OFF
+                        )
 
                         Toast.makeText(context, R.string.homesectionorderbottomsheet_home_section_order_and, Toast.LENGTH_SHORT).show()
                         scope.launch {

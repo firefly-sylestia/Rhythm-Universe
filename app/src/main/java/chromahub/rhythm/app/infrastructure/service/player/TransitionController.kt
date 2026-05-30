@@ -189,6 +189,17 @@ class TransitionController(
                 engine.cancelNext()
                 engine.masterPlayer.currentMediaItem?.let { scheduleTransitionFor(it) }
             }
+
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int
+            ) {
+                if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+                    Log.d(TAG, "onPositionDiscontinuity: SEEK detected. Old pos=${oldPosition.positionMs}, New pos=${newPosition.positionMs}")
+                    handleSeek(newPosition.positionMs)
+                }
+            }
         }
 
         currentObservedPlayer = engine.masterPlayer
@@ -392,6 +403,63 @@ class TransitionController(
                 Log.d(TAG, "Job cancelled before firing.")
                 engine.setPauseAtEndOfMediaItems(false)
             }
+        }
+    }
+
+    private fun handleSeek(positionMs: Long) {
+        val player = engine.masterPlayer
+        val mediaItem = player.currentMediaItem ?: return
+
+        if (isInDestructiveState()) {
+            Log.d(TAG, "Seek during active transition. Let transition finish.")
+            return
+        }
+
+        Log.d(TAG, "Handling seek to ${positionMs}ms for ${mediaItem.mediaId}")
+
+        // Cancel any pending transitions
+        invalidateScheduledTransitions()
+        transitionSchedulerJob?.cancel()
+
+        // Check if crossfade is globally enabled
+        val isCrossfadeEnabled = appSettings.crossfade.value
+        if (!isCrossfadeEnabled) {
+            Log.d(TAG, "Crossfade globally disabled. Skipping seek transition handling.")
+            engine.cancelNext()
+            engine.setPauseAtEndOfMediaItems(false)
+            setState(TransitionState.IDLE)
+            return
+        }
+
+        // Calculate the transition point
+        val duration = player.duration
+        if (duration == C.TIME_UNSET || duration <= 0) {
+            Log.d(TAG, "Duration unset. Rescheduling transition normally.")
+            engine.cancelNext()
+            scheduleTransitionFor(mediaItem)
+            return
+        }
+
+        val crossfadeDurationMs = (appSettings.crossfadeDuration.value * 1000).toInt()
+        val minFade = 500L
+        val guardWindow = 150L
+
+        val maxFadeDuration = (duration - guardWindow).coerceAtLeast(minFade)
+        val effectiveDuration = crossfadeDurationMs.toLong()
+            .coerceAtLeast(minFade)
+            .coerceAtMost(maxFadeDuration)
+
+        val transitionPoint = duration - effectiveDuration
+
+        if (positionMs >= transitionPoint) {
+            Log.d(TAG, "Seek is PAST the transition point ($transitionPoint <= $positionMs). Skipping crossfade to avoid premature skip.")
+            engine.cancelNext()
+            engine.setPauseAtEndOfMediaItems(false)
+            setState(TransitionState.IDLE)
+        } else {
+            Log.d(TAG, "Seek is BEFORE the transition point ($positionMs < $transitionPoint). Rescheduling transition.")
+            engine.cancelNext()
+            scheduleTransitionFor(mediaItem)
         }
     }
 
