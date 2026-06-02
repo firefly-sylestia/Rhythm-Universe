@@ -34,7 +34,7 @@ This guide covers all methods to download and install Rhythm Music Player on you
 
 1. **Download APK**
    - Visit the [Releases page](https://github.com/cromaguy/Rhythm/releases/latest)
-   - Download the latest `Rhythm-vX.X.X-release.apk` file
+   - Download the latest release APK file
 
 2. **Enable Unknown Sources**
    - Go to **Settings → Security → Install unknown apps**

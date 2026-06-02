@@ -4,99 +4,27 @@ This guide will help you set up and start using Rhythm Music Player after instal
 
 ## 📋 First-Time Setup (Onboarding)
 
-Rhythm features a comprehensive 14-step onboarding process to personalize your music experience.
+Rhythm features a dynamic onboarding process to personalize your music experience. Depending on your choice and playback mode, you will follow either a Quick Setup or a detailed Full Tour.
 
-### Step 1: Welcome Screen 👋
-- Introduction to Rhythm's features
-- Overview of the setup process
-- Click "Get Started" to begin
+### The Onboarding Flow
+1. **Welcome Screen 👋**: Introduction to Rhythm's features.
+2. **App Mode Choice 📱**: Choose between **Local** (device files) or **Streaming** (server-based) playback mode.
+3. **Rhythm Guard 🛡️**: Set up hearing safety defaults based on your age.
+4. **Permission Setup 🔐**: Grant necessary storage and notification permissions.
+5. **Notification Preferences 🔔**: Configure how you receive alerts and playback controls.
+6. **Backup & Restore 💾**: Restore previous settings or configure auto-backups.
+7. **Audio & Playback Settings 🎵**: Configure haptics, landing screens, and playback behavior.
+8. **Theming & Appearance 🎨**: Select themes and enable Material You dynamic colors.
+9. **Gesture Controls 👆**: Learn and customize player and library swipes.
+10. **Library Organization 📚**: Configure tab visibility and folder browsing.
+11. **Media Scanning 🔍**: Set up blacklist/whitelist filters for your library.
+12. **Home Screen Widgets 📱**: Learn about available layouts and customization.
+13. **Integrations 🔗**: Connect Last.fm, Discord, and artwork APIs.
+14. **Rhythm Stats 📊**: Explore listening insights and history.
+15. **Update Preferences ⬆️**: Configure update channels and polling.
+16. **Review Summary**: Final check of your configurations.
+17. **Setup Complete ✅**: Start your initial media scan and begin listening!
 
-### Step 2: Permission Setup 🔐
-Grant the following permissions:
-- **Storage Access** (Required): To scan and play your music files
-- **Notification Access** (Android 13+): For playback controls and updates
-- **Bluetooth Access**: For wireless audio output devices
-
-### Step 3: Notification Preferences 🔔
-- Configure notification settings
-- Set up playback notification preferences
-- Customize notification behavior
-
-### Step 4: Backup & Restore 💾
-- Choose whether to restore from a previous backup
-- Set up automatic backup preferences
-- Configure backup frequency and location
-
-### Step 5: Audio & Playback Settings 🎵
-Configure playback behavior:
-- **Haptic Feedback**: Enable tactile vibrations
-- **Default Landing Screen**: Choose Home or Library
-- **System Volume Control**: Use device volume buttons
-- **Queue Behavior**: Auto-add to queue, clear on new song
-- **Playback Persistence**: Remember repeat and shuffle modes
-- **ExoPlayer Shuffle**: Media player or manual shuffle
-- **Lyrics Display**: Enable synchronized lyrics and source priority
-- Audio focus handling and equalizer access
-
-### Step 6: Theming & Appearance 🎨
-Customize the app's look:
-- Select light/dark theme or system default
-- Enable Material You dynamic colors (Android 12+)
-- Choose accent colors and app appearance
-- Set up custom color schemes
-
-### Step 7: Gesture Controls 👆
-Learn and configure gesture controls:
-- Swipe gestures for player controls
-- Mini player and full player gestures
-- Customizable gesture actions
-
-### Step 8: Library Organization 📚
-Organize your music library:
-- **Advanced Tab Management**: Reorder Songs, Playlists, Albums, Artists, Explorer tabs
-- **Tab Visibility Control**: Show/hide tabs based on preferences
-- **Playlist Management**: Create, import, export, reorder, sort
-- **Explorer Enhancement**: Folder-based browsing
-- **Genre Browsing**: Dedicated genre tab with smart categorization
-
-### Step 9: Media Scanning 🔍
-Configure media scanning:
-- **Scanning Tips**: Understand blacklist vs whitelist filtering
-- **Storage Management**: Cache management information
-- Configure detailed filtering in Settings after setup
-- Review scan results and library statistics
-
-### Step 10: Home Screen Widgets 📱
-Set up home screen widgets:
-- Learn about available widget layouts (2x1 to 5x5)
-- Choose between legacy and modern Glance widgets
-- Widget customization options
-
-### Step 11: Integrations 🔗
-Connect external services:
-- **Last.fm Scrobbling**: Track your listening history
-- **Discord Rich Presence**: Show what you're listening to
-- **API Services**: Deezer (artwork), YouTube Music (artwork), LRCLib (lyrics)
-- **Status Broadcasting**: Share playback status with other apps
-
-### Step 12: Rhythm Stats 📊
-Explore listening statistics:
-- View total listening time
-- Track most played songs and artists
-- Analyze music taste trends
-- Export statistics data
-
-### Step 13: Update Preferences ⬆️
-Setup automatic updates:
-- Configure automatic update checking
-- Choose update channel (stable/beta)
-- Set update notification preferences
-- Enable background update downloads
-
-### Step 14: Setup Complete ✅
-- Review your configuration summary
-- Start initial media scan
-- Begin using Rhythm with all features configured!
 
 ---
 
@@ -179,7 +107,7 @@ Browse by:
 ### Themes
 - **Light Mode**: Bright, clean interface
 - **Dark Mode**: Easy on the eyes
-- **Material You**: Dynamic colors from wallpaper (Android 12+)
+- **Material You**: Dynamic colors from wallpaper
 - **Custom Schemes**: Create your own color palette
 - **Festive Themes**: Seasonal themes (Diwali, Christmas)
 

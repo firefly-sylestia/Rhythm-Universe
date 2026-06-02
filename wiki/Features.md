@@ -3,7 +3,6 @@
 Complete guide to all features and capabilities in Rhythm Music Player.
 
 ---
-
 ## 🎵 Audio Playback
 
 ### Professional Media3 ExoPlayer Engine
@@ -23,12 +22,11 @@ Complete guide to all features and capabilities in Rhythm Music Player.
 - Auto-resume after restart or reboot
 
 ---
-
 ## 🎨 Material You Design
 
 ### Dynamic Theming
-- **Material 3 Expressive**: Updated adaptive shapes, fluid motion, and refined components (v4.2+)
-- **Material You**: Automatic color extraction from wallpaper (Android 12+)
+- **Material 3 Expressive**: Updated adaptive shapes, fluid motion, and refined components
+- **Material You**: Automatic color extraction from wallpaper
 - **Light/Dark Modes**: System, light, or dark theme
 - **Custom Color Schemes**: Create personalized palettes
 - **Festive Themes**: Seasonal decorations (Christmas, Halloween, etc.)
@@ -42,7 +40,6 @@ Complete guide to all features and capabilities in Rhythm Music Player.
 - Adaptive icons and dynamic shortcuts
 
 ---
-
 ## 🎤 Synchronized Lyrics
 
 ### LRCLib Integration
@@ -61,7 +58,6 @@ Complete guide to all features and capabilities in Rhythm Music Player.
 - Offline embedded lyrics fallback
 
 ---
-
 ## 🎛️ Audio Enhancement
 
 ### 10-Band Professional Equalizer
@@ -80,12 +76,11 @@ Complete guide to all features and capabilities in Rhythm Music Player.
 
 ### Audio Effects
 - **Bass Boost**: Enhance low frequencies (0-1000)
-- **Virtualizer/Spatial Audio**: 3D sound effect (Android 13+)
+- **Virtualizer/Spatial Audio**: 3D sound effect
 - **Volume Normalization**: Consistent playback levels
 - **Audio Focus**: Automatic pause for calls and notifications
 
 ---
-
 ## 📚 Library Management
 
 ### Smart Organization
@@ -96,7 +91,7 @@ Complete guide to all features and capabilities in Rhythm Music Player.
 - **Genres**: Genre-based categorization
 - **Folders**: File system browser
 
-### Search & Discovery
+### Search & Library Exploration
 - **Instant Search**: Real-time results across all categories
 - **Fuzzy Matching**: Find songs with approximate spelling
 - **Multi-Category Search**: Search songs, albums, artists simultaneously
@@ -111,7 +106,6 @@ Complete guide to all features and capabilities in Rhythm Music Player.
 - Automatic metadata detection
 
 ---
-
 ## 📋 Playlist Features
 
 ### Playlist Management
@@ -130,8 +124,22 @@ Complete guide to all features and capabilities in Rhythm Music Player.
 - **Cross-Platform**: Compatible with other players
 
 ---
+## 🛡️ Hearing Safety (Rhythm Guard)
 
+Rhythm includes a dedicated safety system to protect your hearing:
+- **Age-Aware Defaults**: Automatic volume capping based on user age.
+- **Manual Protection**: User-configurable volume limits to prevent hearing damage.
+- **Safety Alerts**: Notifications when volume levels exceed safe thresholds.
+---
+## 🌐 Streaming Mode
+
+Beyond local playback, Rhythm supports a complete streaming ecosystem:
+- **Dual-Mode Architecture**: Seamlessly switch between Local and Streaming modes.
+- **Server Integration**: Connect to external streaming servers for your music.
+- **Dedicated UI**: Specialized streaming library and player views.
+---
 ## 📊 Playback Statistics
+
 
 ### Rhythm Stats
 - **Play Count**: Track listening frequency
@@ -244,7 +252,7 @@ Complete guide to all features and capabilities in Rhythm Music Player.
 - **Seek Bar**: Timeline scrubbing
 - **Metadata**: Song, artist, album info
 - **Persistent**: Continues in background
-- **Android 13+ Style**: Modern notification design
+- **Android Style**: Modern notification design
 
 ### Update Notifications
 - New version alerts
@@ -267,8 +275,8 @@ Complete guide to all features and capabilities in Rhythm Music Player.
 ### Permissions
 - Granular permission controls
 - Transparent permission usage
-- Android 13+ media permissions
-- Scoped storage (Android 11+)
+- Android media permissions
+- Scoped storage
 - Minimal permission requirements
 
 ---

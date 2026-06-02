@@ -1,6 +1,6 @@
 Your Music, Your Rhythm
 
-Experience your local music collection like never before. Rhythm is a beautiful, open-source Material You music player built for audiophiles. Enjoy high-quality audio with zero tracking and absolutely no ads.  
+Experience your music collection like never before. Rhythm is a beautiful, open-source Material You music player built for audiophiles, supporting both local and streaming playback. Enjoy high-quality audio with zero tracking and absolutely no ads.  
 
 🔊 Audiophile-Grade Sound
 • High-Res Audio: Preserves native sample rates and bit depths for pure, unaltered sound.
@@ -13,16 +13,18 @@ Experience your local music collection like never before. Rhythm is a beautiful,
 • Responsive Widgets: Control your music straight from your home screen with modern Material 3 layouts.  
 
 📚 Smart Library & Lyrics
+• Dual-Mode Playback: Seamlessly switch between your local music library and streaming servers.
 • Synced Lyrics: Sing along with word-by-word highlighting via LRCLib, or use the local editor for custom offsets.
 • Ultimate Organization: Browse your music by Songs, Albums, Artists, Genres, Playlists, or Folders.
 • Multi-Select Power: Manage your queue, share, or delete multiple tracks at once with batch actions.
 • Reliable Scanning: A full-scan media scanner ensures no songs are ever missed.  
 
 ⚙️ Feature-Packed
+• Rhythm Guard: Integrated hearing safety system with age-aware volume protection.
 • Built-in metadata editor with artwork integration from Deezer and YouTube Music.
-• Sleep timer, playback statistics, and guard support.
+• Sleep timer, playback statistics, and stability tools for a crash-free experience.
 • Easy queue management and M3U playlist import/export.
 • In-app auto-updates directly from GitHub.  
 
 🔒 100% Private
-Rhythm respects your data. There are no ads, no analytics, and no accounts required. It is completely offline-capable and proudly open-source (GPL v3).  
+Rhythm respects your data. There are no ads, no analytics, and no accounts required. It is completely offline-capable and proudly open-source (GPL v3).

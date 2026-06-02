@@ -6,37 +6,37 @@ This document details the technical architecture and libraries used in Rhythm Mu
 
 ### UI & Design
 
-| Technology | Version | Purpose |
-|:---|:---:|:---|
-| **Jetpack Compose** | Latest | Modern declarative UI toolkit for Android |
-| **Material 3** | Latest | Material Design components and theming system |
-| **Material Icons Extended** | Latest | Comprehensive icon library |
-| **AndroidX Palette** | Latest | Dynamic color extraction from images |
+| Technology | Purpose |
+|:---|:---|
+| **Jetpack Compose** | Modern declarative UI toolkit for Android |
+| **Material 3** | Material Design components and theming system |
+| **Material Icons Extended** | Comprehensive icon library |
+| **AndroidX Palette** | Dynamic color extraction from images |
 
 ### Audio & Media
 
-| Technology | Version | Purpose |
-|:---|:---:|:---|
-| **Media3 ExoPlayer** | 1.9.2 | Professional-grade media playback engine |
-| **FFmpeg Decoder** | 1.9.0+1 | Extended codec support (EAC3-JOC, AC-3, WMA) |
-| **MediaStore API** | Latest | Android media content provider |
-| **AudioFocus** | Latest | Audio focus management for calls/notifications |
+| Technology | Purpose |
+|:---|:---|
+| **Media3 ExoPlayer** | Professional-grade media playback engine |
+| **FFmpeg Decoder** | Extended codec support (EAC3-JOC, AC-3, WMA) |
+| **MediaStore API** | Android media content provider |
+| **AudioFocus** | Audio focus management for calls/notifications |
 
 ### Widgets
 
-| Technology | Version | Purpose |
-|:---|:---:|:---|
-| **Glance** | 1.1.1 | Modern reactive widgets with Material 3 design |
-| **RemoteViews** | Latest | Legacy widget support |
-| **WorkManager** | Latest | Background widget updates |
+| Technology | Purpose |
+|:---|:---|
+| **Glance** | Modern reactive widgets with Material 3 design |
+| **RemoteViews** | Legacy widget support |
+| **WorkManager** | Background widget updates |
 
 ### Programming Language
 
-| Technology | Version | Purpose |
-|:---|:---:|:---|
-| **Kotlin** | Latest | 100% Kotlin codebase |
-| **Kotlin Coroutines** | Latest | Asynchronous programming |
-| **Kotlin Flow** | Latest | Reactive streams and state management |
+| Technology | Purpose |
+|:---|:---|
+| **Kotlin** | 100% Kotlin codebase |
+| **Kotlin Coroutines** | Asynchronous programming |
+| **Kotlin Flow** | Reactive streams and state management |
 
 ## 🎨 Architecture
 
@@ -331,12 +331,12 @@ plugins {
 
 android {
     namespace = "chromahub.rhythm.app"
-    compileSdk = 36
+    compileSdk = <latest>
     
     defaultConfig {
         applicationId = "chromahub.rhythm.app"
-        minSdk = 26
-        targetSdk = 36
+        minSdk = <min_sdk>
+        targetSdk = <latest>
     }
     
     buildFeatures {
@@ -345,7 +345,7 @@ android {
     }
     
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
+        kotlinCompilerExtensionVersion = "<version>"
     }
 }
 ```
@@ -355,10 +355,10 @@ android {
 ```toml
 # gradle/libs.versions.toml
 [versions]
-kotlin = "1.9.22"
-compose = "1.6.0"
-material3 = "1.2.0"
-exoplayer = "1.9.0"
+kotlin = "<version>"
+compose = "<version>"
+material3 = "<version>"
+exoplayer = "<version>"
 
 [libraries]
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }

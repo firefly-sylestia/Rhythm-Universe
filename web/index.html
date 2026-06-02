@@ -108,12 +108,13 @@
         </div>
         <nav class="mobile-nav-links">
             <ul>
-                <li><a href="#features">Features</a></li>
-                <li><a href="#showcase">Showcase</a></li>
-                <li><a href="updates.html">Updates</a></li>
-                <li><a href="help.html">Help</a></li>
-                <li><a href="privacy.html">Privacy</a></li>
-                <li><a href="#contact">Contact</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#showcase">Showcase</a></li>
+                        <li><a href="updates.html">Updates</a></li>
+                        <li><a href="help.html">Help</a></li>
+                        <li><a href="privacy.html">Privacy</a></li>
+                        <li><a href="#contact">Contact</a></li>
+
             </ul>
         </nav>
         <div class="mobile-auth-buttons">
@@ -141,11 +142,11 @@
         </div>
         <div class="container">
             <div class="hero-content">
-                <div class="hero-text">
-                    <h1>Professional Music Player with Material You Excellence</h1>
-                    <p>Rhythm combines studio-quality audio, intelligent features, and breathtaking Material You Expressive design. Experience gapless playback, High-Resolution audio, synchronized lyrics, advanced equalization, multi-select library actions, and more in a beautifully crafted interface. <strong>v4.2 now available — and coming soon to Google Play Store!</strong></p>
-                    <a href="#downloadOptionsSection" class="btn btn-primary scroll-to-download">Download Now <i class="fas fa-download"></i></a>
-                </div>
+                    <div class="hero-text">
+                        <h1>Professional Music Player with Material You Excellence</h1>
+                        <p>Rhythm combines studio-quality audio, intelligent features, and breathtaking Material You Expressive design. Experience gapless playback, High-Resolution audio, synchronized lyrics, advanced equalization, and a personalized onboarding experience in a beautifully crafted interface. <strong>Coming soon to Google Play Store!</strong></p>
+                        <a href="#downloadOptionsSection" class="btn btn-primary scroll-to-download">Download Now <i class="fas fa-download"></i></a>
+                    </div>
                 <div class="hero-image">
                     <img src="assets/hero.png" alt="Rhythm Home Screen" loading="eager">
                 </div>
@@ -159,31 +160,42 @@
                 <h2>What Makes Rhythm Special</h2>
                 <p>Experience professional-grade music playback with intelligent features, stunning Material You design, and seamless cross-device performance</p>
             </div>
-            <div class="features-grid">
+            <div class="features-image-container" style="text-align: center; margin-bottom: 40px;">
+                <img src="assets/Features.png" alt="Rhythm Features Overview" style="max-width: 100%; height: auto; border-radius: 20px;">
+            </div>
+            <!-- <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-palette"></i>
                     </div>
                     <h3>Material You Excellence</h3>
-                    <p>Dynamic colors extracted from wallpaper (Android 12+), seamless light/dark theme transitions, physics-based animations, responsive design for phones/tablets/foldables, and custom theme customization with color schemes and fonts.</p>
+                    <p>Dynamic colors extracted from wallpaper, seamless light/dark theme transitions, physics-based animations, responsive design for phones/tablets/foldables, and custom theme customization with color schemes and fonts.</p>
                     <a href="https://github.com/cromaguy/Rhythm#what-makes-rhythm-special">Learn more <i class="fas fa-chevron-right"></i></a>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-music"></i>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-music"></i>
+                        </div>
+                        <h3>Professional Audio Engine</h3>
+                        <p>Dual-mode architecture for Local and Streaming playback, powered by Media3 ExoPlayer + FFmpeg decoder with studio-quality gapless playback, High-Resolution mode, EAC3-JOC/Dolby Atmos support, and formats like FLAC, ALAC, Opus, and Vorbis.</p>
+                        <a href="https://github.com/cromaguy/Rhythm#what-makes-rhythm-special">Learn more <i class="fas fa-chevron-right"></i></a>
                     </div>
-                    <h3>Professional Audio Engine</h3>
-                    <p>Media3 ExoPlayer 1.9.2 + FFmpeg decoder with studio-quality gapless playback, High-Resolution mode, EAC3-JOC/Dolby Atmos support, and high-resolution formats (FLAC, ALAC, MP3, AAC, OGG, WAV).</p>
-                    <a href="https://github.com/cromaguy/Rhythm#what-makes-rhythm-special">Learn more <i class="fas fa-chevron-right"></i></a>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-brain"></i>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h3>Intelligent Features</h3>
+                        <p>Real-time LRCLib lyrics with tap-to-seek, fuzzy search across library, advanced shuffle algorithms, multi-select batch operations, auto-resume playback, album shuffle, genre-based organization, and comprehensive metadata editing.</p>
+                        <a href="https://github.com/cromaguy/Rhythm#what-makes-rhythm-special">Learn more <i class="fas fa-chevron-right"></i></a>
                     </div>
-                    <h3>Intelligent Features</h3>
-                    <p>Real-time LRCLib lyrics with tap-to-seek, fuzzy search across library, advanced shuffle algorithms, multi-select batch operations, auto-resume playback, album shuffle, genre-based organization, and comprehensive metadata editing.</p>
-                    <a href="https://github.com/cromaguy/Rhythm#what-makes-rhythm-special">Learn more <i class="fas fa-chevron-right"></i></a>
-                </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <h3>Playback Insights</h3>
+                        <p>Deep dive into your listening habits with Rhythm Stats: track play counts, total listening hours, most played songs/artists, genre distribution analysis, and visualize your habits over time with listening trends.</p>
+                        <a href="https://github.com/cromaguy/Rhythm#what-makes-rhythm-special">Learn more <i class="fas fa-chevron-right"></i></a>
+                    </div>
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-cloud"></i>
@@ -200,15 +212,31 @@
                     <p>Professional 10-band equalizer with presets, advanced sleep timer with fade-out, sophisticated device output management, intelligent cache system, whitelist/blacklist media scanning, and deep customization options throughout.</p>
                     <a href="https://github.com/cromaguy/Rhythm#what-makes-rhythm-special">Learn more <i class="fas fa-chevron-right"></i></a>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-shield-alt"></i>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h3>Reliable & Stable</h3>
+                        <p>Memory leak detection, ANR monitoring, crash logging, beta testing program, and continuous improvements for the best user experience.</p>
+                        <a href="https://github.com/cromaguy/Rhythm#what-makes-rhythm-special">Learn more <i class="fas fa-chevron-right"></i></a>
                     </div>
-                    <h3>Reliable & Stable</h3>
-                    <p>Memory leak detection, ANR monitoring, crash logging, beta testing program, and continuous improvements for the best user experience.</p>
-                    <a href="https://github.com/cromaguy/Rhythm#what-makes-rhythm-special">Learn more <i class="fas fa-chevron-right"></i></a>
-                </div>
-            </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-heartbeat"></i>
+                        </div>
+                        <h3>Hearing Safety</h3>
+                        <p>Rhythm Guard protects your hearing with age-aware volume defaults, user-configurable volume limits, and real-time safety alerts when audio levels exceed safe thresholds.</p>
+                        <a href="https://github.com/cromaguy/Rhythm#what-makes-rhythm-special">Learn more <i class="fas fa-chevron-right"></i></a>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-border-all"></i>
+                        </div>
+                        <h3>Adaptive Widgets</h3>
+                        <p>Experience seamless control with modern Material 3 Glance widgets. Featuring 6 responsive layouts (up to 4x4), dynamic colors, real-time playback sync, and customizable transparency.</p>
+                        <a href="https://github.com/cromaguy/Rhythm#what-makes-rhythm-special">Learn more <i class="fas fa-chevron-right"></i></a>
+                    </div>
+            </div> -->
             </div>
         </div>
     </section>
@@ -249,19 +277,16 @@
                         <img src="assets/ScreenShots/Library_Playlists.png" alt="Rhythm Library Playlists" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Library_AlbumBS.png" alt="Rhythm Album Bottom Sheet" loading="lazy">
-                    </div>
-                    <div class="showcase-carousel-item">
                         <img src="assets/ScreenShots/Library_Explorer.png" alt="Rhythm Library Explorer" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Library_Tab_Order.png" alt="Rhythm Library Tab Order" loading="lazy">
+                        <img src="assets/ScreenShots/Language_Switcher.png" alt="Rhythm Language Switcher" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
                         <img src="assets/ScreenShots/Search.png" alt="Rhythm Search Screen" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Search_Res.png" alt="Rhythm Search Results" loading="lazy">
+                        <img src="assets/ScreenShots/Multi-Selection.png" alt="Rhythm Multi-Selection" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
                         <img src="assets/ScreenShots/Settings.png" alt="Rhythm Settings" loading="lazy">
@@ -282,7 +307,7 @@
                         <img src="assets/ScreenShots/Playlist.png" alt="Rhythm Playlist" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Playist_Management.png" alt="Playlist Management" loading="lazy">
+                        <img src="assets/ScreenShots/Home_Management.png" alt="Rhythm Home Management" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
                         <img src="assets/ScreenShots/Artist.png" alt="Rhythm Artist Screen" loading="lazy">
@@ -297,31 +322,32 @@
                         <img src="assets/ScreenShots/Sleep_Timer.png" alt="Rhythm Sleep Timer" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Sleep_Timer3.png" alt="Rhythm Sleep Timer 3" loading="lazy">
+                        <img src="assets/ScreenShots/Sleep_Timer2.png" alt="Rhythm Sleep Timer 2" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Cache_Management.png" alt="Cache Management" loading="lazy">
+                        <img src="assets/ScreenShots/Rhythm_Stats.png" alt="Rhythm Stats" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Backup_Restore.png" alt="Backup Restore" loading="lazy">
+                        <img src="assets/ScreenShots/AutoEQ.png" alt="Rhythm AutoEQ" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Integrations.png" alt="API / Integrations" loading="lazy">
+                        <img src="assets/ScreenShots/Tour.png" alt="Rhythm Tour" loading="lazy">
                     </div>
-                    <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Media_Scan.png" alt="Media Scanner" loading="lazy">
-                    </div>
-                    <!-- Single Media_Scan image used for scanner variants -->
                     <div class="showcase-carousel-item">
                         <img src="assets/ScreenShots/Edit_Metadata.png" alt="Metadata Editor" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Themes.png" alt="Rhythm Themes" loading="lazy">
+                        <img src="assets/ScreenShots/Lyrics_Editor.png" alt="Lyrics Editor" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Themes3.png" alt="Rhythm Themes 2" loading="lazy">
+                        <img src="assets/ScreenShots/Edit_Metadata.png" alt="Metadata Editor" loading="lazy">
                     </div>
-                    <!-- Deduplicated Themes image (Themes3) -->
+                    <div class="showcase-carousel-item">
+                        <img src="assets/ScreenShots/Modes.png" alt="Rhythm Modes" loading="lazy">
+                    </div>
+                    <div class="showcase-carousel-item">
+                        <img src="assets/ScreenShots/Shapes.png" alt="Rhythm Shapes" loading="lazy">
+                    </div>
                     <div class="showcase-carousel-item">
                         <img src="assets/ScreenShots/Song_Info.png" alt="Song Information" loading="lazy">
                     </div>
@@ -329,7 +355,7 @@
                         <img src="assets/ScreenShots/About.png" alt="About Rhythm" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
-                        <img src="assets/ScreenShots/Splash.png" alt="Rhythm Splash Screen" loading="lazy">
+                        <img src="assets/ScreenShots/Full_Screen_Lyrics_View.png" alt="Full Screen Lyrics" loading="lazy">
                     </div>
                     <div class="showcase-carousel-item">
                         <img src="assets/ScreenShots/Updater.png" alt="Rhythm Updater" loading="lazy">
@@ -340,7 +366,7 @@
             </div>
         </div>
     </section>
-
+    
     <section class="news-carousel-section">
         <div class="container">
             <div class="section-header">
@@ -356,8 +382,9 @@
             </div>
         </div>
     </section>
-
+    
     <section class="translation-section" id="translationSection">
+
         <div class="container">
             <div class="section-header">
                 <h2>Help Translate Rhythm</h2>

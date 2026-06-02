@@ -44,7 +44,7 @@ Building and maintaining **Rhythm** is a massive labor of love, provided complet
 
 ## ✨ Why Choose Rhythm?
 
-Rhythm (now at **v4.5**) is a modern, open-source music player built with **Material 3 Expressive** design. It delivers professional-grade audio with High-Resolution playback, EAC3-JOC/Dolby Atmos via FFmpeg, and completely respects your privacy.
+Rhythm is a modern, open-source music player built with **Material 3 Expressive** design. It delivers professional-grade audio with High-Resolution playback, EAC3-JOC/Dolby Atmos via FFmpeg, and completely respects your privacy.
 
 | 🎨 **Design & UI** | 🎵 **Audio Engine** |
 | :--- | :--- |
@@ -57,6 +57,8 @@ Rhythm (now at **v4.5**) is a modern, open-source music player built with **Mate
 | **Synced Lyrics:** LRCLib integration with word-by-word highlighting. | **100% FOSS:** Completely open-source with zero tracking. |
 | **Smart Library:** Multi-select batch operations for songs and albums. | **Offline Capable:** Designed to work flawlessly without the internet. |
 | **Playback Stats:** Comprehensive listening statistics and insights. | **Local First:** Your data and habits stay securely on your device. |
+| **Streaming Mode:** Dual-mode architecture for local and server playback. | |
+| **Rhythm Guard:** Integrated hearing safety and volume protection. | |
 
 > **System Requirements:** Android 8.0+ (API 26) • 2GB RAM • 50MB Storage
 
@@ -123,7 +125,7 @@ Choose your preferred platform to download the latest version of Rhythm:
 
 </div>
 
-> 💡 **Note:** F-Droid, IzzyOnDroid, and GitHub releases include all features, including Deezer & YouTube Music artwork, LRCLib lyrics, and YouTube Music search. See [Build Variants](docs/BUILD_VARIANTS.md) for details. Need help? Check out the [Installation Guide](https://github.com/cromaguy/Rhythm/wiki/Installation-Guide).
+> 💡 **Note:** F-Droid, IzzyOnDroid, and GitHub releases include all features, including Deezer & YouTube Music artwork, LRCLib lyrics, and YouTube Music artwork. See [Build Variants](docs/BUILD_VARIANTS.md) for details. Need help? Check out the [Installation Guide](https://github.com/cromaguy/Rhythm/wiki/Installation-Guide).
 
 ---
 
