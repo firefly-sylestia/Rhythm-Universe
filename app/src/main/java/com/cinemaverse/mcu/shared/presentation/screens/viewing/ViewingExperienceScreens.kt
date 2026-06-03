@@ -157,9 +157,8 @@ private fun ViewingHomeContent(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val message by ViewingMetadataStore.statusMessage
-    val isFetching by ViewingMetadataStore.isFetching
+    val isIndexing by ViewingMetadataStore.isFetching
     val marvel = remember(data) { data.allItems.filter { it.universe == "MCU" }.take(14) }
-    val dc = remember(data) { data.allItems.filter { it.universe in setOf("DCU", "DCEU", "Elseworlds") }.take(14) }
     val lists = remember(data) { data.allLists.take(12) }
 
     LazyColumn(
@@ -167,7 +166,7 @@ private fun ViewingHomeContent(
         contentPadding = PaddingValues(ViewingUi.screenHPad, ViewingUi.topPad, ViewingUi.screenHPad, ViewingUi.bottomPad),
         verticalArrangement = Arrangement.spacedBy(ViewingUi.sectionGap)
     ) {
-        item { CinemaverseHeader(onOpenSettings = onOpenSettings) }
+        item { MarvelDatabaseHeader(onOpenSettings = onOpenSettings) }
         item {
             HeroViewingCard(
                 item = data.featuredItem,
@@ -179,14 +178,13 @@ private fun ViewingHomeContent(
         item {
             ApiStateCard(
                 message = message,
-                isFetching = isFetching,
+                isIndexing = isIndexing,
                 onOpenSettings = onOpenSettings,
-                onFetch = { coroutineScope.launch { ViewingMetadataStore.fetchAll(data) } }
+                onIndex = { coroutineScope.launch { ViewingMetadataStore.fetchAll(data) } }
             )
         }
         item { PosterRail("Marvel", "MCU films, series, specials, One-Shots, and Defenders entries", marvel, onOpenItem) }
-        item { PosterRail("DC", "DCU, DCEU, Elseworlds, and connected TV", dc, onOpenItem) }
-        item { ListRail("Viewing orders", "Release, timeline, phase/chapter, saga, and collection lists", lists, onOpenList) }
+        item { ListRail("Watch orders", "Release, chronological, phase, saga, and curated Marvel watch orders", lists, onOpenList) }
     }
 }
 
@@ -215,9 +213,10 @@ fun ViewingLibraryScreen(
         else -> {
             val filtered = remember(tab, sortMode, data) {
                 val base = when (tab) {
-                    "Marvel" -> data.allItems.filter { it.universe == "MCU" }
-                    "DC" -> data.allItems.filter { it.universe in setOf("DCU", "DCEU", "Elseworlds") }
-                    else -> data.allItems
+                    "Movies" -> data.allItems.filter { it.type == com.cinemaverse.mcu.shared.data.viewing.ViewingType.MOVIE }
+                    "Series" -> data.allItems.filter { it.type == com.cinemaverse.mcu.shared.data.viewing.ViewingType.SERIES }
+                    "Specials" -> data.allItems.filter { it.type == com.cinemaverse.mcu.shared.data.viewing.ViewingType.SPECIAL || it.type == com.cinemaverse.mcu.shared.data.viewing.ViewingType.SHORT || it.type == com.cinemaverse.mcu.shared.data.viewing.ViewingType.ONE_SHOT }
+                    else -> data.allItems.filter { it.universe == "MCU" || it.studio?.contains("Marvel", ignoreCase = true) == true || it.franchise?.contains("Marvel", ignoreCase = true) == true }
                 }
                 base.sortedFor(sortMode)
             }
@@ -226,14 +225,14 @@ fun ViewingLibraryScreen(
                 contentPadding = PaddingValues(ViewingUi.screenHPad, ViewingUi.topPad, ViewingUi.screenHPad, ViewingUi.bottomPad),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-                item { CinemaverseHeader(title = "Library", subtitle = "Titles • Universes • Phases • Collections • Watch orders", onOpenSettings = onOpenSettings) }
-                item { LibraryTabs(tab, onTab = { tab = it }) }
+                item { MarvelDatabaseHeader(title = "Database", subtitle = "Titles • Movies • Series • Characters • Phases • Sagas • Watch orders", onOpenSettings = onOpenSettings) }
+                item { MarvelLibraryTabs(tab, onTab = { tab = it }) }
                 item { SortChips(sortMode, { sortMode = it }) }
                 if (tab == "Collections") {
                     items(data.allLists, key = { it.id }) { list -> WideListCard(list, onClick = { selectedListId = list.id }) }
                 } else {
                     item { ListRail("Phases / chapters", "Tap any chip to open a functional filtered route", data.allLists.filter { it.category == "Phases / Chapters" || it.category == "Saga Order" }.take(18), onOpenList = { selectedListId = it.id }) }
-                    if (filtered.isEmpty()) item { EmptyState("No titles here yet", "Try another universe or collection tab.") }
+                    if (filtered.isEmpty()) item { EmptyState("No Marvel records here yet", "Try another phase, saga, title type, or watch-order filter.") }
                     items(filtered, key = { it.id }) { item -> ViewingOrderRow(item, sortMode.orderFor(item), onClick = { selectedItemId = item.id; onOpenDetail() }) }
                 }
             }
@@ -264,7 +263,7 @@ fun ViewingSearchScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Cinemaverse Search") },
+                title = { Text("Marvel Database Search") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(RhythmIcons.Back, contentDescription = "Back") } },
                 actions = { SettingsIconAction(onOpenSettings) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f))
@@ -277,8 +276,8 @@ fun ViewingSearchScreen(
             verticalArrangement = Arrangement.spacedBy(ViewingUi.cardGap)
         ) {
             item { OutlinedTextField(value = query, onValueChange = { query = it }, placeholder = { Text("Search title, cast, director, phase, year, IMDb ID") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
-            if (items.isEmpty() && lists.isEmpty()) item { EmptyState("No viewing results", "Try another universe/category or fetch poster metadata later.") }
-            if (lists.isNotEmpty()) item { ListRail("Matching lists", "${lists.size} viewing orders", lists, onOpenList = {}) }
+            if (items.isEmpty() && lists.isEmpty()) item { EmptyState("No database results", "Try a phase, saga, character, IMDb ID, or collection.") }
+            if (lists.isNotEmpty()) item { ListRail("Matching watch orders", "${lists.size} viewing orders", lists, onOpenList = {}) }
             items(items, key = { it.id }) { item -> ViewingOrderRow(item, item.releaseOrder ?: 0, onClick = { selectedItemId = item.id; onOpenDetail(item) }) }
         }
     }
@@ -349,13 +348,13 @@ fun ViewingDetailScreen(
             item {
                 ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                     Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Synopsis / lore", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(selected.overview ?: selected.plot ?: selected.description ?: "No overview available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             item { CreditsBlock(selected) }
-            if (related.isNotEmpty()) item { PosterRail("Related titles", selected.franchise ?: selected.universe ?: "Cinemaverse", related, onOpenItem = {}) }
+            if (related.isNotEmpty()) item { PosterRail("Related titles", selected.franchise ?: selected.universe ?: "Marvel Database", related, onOpenItem = {}) }
             item { Text("Metadata source: ${selected.metadataSource} • Updated ${selected.lastUpdated ?: "offline catalog"}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
@@ -381,10 +380,10 @@ private fun ViewingListDetailScreen(list: ViewingList, onBack: () -> Unit, onOpe
 }
 
 @Composable
-private fun CinemaverseHeader(title: String = "Cinemaverse", subtitle: String = "Marvel • DC • Release orders • Trailers", onOpenSettings: () -> Unit) {
+private fun MarvelDatabaseHeader(title: String = "Marvel Database", subtitle: String = "Movies • Series • Phases • Sagas • Timelines", onOpenSettings: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.primaryContainer, tonalElevation = 3.dp) {
-            Image(painter = painterResource(R.drawable.ic_cinemaverse), contentDescription = "Cinemaverse", modifier = Modifier.size(58.dp).padding(12.dp))
+            Image(painter = painterResource(R.drawable.ic_cinemaverse), contentDescription = "Marvel Database", modifier = Modifier.size(58.dp).padding(12.dp))
         }
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -407,7 +406,7 @@ private fun HeroViewingCard(item: ViewingItem, list: ViewingList, onOpenDetail: 
                 Text("${list.title} • ${list.items.size} titles", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(onClick = onOpenDetail) { Text("Details") }
-                    OutlinedButton(onClick = onOpenLibrary) { Text("Library") }
+                    OutlinedButton(onClick = onOpenLibrary) { Text("Database") }
                 }
             }
         }
@@ -479,9 +478,9 @@ private fun ViewingOrderRow(item: ViewingItem, order: Int, onClick: () -> Unit) 
 }
 
 @Composable
-private fun LibraryTabs(selected: String, onTab: (String) -> Unit) {
+private fun MarvelLibraryTabs(selected: String, onTab: (String) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(ViewingUi.chipGap)) {
-        items(listOf("Titles", "Marvel", "DC", "Collections", "Watchlists")) { tab -> FilterChip(selected = selected == tab, onClick = { onTab(tab) }, label = { Text(tab) }) }
+        items(listOf("All", "Movies", "Series", "Specials", "Collections", "Watchlist")) { tab -> FilterChip(selected = selected == tab, onClick = { onTab(tab) }, label = { Text(tab) }) }
     }
 }
 
@@ -513,7 +512,7 @@ private fun MetadataGrid(item: ViewingItem) {
 private fun CreditsBlock(item: ViewingItem) {
     ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Cast & crew", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("Characters & credits", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             DetailLine("Director", item.director.orEmpty())
             DetailLine("Writer", item.writer.orEmpty())
             DetailLine("Actors", item.actors.joinToString(" • "))
@@ -547,15 +546,15 @@ private fun HeroListCard(list: ViewingList) {
 }
 
 @Composable
-private fun ApiStateCard(message: String, isFetching: Boolean, onOpenSettings: () -> Unit, onFetch: () -> Unit) {
+private fun ApiStateCard(message: String, isIndexing: Boolean, onOpenSettings: () -> Unit, onIndex: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer), shape = MaterialTheme.shapes.large) {
         Row(Modifier.fillMaxWidth().padding(ViewingUi.cardPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f)) {
-                Text("Poster & database fetch", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text("OMDb database indexing", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
                 Text(message, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.78f))
             }
             Column(horizontalAlignment = Alignment.End) {
-                TextButton(onClick = onFetch, enabled = !isFetching) { Text(if (isFetching) "Loading" else "Fetch") }
+                TextButton(onClick = onIndex, enabled = !isIndexing) { Text(if (isIndexing) "Loading" else "Index") }
                 TextButton(onClick = onOpenSettings) { Text("Settings") }
             }
         }
@@ -599,7 +598,7 @@ private fun rememberEnrichedItem(item: ViewingItem): ViewingItem {
 @Composable
 private fun PosterBackdrop(item: ViewingItem, modifier: Modifier, contentScale: ContentScale, shape: RoundedCornerShape? = null) {
     val m = if (shape != null) modifier.clip(shape) else modifier
-    ArtworkImage(ViewingArtworkUtils.resolveBackdrop(item) ?: ViewingArtworkUtils.resolvePoster(item), "Poster for ${item.title}", m, contentScale)
+    ArtworkImage(ViewingArtworkUtils.resolveBackdrop(item) ?: ViewingArtworkUtils.resolvePoster(item), "Poster record for ${item.title}", m, contentScale)
 }
 
 @Composable

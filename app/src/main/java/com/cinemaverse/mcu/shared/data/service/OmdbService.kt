@@ -12,9 +12,11 @@ import java.net.URLEncoder
 import java.net.URL
 
 class OmdbService(
-    private val apiKey: String = BuildConfig.OMDB_API_KEY
+    private val apiKey: String = BuildConfig.OMDB_API_KEY,
+    private val secondaryApiKey: String = BuildConfig.OMDB_SECONDARY_API_KEY
 ) {
-    val hasApiKey: Boolean get() = apiKey.isNotBlank()
+    private val apiKeys: List<String> = listOf(apiKey, secondaryApiKey).filter { it.isNotBlank() }.distinct()
+    val hasApiKey: Boolean get() = apiKeys.isNotEmpty()
 
     suspend fun getMovieByTitle(title: String, year: String? = null): Result<ViewingItem> = withContext(Dispatchers.IO) {
         if (!hasApiKey) return@withContext Result.failure(IllegalStateException("OMDb API key is missing; using local viewing-list data."))
@@ -97,12 +99,24 @@ class OmdbService(
     }
 
     private fun request(query: String): JSONObject {
-        val url = URL("https://www.omdbapi.com/?apikey=${apiKey.urlEncode()}&$query")
-        val connection = (url.openConnection() as HttpURLConnection).apply {
-            connectTimeout = 8_000
-            readTimeout = 8_000
+        var lastError: Throwable? = null
+        apiKeys.forEach { key ->
+            runCatching {
+                val url = URL("https://www.omdbapi.com/?apikey=${key.urlEncode()}&$query")
+                val connection = (url.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8_000
+                    readTimeout = 8_000
+                }
+                val body = connection.inputStream.bufferedReader().use { it.readText() }
+                val json = JSONObject(body)
+                val error = json.optString("Error")
+                if (json.optString("Response") == "False" && error.contains("request limit", ignoreCase = true)) {
+                    throw IllegalStateException(error)
+                }
+                return json
+            }.onFailure { lastError = it }
         }
-        return connection.inputStream.bufferedReader().use { JSONObject(it.readText()) }
+        throw lastError ?: IllegalStateException("OMDb request failed because no API key is configured.")
     }
 }
 

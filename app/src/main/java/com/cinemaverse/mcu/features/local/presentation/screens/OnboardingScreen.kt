@@ -55,6 +55,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -198,6 +200,45 @@ fun OnboardingScreen(
     val isStreamingServiceConnected = remember(sessions, streamingService) {
         sessions[streamingService]?.isConnected == true
     }
+
+    com.cinemaverse.mcu.shared.presentation.components.database.MarvelDatabaseScaffold(
+        universe = com.cinemaverse.mcu.shared.presentation.theme.database.MarvelDatabaseUniverse.TVA,
+        commandBar = {
+            com.cinemaverse.mcu.shared.presentation.components.database.DatabaseCommandBar(
+                primaryLabel = if (currentStep == OnboardingStep.COMPLETE) "Enter database" else "Continue setup",
+                secondaryLabel = "Skip tour",
+                onPrimary = { if (currentStep == OnboardingStep.COMPLETE) onFinish() else onNextStep() },
+                onSecondary = onSkipFullTour
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("INITIALIZE MARVEL DATABASE REACTOR", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    Text("Marvel Database setup", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+                    Text("Configure catalog indexing, poster-adaptive color, universe accents, watch-order defaults, and one-hand reach behavior. Critical controls stay in the lower command deck.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            item {
+                com.cinemaverse.mcu.shared.presentation.components.database.DatabaseSurface(selected = true) {
+                    Column(Modifier.fillMaxWidth().padding(cardPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Setup stage", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(currentStep.name.lowercase().replace('_', ' ').replaceFirstChar { it.titlecase() }, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        com.cinemaverse.mcu.shared.presentation.components.database.TimelineTrack("Database initialization", ((currentStep.ordinal + 1).toFloat() / OnboardingStep.entries.size.toFloat()).coerceIn(0f, 1f))
+                    }
+                }
+            }
+            item { com.cinemaverse.mcu.shared.presentation.components.database.MetadataPanel("Catalog source", "Bundled Marvel cinematic database with OMDb metadata and poster-first artwork enrichment.") }
+            item { com.cinemaverse.mcu.shared.presentation.components.database.MetadataPanel("Visual system", "Reactor, Wakanda, Mystic, Cosmic, TVA, Spider-Verse, Street-Level, and Supernatural accent palettes are available.") }
+            item { com.cinemaverse.mcu.shared.presentation.components.database.MetadataPanel("Reach mode", "Swipe down on major database screens to shift command content into thumb range; swipe up or wait to exit.") }
+        }
+    }
+    return
     
     val visibleSteps = remember(appMode) {
         val list = mutableListOf<OnboardingStep>()

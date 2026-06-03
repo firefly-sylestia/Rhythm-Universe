@@ -25,15 +25,15 @@ object ViewingMetadataStore {
     suspend fun fetchAll(data: McuAssetDataSource.ViewingAssetData) {
         if (isFetching.value) return
         isFetching.value = true
-        statusMessage.value = "Fetching TMDB posters, backdrops, descriptions, ratings, and cast…"
+        statusMessage.value = "Indexing Marvel database with OMDb metadata and poster-first artwork…"
         var loaded = 0
         try {
             data.allItems.forEach { item ->
                 runCatching { enrich(item) }
                 loaded += 1
-                statusMessage.value = "Fetched $loaded of ${data.allItems.size} Cinemaverse titles."
+                statusMessage.value = "Indexed $loaded of ${data.allItems.size} Marvel database records."
             }
-            statusMessage.value = "Database loaded: $loaded titles refreshed from TMDB. Posters and descriptions are cached for this app session."
+            statusMessage.value = "Database loaded: $loaded Marvel records refreshed from OMDb, with TMDB used only for missing artwork."
         } catch (error: Throwable) {
             statusMessage.value = error.message ?: "Metadata fetch failed."
         } finally {
@@ -70,6 +70,6 @@ object ViewingMetadataStore {
         language = remote.language ?: local.language,
         country = remote.country ?: local.country,
         metadataSource = remote.metadataSource,
-        lastUpdated = "TMDB"
+        lastUpdated = "OMDb/TMDB fallback"
     )
 }

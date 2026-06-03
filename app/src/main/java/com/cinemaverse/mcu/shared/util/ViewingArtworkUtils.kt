@@ -16,20 +16,20 @@ object ViewingArtworkUtils {
 
     fun resolvePoster(item: ViewingItem): String? = firstUsable(
         item.localPoster?.takeIf { isLocalAssetArtwork(it) },
-        item.localPoster,
-        item.localBackdrop?.takeIf { isLocalAssetArtwork(it) },
-        item.tmdbPoster,
+        item.omdbPoster,
         item.poster,
-        item.omdbPoster
+        item.tmdbPoster,
+        item.localPoster,
+        item.localBackdrop?.takeIf { isLocalAssetArtwork(it) }
     )
 
     fun resolvePoster(list: ViewingList): String? = firstUsable(
         list.localPoster,
-        list.poster,
-        list.items.firstOrNull()?.localPoster,
-        list.items.firstOrNull()?.tmdbPoster,
+        list.items.firstOrNull()?.omdbPoster,
         list.items.firstOrNull()?.poster,
-        list.items.firstOrNull()?.omdbPoster
+        list.items.firstOrNull()?.tmdbPoster,
+        list.poster,
+        list.items.firstOrNull()?.localPoster
     )
 
     fun resolveBackdrop(item: ViewingItem): String? = firstUsable(

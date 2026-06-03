@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -91,6 +93,56 @@ fun MediaScanLoader(
     val songsFound = songs.size
     val albumsFound = albums.size
     val artistsFound = artists.size
+
+    val progressValue = if (scanProgress.total > 0) {
+        scanProgress.current.toFloat() / scanProgress.total.toFloat()
+    } else when {
+        songsFound + albumsFound + artistsFound > 0 -> 0.82f
+        else -> 0.34f
+    }
+    com.cinemaverse.mcu.shared.presentation.components.database.MarvelDatabaseScaffold(
+        universe = com.cinemaverse.mcu.shared.presentation.theme.database.MarvelDatabaseUniverse.TVA,
+        commandBar = {
+            com.cinemaverse.mcu.shared.presentation.components.database.DatabaseCommandBar(
+                primaryLabel = "Continue",
+                secondaryLabel = "Refresh index",
+                onPrimary = onScanComplete,
+                onSecondary = { musicViewModel.refreshLibrary() }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(22.dp, 36.dp, 22.dp, 132.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            item {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("INDEXING THE MARVEL DATABASE", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    Text("Building cinematic archive", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+                    Text("Loading Marvel catalog records, posters, phases, sagas, timeline order, and watchlist metadata.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            item { com.cinemaverse.mcu.shared.presentation.components.database.TimelineTrack("Database indexing", progressValue.coerceIn(0f, 1f)) }
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    com.cinemaverse.mcu.shared.presentation.components.database.MetadataPanel("Titles", songsFound.coerceAtLeast(0).toString(), Modifier.weight(1f))
+                    com.cinemaverse.mcu.shared.presentation.components.database.MetadataPanel("Collections", albumsFound.coerceAtLeast(0).toString(), Modifier.weight(1f))
+                    com.cinemaverse.mcu.shared.presentation.components.database.MetadataPanel("Universes", artistsFound.coerceAtLeast(0).toString(), Modifier.weight(1f))
+                }
+            }
+            item {
+                com.cinemaverse.mcu.shared.presentation.components.database.DatabaseSurface(selected = true) {
+                    Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Current operation", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Initializing database • Loading Marvel catalog • Reading title metadata • Loading posters • Building timeline • Grouping phases and sagas", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+    return
     
     // Track scanning progress
     var displayProgress by remember { mutableStateOf(0f) }

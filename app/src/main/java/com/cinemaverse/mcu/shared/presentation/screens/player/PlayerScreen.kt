@@ -152,7 +152,55 @@ fun PlayerScreen(
     navController: NavController,
     isStreamingMode: Boolean = false,
     modifier: Modifier = Modifier
-) {
+ ) {
+    val title = song?.title ?: "Featured Marvel title"
+    val detail = listOfNotNull(song?.album, song?.artist).filter { it.isNotBlank() }.joinToString(" • ").ifBlank { "Marvel Database Console" }
+    com.cinemaverse.mcu.shared.presentation.components.database.MarvelDatabaseScaffold(
+        universe = com.cinemaverse.mcu.shared.presentation.theme.database.universeFor(title, detail),
+        commandBar = {
+            com.cinemaverse.mcu.shared.presentation.components.database.DatabaseCommandBar(
+                primaryLabel = if (isFavorite) "Favorited" else "Favorite",
+                secondaryLabel = "Mark watched",
+                onPrimary = onToggleFavorite,
+                onSecondary = onPlayPause
+            )
+        },
+        modifier = modifier
+    ) { padding ->
+        androidx.compose.foundation.lazy.LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(22.dp, 28.dp, 22.dp, 132.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            item {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("TITLE DATABASE CONSOLE", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+                        Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    androidx.compose.material3.IconButton(onClick = onBack) { Icon(RhythmIcons.Close, contentDescription = "Close title detail") }
+                }
+            }
+            item {
+                com.cinemaverse.mcu.shared.presentation.components.database.DatabaseSurface(selected = true) {
+                    Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text("Classified archive record", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text("This screen replaces playback controls with database actions, lore, metadata, watch status, and reachable command controls.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            com.cinemaverse.mcu.shared.presentation.components.database.UniverseBadge("Reactor UI")
+                            com.cinemaverse.mcu.shared.presentation.components.database.UniverseBadge(if (isFavorite) "Favorite" else "Unwatched")
+                        }
+                    }
+                }
+            }
+            item { com.cinemaverse.mcu.shared.presentation.components.database.MetadataPanel("Runtime / record length", song?.duration?.let { formatDuration(it) } ?: "Catalog metadata pending") }
+            item { com.cinemaverse.mcu.shared.presentation.components.database.MetadataPanel("Synopsis / lore", "Open a Marvel database title from Dashboard, Database, Search, or Timeline for poster-backed synopsis, release order, phase, saga, cast, ratings, and related-title panels.") }
+            item { com.cinemaverse.mcu.shared.presentation.components.database.TimelineTrack("Viewing order sync", progress().coerceIn(0f, 1f)) }
+        }
+    }
+    return
+
     val playerThemeId by appSettings.playerThemeId.collectAsState()
     var showFullScreenLyrics by remember { mutableStateOf(false) }
 

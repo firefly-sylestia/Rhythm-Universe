@@ -21,30 +21,31 @@ class MovieMetadataService(
         var source = MetadataSource.LOCAL
         val messages = mutableListOf<String>()
 
-        if (tmdbService.hasCredentials) {
-            tmdbService.getTmdbViewingDetails(localItem).fold(
-                onSuccess = { tmdb ->
-                    merged = mergePreservingLocal(merged, tmdb)
-                    source = MetadataSource.TMDB
-                },
-                onFailure = { messages += it.message ?: "TMDB lookup failed." }
-            )
-        } else {
-            messages += "TMDB token not configured; using local fallback fields."
-        }
-
         if (omdbService.hasApiKey) {
             val omdbResult = localItem.imdbId?.let { omdbService.getMovieByImdbId(it) }
                 ?: omdbService.getMovieByTitle(localItem.title, localItem.year)
             omdbResult.fold(
                 onSuccess = { omdb ->
                     merged = mergePreservingLocal(merged, omdb)
-                    source = if (source == MetadataSource.TMDB) MetadataSource.MERGED else MetadataSource.OMDB
+                    source = MetadataSource.OMDB
                 },
                 onFailure = { messages += it.message ?: "OMDb lookup failed." }
             )
         } else {
-            messages += "OMDb key not configured; using local/TMDB fallback fields."
+            messages += "OMDb key not configured; using local fallback fields."
+        }
+
+        val posterStillMissing = merged.poster.isNullOrBlank() && merged.omdbPoster.isNullOrBlank() && merged.backdrop.isNullOrBlank()
+        if (posterStillMissing && tmdbService.hasCredentials) {
+            tmdbService.getTmdbViewingDetails(localItem).fold(
+                onSuccess = { tmdb ->
+                    merged = mergePreservingLocal(merged, tmdb)
+                    source = if (source == MetadataSource.OMDB) MetadataSource.MERGED else MetadataSource.TMDB
+                },
+                onFailure = { messages += it.message ?: "TMDB poster fallback failed." }
+            )
+        } else if (posterStillMissing) {
+            messages += "TMDB fallback token missing; local poster fallback remains active."
         }
 
         val result = MetadataResult(
@@ -59,9 +60,9 @@ class MovieMetadataService(
 
     fun getConfigurationMessage(): String = buildString {
         if (!omdbService.hasApiKey) append("OMDb key missing. ")
-        if (!tmdbService.hasCredentials) append("TMDB token missing. ")
-        if (isBlank()) append("OMDb and TMDB metadata enrichment configured; YouTube trailers use stored IDs or optional Data API discovery.")
-        else append("Cinemaverse remains usable with the offline Marvel/DC viewing catalog.")
+        if (!tmdbService.hasCredentials) append("TMDB poster fallback token missing. ")
+        if (isBlank()) append("OMDb metadata and poster fetching configured; TMDB is reserved as a poster fallback.")
+        else append("Marvel Database remains usable with the bundled offline catalog.")
     }
 
     private fun mergePreservingLocal(local: ViewingItem, api: ViewingItem): ViewingItem = local.copy(

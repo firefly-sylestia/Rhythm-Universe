@@ -456,7 +456,7 @@ fun LocalNavigation(
     }
     val showBottomNav = remember(currentRoute, localExperienceMode) {
         if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
-            currentRoute == Screen.Home.route || isLibraryRoute || currentRoute == Screen.Search.route
+            currentRoute == Screen.Home.route || isLibraryRoute || currentRoute == Screen.Search.route || currentRoute == Screen.Settings.route
         } else {
             currentRoute == Screen.Home.route || isLibraryRoute
         }
@@ -985,7 +985,12 @@ private fun LocalNavigationContent(
                                     // Use first visible library tab based on user's tab order
                                     val libraryRoute =
                                         Screen.Library.createRoute(firstVisibleLibraryTab)
-                                    val items = listOf(
+                                    val items = if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) listOf(
+                                        Triple(Screen.Home.route, "Dashboard", Pair(RhythmIcons.HomeFilled, RhythmIcons.Home)),
+                                        Triple(libraryRoute, "Database", Pair(RhythmIcons.Navigation.Library, RhythmIcons.Navigation.LibraryOutlined)),
+                                        Triple(Screen.Search.route, "Search", Pair(RhythmIcons.SearchFilled, RhythmIcons.Search)),
+                                        Triple(Screen.Settings.route, "Settings", Pair(RhythmIcons.SettingsFilled, RhythmIcons.Settings))
+                                    ) else listOf(
                                         Triple(
                                             Screen.Home.route, "Home",
                                             Pair(RhythmIcons.HomeFilled, RhythmIcons.Home)
@@ -998,8 +1003,8 @@ private fun LocalNavigationContent(
 
                                     items.forEachIndexed { index, (route, title, icons) ->
                                         val isSelected = when (title) {
-                                            "Home" -> currentRoute == Screen.Home.route
-                                            "Library" -> currentRoute.startsWith("library")
+                                            "Home", "Dashboard" -> currentRoute == Screen.Home.route
+                                            "Library", "Database" -> currentRoute.startsWith("library")
                                             else -> false
                                         }
 
@@ -1558,15 +1563,22 @@ private fun LocalNavigationContent(
                                 )
                     }
                 ) {
-                    // Use the settings screen (now the default)
-                    SettingsScreenWrapper(
-                        onBack = {
-                            navigateBackOrToLanding()
-                        },
-                        appSettings = appSettings,
-                        navController = navController,
-                        musicViewModel = viewModel
-                    )
+                    if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
+                        DisabledViewingSettingsPanel(
+                            title = "Marvel Database settings",
+                            message = "Database mode is active. Poster-adaptive color, universe accents, system dark/light theme, OMDb-first metadata, one-hand reach behavior, watch-order browsing, and opaque reactor panels are enabled for the Marvel catalog experience.",
+                            onBackClick = navigateBackOrToLanding
+                        )
+                    } else {
+                        SettingsScreenWrapper(
+                            onBack = {
+                                navigateBackOrToLanding()
+                            },
+                            appSettings = appSettings,
+                            navController = navController,
+                            musicViewModel = viewModel
+                        )
+                    }
                 }
                 // Tuner Settings Subroutes
                 composable(Screen.TunerNotifications.route) {
