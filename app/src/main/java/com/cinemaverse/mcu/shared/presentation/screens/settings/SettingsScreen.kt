@@ -28,6 +28,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -1156,6 +1157,7 @@ fun SettingsScreenWrapper(
     val currentSong by musicViewModel.currentSong.collectAsState()
     val isPlaying by musicViewModel.isPlaying.collectAsState()
     val appMode by appSettings.appMode.collectAsState()
+    val localExperienceMode by appSettings.localExperienceMode.collectAsState()
 
     // Hoist the main settings scroll state to persist across navigation
     val mainSettingsScrollState = rememberSaveable(
