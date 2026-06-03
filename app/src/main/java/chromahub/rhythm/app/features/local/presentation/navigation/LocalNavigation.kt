@@ -235,6 +235,66 @@ sealed class Screen(val route: String) {
     object Equalizer : Screen("equalizer")
 }
 
+private fun String.isViewingExperienceMode(): Boolean =
+    this == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING || this == AppSettings.LOCAL_EXPERIENCE_MODE_MARVEL
+
+private fun rhythmRouteBase(route: String): String = route.substringBefore("?")
+
+private fun isRestorableRhythmRoute(route: String): Boolean {
+    val routeBase = rhythmRouteBase(route)
+    return route == Screen.Home.route ||
+        route == Screen.Search.route ||
+        route == Screen.RhythmStats.route ||
+        routeBase == rhythmRouteBase(Screen.Library.route) ||
+        route.startsWith("playlist/") ||
+        route.startsWith("artist/")
+}
+
+
+private fun localRouteFromBackStackEntry(backStackEntry: androidx.navigation.NavBackStackEntry): String {
+    return when (backStackEntry.destination.route) {
+        Screen.Library.route -> {
+            val tab = backStackEntry.arguments?.getString("tab")
+            val libraryTab = when (tab) {
+                "playlists" -> LibraryTab.PLAYLISTS
+                "albums" -> LibraryTab.ALBUMS
+                "artists" -> LibraryTab.ARTISTS
+                "explorer" -> LibraryTab.EXPLORER
+                else -> LibraryTab.SONGS
+            }
+            Screen.Library.createRoute(libraryTab)
+        }
+        Screen.PlaylistDetail.route -> backStackEntry.arguments?.getString("playlistId")
+            ?.let { Screen.PlaylistDetail.createRoute(it) }
+            ?: Screen.PlaylistDetail.route
+        Screen.ArtistDetail.route -> backStackEntry.arguments?.getString("artistName")
+            ?.let { Screen.ArtistDetail.createRoute(it) }
+            ?: Screen.ArtistDetail.route
+        else -> backStackEntry.destination.route ?: Screen.Home.route
+    }
+}
+
+private fun normalizeRestorableRhythmRoute(
+    route: String?,
+    fallbackRoute: String,
+    firstVisibleLibraryTab: LibraryTab,
+    hiddenLibraryTabs: Set<String>
+): String {
+    if (route.isNullOrBlank() || !isRestorableRhythmRoute(route)) return fallbackRoute
+
+    val routeBase = rhythmRouteBase(route)
+    if (routeBase != rhythmRouteBase(Screen.Library.route)) return route
+
+    val requestedTab = route.substringAfter("tab=", missingDelimiterValue = firstVisibleLibraryTab.name.lowercase())
+        .substringBefore("&")
+        .uppercase()
+    return if (requestedTab in hiddenLibraryTabs) {
+        Screen.Library.createRoute(firstVisibleLibraryTab)
+    } else {
+        route
+    }
+}
+
 @Composable
 private fun AnimateIn(
     modifier: Modifier = Modifier,
@@ -393,13 +453,56 @@ fun LocalNavigation(
     // Update current route when destination changes
     LaunchedEffect(navController) {
         navController.currentBackStackEntryFlow.collect { backStackEntry ->
-            currentRoute = backStackEntry.destination.route ?: Screen.Home.route
+            currentRoute = localRouteFromBackStackEntry(backStackEntry)
             val routeBase = currentRoute.substringBefore("?")
             // Update selectedTab based on current route
             when {
                 currentRoute == Screen.Home.route -> selectedTab = 0
                 routeBase == Screen.Library.route.substringBefore("?") -> selectedTab = 1
             }
+        }
+    }
+
+    var lastHandledLocalExperienceMode by rememberSaveable { mutableStateOf(localExperienceMode) }
+    var lastRestorableRhythmRoute by rememberSaveable { mutableStateOf(startDestination) }
+
+    LaunchedEffect(
+        currentRoute,
+        localExperienceMode,
+        startDestination,
+        firstVisibleLibraryTab,
+        hiddenLibraryTabs
+    ) {
+        if (!localExperienceMode.isViewingExperienceMode() && isRestorableRhythmRoute(currentRoute)) {
+            lastRestorableRhythmRoute = normalizeRestorableRhythmRoute(
+                route = currentRoute,
+                fallbackRoute = startDestination,
+                firstVisibleLibraryTab = firstVisibleLibraryTab,
+                hiddenLibraryTabs = hiddenLibraryTabs
+            )
+        }
+    }
+
+    LaunchedEffect(localExperienceMode) {
+        if (lastHandledLocalExperienceMode == localExperienceMode) return@LaunchedEffect
+
+        val targetRoute = if (localExperienceMode.isViewingExperienceMode()) {
+            Screen.Home.route
+        } else {
+            normalizeRestorableRhythmRoute(
+                route = lastRestorableRhythmRoute,
+                fallbackRoute = startDestination,
+                firstVisibleLibraryTab = firstVisibleLibraryTab,
+                hiddenLibraryTabs = hiddenLibraryTabs
+            )
+        }
+
+        lastHandledLocalExperienceMode = localExperienceMode
+        navController.navigate(targetRoute) {
+            popUpTo(navController.graph.id) {
+                inclusive = true
+            }
+            launchSingleTop = true
         }
     }
 
@@ -439,6 +542,7 @@ fun LocalNavigation(
     // Provide dynamic mini-player padding with comprehensive navigation handling
     val showMiniPlayer =
         currentSong != null &&
+            !localExperienceMode.isViewingExperienceMode() &&
             !isMiniPlayerDismissed &&
             currentRoute != Screen.Player.route &&
             currentRoute != Screen.Search.route
@@ -1255,7 +1359,7 @@ private fun LocalNavigationContent(
                         fadeOut(animationSpec = tween(200))
                     }
                 ) {
-                    if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
+                    if (localExperienceMode.isViewingExperienceMode()) {
                         ViewingHomeScreen(
                             onOpenLibrary = {
                                 navController.navigate(Screen.Library.createRoute(firstVisibleLibraryTab)) {
@@ -1376,7 +1480,7 @@ private fun LocalNavigationContent(
                                 )
                     }
                 ) {
-                    if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
+                    if (localExperienceMode.isViewingExperienceMode()) {
                         ViewingSearchScreen(
                             onBack = { navigateBackOrToLanding() },
                             onOpenDetail = { navController.navigate(Screen.Player.route) }
@@ -1818,7 +1922,7 @@ private fun LocalNavigationContent(
                         else -> LibraryTab.SONGS
                     }
 
-                    if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
+                    if (localExperienceMode.isViewingExperienceMode()) {
                         ViewingLibraryScreen(onOpenDetail = { navController.navigate(Screen.Player.route) })
                     } else {
                         LibraryScreen(
@@ -2054,7 +2158,7 @@ private fun LocalNavigationContent(
                         }
                     }
 
-                    if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
+                    if (localExperienceMode.isViewingExperienceMode()) {
                         ViewingDetailScreen(onBack = { navigateBackOrToLanding() })
                     } else {
                         PlayerScreen(

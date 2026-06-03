@@ -390,9 +390,10 @@ class AppSettings private constructor(context: Context) {
         
         // App Mode Settings (Local vs Streaming)
         private const val KEY_APP_MODE = "app_mode" // "LOCAL" or "STREAMING"
-        private const val KEY_LOCAL_EXPERIENCE_MODE = "local_experience_mode" // "RHYTHM" or "VIEWING"
+        private const val KEY_LOCAL_EXPERIENCE_MODE = "local_experience_mode" // "RHYTHM", "VIEWING", or legacy "MARVEL"
         const val LOCAL_EXPERIENCE_MODE_RHYTHM = "RHYTHM"
         const val LOCAL_EXPERIENCE_MODE_VIEWING = "VIEWING"
+        const val LOCAL_EXPERIENCE_MODE_MARVEL = "MARVEL"
         private const val KEY_STREAMING_SERVICE = "streaming_service" // "SPOTIFY", "APPLE_MUSIC", etc.
         private const val KEY_STREAMING_QUALITY = "streaming_quality" // "LOW", "MEDIUM", "HIGH", "LOSSLESS"
         private const val KEY_ALLOW_CELLULAR_STREAMING = "allow_cellular_streaming"
@@ -2243,10 +2244,10 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     }
 
     fun setLocalExperienceMode(mode: String) {
-        val sanitizedMode = if (mode == LOCAL_EXPERIENCE_MODE_VIEWING) {
-            LOCAL_EXPERIENCE_MODE_VIEWING
-        } else {
-            LOCAL_EXPERIENCE_MODE_RHYTHM
+        val sanitizedMode = when (mode) {
+            LOCAL_EXPERIENCE_MODE_VIEWING,
+            LOCAL_EXPERIENCE_MODE_MARVEL -> LOCAL_EXPERIENCE_MODE_VIEWING
+            else -> LOCAL_EXPERIENCE_MODE_RHYTHM
         }
         prefs.edit().putString(KEY_LOCAL_EXPERIENCE_MODE, sanitizedMode).apply()
         _localExperienceMode.value = sanitizedMode
