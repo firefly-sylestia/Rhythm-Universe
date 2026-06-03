@@ -727,12 +727,13 @@ private fun LocalNavigationContent(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val navigateToTopLevel: (String) -> Unit = { route ->
+        val viewingMode = localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING
         navController.navigate(route) {
             popUpTo(navController.graph.findStartDestination().id) {
-                saveState = true
+                saveState = !viewingMode
             }
             launchSingleTop = true
-            restoreState = true
+            restoreState = !viewingMode
         }
     }
     val navigateBackOrToLanding: () -> Unit = {
@@ -1051,12 +1052,13 @@ private fun LocalNavigationContent(
                                                         haptic,
                                                         HapticFeedbackType.LongPress
                                                     )
+                                                    val viewingMode = localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING
                                                     navController.navigate(route) {
                                                         popUpTo(navController.graph.findStartDestination().id) {
-                                                            saveState = true
+                                                            saveState = !viewingMode
                                                         }
                                                         launchSingleTop = true
-                                                        restoreState = true
+                                                        restoreState = !viewingMode
                                                     }
                                                 },
                                             contentAlignment = Alignment.Center
@@ -1161,12 +1163,13 @@ private fun LocalNavigationContent(
                                         haptic,
                                         HapticFeedbackType.LongPress
                                     )
+                                    val viewingMode = localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING
                                     navController.navigate(Screen.Search.route) {
                                         popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
+                                            saveState = !viewingMode
                                         }
                                         launchSingleTop = true
-                                        restoreState = true
+                                        restoreState = !viewingMode
                                     }
                                 },
                                 colors = IconButtonDefaults.filledIconButtonColors(
@@ -1265,13 +1268,12 @@ private fun LocalNavigationContent(
                         ViewingHomeScreen(
                             onOpenLibrary = {
                                 navController.navigate(Screen.Library.createRoute(firstVisibleLibraryTab)) {
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = false }
                                     launchSingleTop = true
-                                    restoreState = true
+                                    restoreState = false
                                 }
                             },
-                            onOpenSearch = { navigateToTopLevel(Screen.Search.route) },
-                            onOpenDetail = { navController.navigate(Screen.Player.route) },
+                            onOpenDetail = {},
                             onOpenSettings = { navigateToTopLevel(Screen.Settings.route) }
                         )
                     } else {
@@ -1385,7 +1387,6 @@ private fun LocalNavigationContent(
                     if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
                         ViewingSearchScreen(
                             onBack = { navigateBackOrToLanding() },
-                            onOpenDetail = { navController.navigate(Screen.Player.route) },
                             onOpenSettings = { navigateToTopLevel(Screen.Settings.route) }
                         )
                     } else {
@@ -1843,7 +1844,7 @@ private fun LocalNavigationContent(
 
                     if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
                         ViewingLibraryScreen(
-                            onOpenDetail = { navController.navigate(Screen.Player.route) },
+                            onOpenDetail = {},
                             onOpenSettings = { navigateToTopLevel(Screen.Settings.route) }
                         )
                     } else {

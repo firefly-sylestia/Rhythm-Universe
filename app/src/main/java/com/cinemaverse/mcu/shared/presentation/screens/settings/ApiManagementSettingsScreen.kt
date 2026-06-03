@@ -160,6 +160,9 @@ fun ApiManagementSettingsScreen(onBackClick: () -> Unit) {
     val context = LocalContext.current
     val hapticFeedback = LocalHapticFeedback.current
     val appSettings = AppSettings.getInstance(context)
+    val scope = rememberCoroutineScope()
+    var movieMetadataStatus by rememberSaveable { mutableStateOf("Ready to fetch posters and TMDB descriptions for the bundled Cinemaverse catalog.") }
+    var isFetchingMovieMetadata by rememberSaveable { mutableStateOf(false) }
 
     // API states
     val deezerApiEnabled by appSettings.deezerApiEnabled.collectAsState()
@@ -201,15 +204,40 @@ fun ApiManagementSettingsScreen(onBackClick: () -> Unit) {
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            text = "Configure OMDB_API_KEY, TMDB_API_KEY, and TMDB_READ_ACCESS_TOKEN before building. Rhythm uses bundled viewing-list data when keys are missing.",
+                            text = "A TMDB read token is bundled for Cinemaverse posters and descriptions. Environment keys can still override it at build time.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)
                         )
                         Text(
-                            text = "Local poster/backdrop overrides are edited in ViewingLists.kt and take priority over TMDB and OMDb artwork.",
+                            text = movieMetadataStatus,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f)
                         )
+                        Button(
+                            enabled = !isFetchingMovieMetadata,
+                            onClick = {
+                                isFetchingMovieMetadata = true
+                                movieMetadataStatus = "Fetching TMDB posters and overview descriptions…"
+                                scope.launch {
+                                    val catalog = com.cinemaverse.mcu.shared.data.viewing.McuAssetDataSource.load(context)
+                                    val service = com.cinemaverse.mcu.shared.data.service.MovieMetadataService()
+                                    runCatching {
+                                        val sample = catalog.allItems.take(12).map { service.getEnrichedViewingItem(it) }
+                                        val posterCount = sample.count { !it.item.tmdbPoster.isNullOrBlank() || !it.item.poster.isNullOrBlank() || !it.item.localPoster.isNullOrBlank() }
+                                        movieMetadataStatus = "Fetched $posterCount/${sample.size} sample titles. Home, Library, Search, and detail pages now use TMDB/local posters with improved descriptions."
+                                    }.onFailure { error ->
+                                        movieMetadataStatus = error.message ?: "Movie metadata fetch failed. The offline catalog is still available."
+                                    }
+                                    isFetchingMovieMetadata = false
+                                }
+                            }
+                        ) {
+                            if (isFetchingMovieMetadata) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(if (isFetchingMovieMetadata) "Fetching" else "Fetch movie database")
+                        }
                     }
                 }
             }

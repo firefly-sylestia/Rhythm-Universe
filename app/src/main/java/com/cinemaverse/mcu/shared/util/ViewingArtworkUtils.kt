@@ -52,6 +52,7 @@ object ViewingArtworkUtils {
 
     fun isUsableArtwork(value: String?): Boolean = !value.isNullOrBlank() &&
         !value.contains("[I WILL PROVIDE POSTER FOLDER PATH LATER]") &&
+        !value.contains("www.themoviedb.org/t/p/") &&
         value != "N/A"
 
     private fun firstUsable(vararg values: String?): String? = values.firstOrNull(::isUsableArtwork)

@@ -60,8 +60,9 @@ object McuAssetDataSource {
 
     fun load(assetManager: AssetManager): ViewingAssetData = runCatching {
         val root = JSONObject(assetManager.open(CATALOG_PATH).bufferedReader().use { it.readText() })
+        val localPosters = assetManager.list("mcu_posters")?.toList().orEmpty()
         val items = root.optJSONArray("items").orEmptyObjects()
-            .map { it.toViewingItem() }
+            .map { it.toViewingItem(localPosters) }
             .distinctBy { it.id }
         buildData(items, root.optString("updated").takeUsable())
     }.getOrElse { error ->
@@ -139,7 +140,7 @@ object McuAssetDataSource {
         return lists.distinctBy { it.id }
     }
 
-    private fun JSONObject.toViewingItem(): ViewingItem {
+    private fun JSONObject.toViewingItem(localPosters: List<String> = emptyList()): ViewingItem {
         val type = optString("type").toViewingType()
         val releaseDate = optString("releaseDate").takeUsable()
         val youtubeId = optString("youtubeVideoId").takeUsable() ?: optString("trailerUrl").takeUsable()?.extractYoutubeVideoId()
@@ -173,8 +174,10 @@ object McuAssetDataSource {
             poster = optString("poster").takeUsable(),
             tmdbPoster = optString("tmdbPoster").takeUsable(),
             omdbPoster = optString("omdbPoster").takeUsable(),
+            localPoster = optString("localPoster").takeUsable() ?: inferLocalPoster(optString("title"), optString("id"), localPosters),
             backdrop = optString("backdrop").takeUsable(),
             tmdbBackdrop = optString("tmdbBackdrop").takeUsable(),
+            localBackdrop = optString("localBackdrop").takeUsable(),
             trailerUrl = optString("trailerUrl").takeUsable() ?: youtubeId?.let { "https://www.youtube.com/watch?v=$it" },
             youtubeVideoId = youtubeId,
             trailerSource = youtubeId?.let { TrailerSource.YOUTUBE },
@@ -187,6 +190,23 @@ object McuAssetDataSource {
             status = optString("status").toViewingStatus()
         )
     }
+
+    private fun inferLocalPoster(title: String, id: String, localPosters: List<String>): String? {
+        if (localPosters.isEmpty()) return null
+        val titleKey = title.posterKey()
+        val idKey = id.removePrefix("mcu-").posterKey()
+        val match = localPosters.firstOrNull { file ->
+            val fileKey = file.substringBeforeLast(".").replace(Regex("^\\d+-"), "").posterKey()
+            fileKey == titleKey || fileKey == idKey || titleKey.contains(fileKey) || fileKey.contains(titleKey)
+        }
+        return match?.let { "file:///android_asset/mcu_posters/$it" }
+    }
+
+    private fun String.posterKey(): String = lowercase()
+        .replace("marvel one shot", "")
+        .replace("season", "s")
+        .replace(Regex("[^a-z0-9]+"), "-")
+        .trim('-')
 
     private fun releaseComparator() = compareBy<ViewingItem> { it.releaseDate ?: "9999-99-99" }.thenBy { it.releaseOrder ?: Int.MAX_VALUE }.thenBy { it.title }
     private fun chronologicalComparator() = compareBy<ViewingItem> { it.chronologicalOrder ?: Int.MAX_VALUE }.thenBy { it.releaseDate ?: "9999-99-99" }.thenBy { it.title }

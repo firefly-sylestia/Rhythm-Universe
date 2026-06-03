@@ -22,7 +22,7 @@ class MovieMetadataService(
         val messages = mutableListOf<String>()
 
         if (tmdbService.hasCredentials && localItem.tmdbId != null) {
-            tmdbService.getTmdbMovieDetails(localItem.tmdbId).fold(
+            tmdbService.getTmdbMovieDetails(localItem.tmdbId, if (localItem.type == com.cinemaverse.mcu.shared.data.viewing.ViewingType.SERIES) "tv" else "movie").fold(
                 onSuccess = { tmdb ->
                     merged = mergePreservingLocal(merged, tmdb)
                     source = MetadataSource.TMDB
@@ -60,7 +60,7 @@ class MovieMetadataService(
     fun getConfigurationMessage(): String = buildString {
         if (!omdbService.hasApiKey) append("OMDb key missing. ")
         if (!tmdbService.hasCredentials) append("TMDB key/token missing. ")
-        if (isBlank()) append("OMDb and TMDB metadata enrichment configured; YouTube trailers use stored IDs or optional Data API discovery.")
+        if (isBlank()) append("TMDB poster/overview fetching is ready. Use Settings to refresh movie metadata when needed.")
         else append("Cinemaverse remains usable with the offline Marvel/DC viewing catalog.")
     }
 

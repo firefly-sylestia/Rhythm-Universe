@@ -15,23 +15,24 @@ import java.net.URL
 
 class TmdbService(
     private val apiKey: String = BuildConfig.TMDB_API_KEY,
-    private val readAccessToken: String = BuildConfig.TMDB_READ_ACCESS_TOKEN
+    private val readAccessToken: String = BuildConfig.TMDB_READ_ACCESS_TOKEN.ifBlank { DEFAULT_READ_ACCESS_TOKEN }
 ) {
     val hasCredentials: Boolean get() = apiKey.isNotBlank() || readAccessToken.isNotBlank()
 
     suspend fun searchTmdbMovies(query: String): Result<List<ViewingItem>> = withContext(Dispatchers.IO) {
         if (!hasCredentials) return@withContext Result.failure(IllegalStateException("TMDB API key/token is missing; using local viewing-list data."))
         runCatching {
-            val json = request("/search/movie", "query=${query.urlEncode()}")
+            val json = request("/search/multi", "query=${query.urlEncode()}&include_adult=false&language=en-US&page=1")
             json.optJSONArray("results")?.let { array ->
                 (0 until array.length()).mapNotNull { index -> normalizeTmdbMovie(array.optJSONObject(index)) }
             } ?: emptyList()
         }
     }
 
-    suspend fun getTmdbMovieDetails(movieId: Int): Result<ViewingItem> = withContext(Dispatchers.IO) {
+    suspend fun getTmdbMovieDetails(movieId: Int, mediaType: String = "movie"): Result<ViewingItem> = withContext(Dispatchers.IO) {
         if (!hasCredentials) return@withContext Result.failure(IllegalStateException("TMDB API key/token is missing; using local viewing-list data."))
-        runCatching { normalizeTmdbMovie(request("/movie/$movieId", "append_to_response=credits,videos,recommendations,images,external_ids")) }
+        val normalizedMediaType = if (mediaType == "tv") "tv" else "movie"
+        runCatching { normalizeTmdbMovie(request("/$normalizedMediaType/$movieId", "append_to_response=credits,videos,recommendations,images,external_ids&language=en-US")) }
     }
 
     suspend fun getTmdbMovieVideos(movieId: Int): Result<List<String>> = withContext(Dispatchers.IO) {
@@ -70,16 +71,16 @@ class TmdbService(
         val credits = extractCredits(json.optJSONObject("credits"))
         val trailer = extractTrailerUrls(json.optJSONObject("videos")).firstOrNull()
         val imdbId = json.optJSONObject("external_ids")?.optString("imdb_id")?.takeUsable()
-        val releaseDate = json.optString("release_date").takeUsable()
+        val releaseDate = json.optString("release_date").takeUsable() ?: json.optString("first_air_date").takeUsable()
         return ViewingItem(
             id = json.optInt("id").takeIf { it > 0 }?.toString() ?: json.optString("title").slug(),
             title = json.optString("title", json.optString("name")),
-            originalTitle = json.optString("original_title").takeUsable(),
+            originalTitle = (json.optString("original_title").takeUsable() ?: json.optString("original_name").takeUsable()),
             year = releaseDate?.take(4),
             releaseDate = releaseDate,
             imdbId = imdbId,
             tmdbId = json.optInt("id").takeIf { it > 0 },
-            runtime = json.optInt("runtime").takeIf { it > 0 }?.let { "$it min" },
+            runtime = (json.optInt("runtime").takeIf { it > 0 } ?: json.optJSONArray("episode_run_time")?.optInt(0)?.takeIf { it > 0 })?.let { "$it min" },
             genres = genres,
             plot = json.optString("overview").takeUsable(),
             overview = json.optString("overview").takeUsable(),
@@ -138,6 +139,9 @@ class TmdbService(
             if (readAccessToken.isNotBlank()) setRequestProperty("Authorization", "Bearer $readAccessToken")
         }
         return connection.inputStream.bufferedReader().use { JSONObject(it.readText()) }
+    }
+    private companion object {
+        private const val DEFAULT_READ_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2NWVkYTQ4Y2Y1ODAzZjIyMzA0ZmQyMWY0ZjA2YTM1ZSIsIm5iZiI6MTc3ODY4NTg2My42ODcsInN1YiI6IjZhMDQ5N2E3N2IyZDk3NzQ2MDM3N2E1OSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.XTD8e-B7awrTVIJd5WtD3vZ5FnWjE8sWkSjgYIeauAA"
     }
 }
 
