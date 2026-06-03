@@ -2,6 +2,7 @@ package com.cinemaverse.mcu.shared.presentation.components.player
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,8 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Surface
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -54,16 +54,18 @@ fun MiniPlayer(
 ) {
     if (song == null) return
     val tokens = rememberMarvelDatabaseTokens(MarvelDatabaseUniverse.Default)
-    ElevatedCard(
-        onClick = onPlayerClick,
+    Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .semantics { contentDescription = "Selected Marvel title preview: ${song.title}" },
-        colors = CardDefaults.elevatedCardColors(containerColor = tokens.commandPanel),
+            .semantics { contentDescription = "Selected Marvel title preview: ${song.title}" }
+            .clickable(onClick = onPlayerClick),
+        color = tokens.commandPanel,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         border = BorderStroke(1.dp, tokens.posterPalette.posterOutline.copy(alpha = 0.55f)),
         shape = RoundedCornerShape(28.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp)
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp
     ) {
         Row(
             modifier = Modifier
