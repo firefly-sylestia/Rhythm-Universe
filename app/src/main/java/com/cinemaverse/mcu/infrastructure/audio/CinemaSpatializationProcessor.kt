@@ -21,7 +21,7 @@ import androidx.media3.common.util.UnstableApi
  * Latency: <1ms per buffer
  */
 @OptIn(UnstableApi::class)
-class RhythmSpatializationProcessor : RhythmAudioProcessor() {
+class CinemaSpatializationProcessor : RhythmAudioProcessor() {
     
     companion object {
         private const val TAG = "RhythmSpatialization"

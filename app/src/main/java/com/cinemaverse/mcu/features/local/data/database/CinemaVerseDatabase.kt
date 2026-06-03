@@ -18,7 +18,7 @@ import com.cinemaverse.mcu.features.local.data.database.entity.MCUTitleEntity
 import com.cinemaverse.mcu.features.local.data.database.entity.MCUSeriesEntity
 
 @Database(entities = [SongEntity::class, ArtistEntity::class, SongArtistEntity::class, MCUTitleEntity::class, MCUSeriesEntity::class], version = 7, exportSchema = false)
-abstract class RhythmDatabase : RoomDatabase() {
+abstract class CinemaVerseDatabase : RoomDatabase() {
     abstract fun songDao(): SongDao
     abstract fun artistDao(): ArtistDao
     abstract fun songArtistDao(): SongArtistDao

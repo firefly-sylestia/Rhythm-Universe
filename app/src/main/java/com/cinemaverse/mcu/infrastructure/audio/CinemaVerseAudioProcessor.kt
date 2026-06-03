@@ -17,7 +17,7 @@ import java.nio.ShortBuffer
  */
 @OptIn(UnstableApi::class)
 @Suppress("OVERRIDE_DEPRECATION")
-abstract class RhythmAudioProcessor : AudioProcessor {
+abstract class CinemaVerseAudioProcessor : AudioProcessor {
     
     companion object {
         private const val TAG = "RhythmAudioProcessor"

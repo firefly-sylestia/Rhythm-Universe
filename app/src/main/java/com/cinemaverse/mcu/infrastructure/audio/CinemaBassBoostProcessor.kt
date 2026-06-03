@@ -18,7 +18,7 @@ import kotlin.math.PI
  * Latency: <1ms per buffer
  */
 @OptIn(UnstableApi::class)
-class RhythmBassBoostProcessor : RhythmAudioProcessor() {
+class CinemaBassBoostProcessor : RhythmAudioProcessor() {
     
     companion object {
         private const val TAG = "RhythmBassBoost"
