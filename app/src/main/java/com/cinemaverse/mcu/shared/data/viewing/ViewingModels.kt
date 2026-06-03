@@ -32,10 +32,13 @@ data class ViewingItem(
     val saga: String? = null,
     val franchise: String? = null,
     val studio: String? = null,
+    val universe: String? = null,
+    val category: String? = null,
     val order: Int? = null,
     val releaseOrder: Int? = null,
     val chronologicalOrder: Int? = null,
     val phaseOrder: Int? = null,
+    val collectionOrder: Int? = null,
     val runtime: String? = null,
     val genres: List<String> = emptyList(),
     val plot: String? = null,
@@ -48,6 +51,7 @@ data class ViewingItem(
     val tmdbBackdrop: String? = null,
     val localBackdrop: String? = null,
     val trailerUrl: String? = null,
+    val youtubeVideoId: String? = null,
     val trailerSource: TrailerSource? = null,
     val director: String? = null,
     val writer: String? = null,
@@ -60,6 +64,10 @@ data class ViewingItem(
     val awards: String? = null,
     val language: String? = null,
     val country: String? = null,
+    val watchProviders: List<String> = emptyList(),
+    val metadataSource: MetadataSource = MetadataSource.LOCAL,
+    val lastUpdated: String? = null,
+    val status: ViewingStatus = ViewingStatus.RELEASED,
     val watched: Boolean = false,
     val favorite: Boolean = false,
     val watchlisted: Boolean = false,
@@ -77,6 +85,9 @@ data class ViewingList(
     val phase: String? = null,
     val saga: String? = null,
     val franchise: String? = null,
+    val universe: String? = null,
+    val category: String? = null,
+    val itemIds: List<String> = emptyList(),
     val items: List<ViewingItem>,
     val sortModes: List<ViewingSortMode> = listOf(
         ViewingSortMode.RELEASE,
@@ -86,13 +97,18 @@ data class ViewingList(
     )
 )
 
-enum class ViewingType { MOVIE, SERIES, EPISODE, SPECIAL, SHORT }
+enum class ViewingType { MOVIE, SERIES, EPISODE, SPECIAL, SHORT, ONE_SHOT }
+enum class ViewingStatus { RELEASED, UPCOMING, ANNOUNCED }
 enum class TrailerSource { TMDB, YOUTUBE, LOCAL, MANUAL }
 enum class ViewingSortMode(val label: String) {
     RELEASE("Release order"),
     CHRONOLOGICAL("Chronological order"),
-    PHASE("Phase order"),
-    CUSTOM("Custom order")
+    PHASE("Phase / chapter"),
+    SAGA("Saga / universe"),
+    TITLE("Title"),
+    RATING("Rating"),
+    RUNTIME("Runtime"),
+    CUSTOM("Watch order")
 }
 
 data class MetadataResult(

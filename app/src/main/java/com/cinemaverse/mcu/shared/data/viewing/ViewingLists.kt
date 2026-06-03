@@ -1,112 +1,133 @@
 package com.cinemaverse.mcu.shared.data.viewing
 
+/**
+ * Offline Cinemaverse catalog seed.
+ * Cross-checked against Marvel's official Disney+ MCU timeline (https://www.marvel.com/articles/movies/mcu-timeline-order-disney-plus),
+ * Marvel's Disney+ hub (https://www.marvel.com/disneyplus), DC's official catalog (https://www.dc.com/movies),
+ * and DC project pages for Creature Commandos/Superman. API enrichment is handled separately via TMDb/OMDb.
+ */
 object ViewingLists {
-    private val releaseItems = listOf(
-        item("iron-man", "Iron Man", "2008", "tt0371746", 1726, "Phase One", "Infinity Saga", 1, 3, "126 min", listOf("Action", "Adventure", "Sci-Fi"), "Tony Stark builds the first Iron Man armor and begins a new cinematic universe."),
-        item("incredible-hulk", "The Incredible Hulk", "2008", "tt0800080", 1724, "Phase One", "Infinity Saga", 2, 5, "112 min", listOf("Action", "Adventure", "Sci-Fi"), "Bruce Banner searches for a cure while being hunted by forces that want his power."),
-        item("iron-man-2", "Iron Man 2", "2010", "tt1228705", 10138, "Phase One", "Infinity Saga", 3, 4, "124 min", listOf("Action", "Adventure", "Sci-Fi"), "Tony Stark faces legacy, rivalry, and the consequences of revealing his identity."),
-        item("thor", "Thor", "2011", "tt0800369", 10195, "Phase One", "Infinity Saga", 4, 6, "115 min", listOf("Action", "Fantasy", "Adventure"), "A banished Asgardian prince learns humility on Earth."),
-        item("captain-america-first-avenger", "Captain America: The First Avenger", "2011", "tt0458339", 1771, "Phase One", "Infinity Saga", 5, 1, "124 min", listOf("Action", "Adventure", "Sci-Fi"), "Steve Rogers becomes Captain America during World War II."),
-        item("the-avengers", "The Avengers", "2012", "tt0848228", 24428, "Phase One", "Infinity Saga", 6, 7, "143 min", listOf("Action", "Adventure", "Sci-Fi"), "Earth's mightiest heroes assemble against Loki and the Chitauri."),
-        item("iron-man-3", "Iron Man 3", "2013", "tt1300854", 68721, "Phase Two", "Infinity Saga", 7, 8, "130 min", listOf("Action", "Adventure", "Sci-Fi"), "Tony Stark confronts trauma and a mysterious terrorist threat."),
-        item("thor-dark-world", "Thor: The Dark World", "2013", "tt1981115", 76338, "Phase Two", "Infinity Saga", 8, 9, "112 min", listOf("Action", "Adventure", "Fantasy"), "Thor battles the Dark Elves as the Nine Realms align."),
-        item("captain-america-winter-soldier", "Captain America: The Winter Soldier", "2014", "tt1843866", 100402, "Phase Two", "Infinity Saga", 9, 10, "136 min", listOf("Action", "Adventure", "Thriller"), "Steve Rogers uncovers a conspiracy inside S.H.I.E.L.D."),
-        item("guardians-galaxy", "Guardians of the Galaxy", "2014", "tt2015381", 118340, "Phase Two", "Infinity Saga", 10, 11, "121 min", listOf("Action", "Adventure", "Comedy"), "A band of misfits becomes an unlikely cosmic family."),
-        item("avengers-age-ultron", "Avengers: Age of Ultron", "2015", "tt2395427", 99861, "Phase Two", "Infinity Saga", 11, 13, "141 min", listOf("Action", "Adventure", "Sci-Fi"), "The Avengers face Ultron after a peacekeeping program goes wrong."),
-        item("ant-man", "Ant-Man", "2015", "tt0478970", 102899, "Phase Two", "Infinity Saga", 12, 14, "117 min", listOf("Action", "Comedy", "Sci-Fi"), "Scott Lang learns to use a shrinking suit for a heist with heroic stakes."),
-        item("captain-america-civil-war", "Captain America: Civil War", "2016", "tt3498820", 271110, "Phase Three", "Infinity Saga", 13, 15, "147 min", listOf("Action", "Adventure", "Sci-Fi"), "The Avengers fracture over accountability and loyalty."),
-        item("doctor-strange", "Doctor Strange", "2016", "tt1211837", 284052, "Phase Three", "Infinity Saga", 14, 16, "115 min", listOf("Action", "Adventure", "Fantasy"), "A surgeon discovers mystic arts and a larger universe."),
-        item("guardians-galaxy-vol-2", "Guardians of the Galaxy Vol. 2", "2017", "tt3896198", 283995, "Phase Three", "Infinity Saga", 15, 12, "136 min", listOf("Action", "Adventure", "Comedy"), "The Guardians learn more about Peter Quill's origins."),
-        item("spider-man-homecoming", "Spider-Man: Homecoming", "2017", "tt2250912", 315635, "Phase Three", "Infinity Saga", 16, 17, "133 min", listOf("Action", "Adventure", "Comedy"), "Peter Parker balances school life with being Spider-Man."),
-        item("thor-ragnarok", "Thor: Ragnarok", "2017", "tt3501632", 284053, "Phase Three", "Infinity Saga", 17, 18, "130 min", listOf("Action", "Adventure", "Comedy"), "Thor races to save Asgard from Hela."),
-        item("black-panther", "Black Panther", "2018", "tt1825683", 284054, "Phase Three", "Infinity Saga", 18, 19, "134 min", listOf("Action", "Adventure", "Sci-Fi"), "T'Challa returns to Wakanda and faces a challenge to the throne."),
-        item("avengers-infinity-war", "Avengers: Infinity War", "2018", "tt4154756", 299536, "Phase Three", "Infinity Saga", 19, 20, "149 min", listOf("Action", "Adventure", "Sci-Fi"), "The Avengers and Guardians try to stop Thanos from completing the Infinity Gauntlet."),
-        item("ant-man-wasp", "Ant-Man and the Wasp", "2018", "tt5095030", 363088, "Phase Three", "Infinity Saga", 20, 21, "118 min", listOf("Action", "Adventure", "Comedy"), "Scott Lang and Hope van Dyne explore the Quantum Realm."),
-        item("captain-marvel", "Captain Marvel", "2019", "tt4154664", 299537, "Phase Three", "Infinity Saga", 21, 2, "123 min", listOf("Action", "Adventure", "Sci-Fi"), "Carol Danvers discovers her powers and past in the 1990s."),
-        item("avengers-endgame", "Avengers: Endgame", "2019", "tt4154796", 299534, "Phase Three", "Infinity Saga", 22, 22, "181 min", listOf("Action", "Adventure", "Drama"), "The remaining heroes attempt to undo Thanos' snap."),
-        item("spider-man-far-from-home", "Spider-Man: Far From Home", "2019", "tt6320628", 429617, "Phase Three", "Infinity Saga", 23, 23, "129 min", listOf("Action", "Adventure", "Comedy"), "Peter Parker faces grief, illusions, and responsibility abroad."),
-        item("black-widow", "Black Widow", "2021", "tt3480822", 497698, "Phase Four", "Multiverse Saga", 24, 24, "134 min", listOf("Action", "Adventure", "Sci-Fi"), "Natasha Romanoff confronts the history she left behind."),
-        item("shang-chi", "Shang-Chi and the Legend of the Ten Rings", "2021", "tt9376612", 566525, "Phase Four", "Multiverse Saga", 25, 25, "132 min", listOf("Action", "Adventure", "Fantasy"), "Shang-Chi is pulled into the legacy of the Ten Rings."),
-        item("eternals", "Eternals", "2021", "tt9032400", 524434, "Phase Four", "Multiverse Saga", 26, 26, "156 min", listOf("Action", "Adventure", "Fantasy"), "Ancient protectors reveal their role in Earth's history."),
-        item("spider-man-no-way-home", "Spider-Man: No Way Home", "2021", "tt10872600", 634649, "Phase Four", "Multiverse Saga", 27, 27, "148 min", listOf("Action", "Adventure", "Fantasy"), "A spell gone wrong brings multiverse consequences to Peter Parker."),
-        item("doctor-strange-mom", "Doctor Strange in the Multiverse of Madness", "2022", "tt9419884", 453395, "Phase Four", "Multiverse Saga", 28, 28, "126 min", listOf("Action", "Adventure", "Fantasy"), "Doctor Strange navigates dangerous alternate realities."),
-        item("thor-love-thunder", "Thor: Love and Thunder", "2022", "tt10648342", 616037, "Phase Four", "Multiverse Saga", 29, 29, "118 min", listOf("Action", "Adventure", "Comedy"), "Thor faces Gorr the God Butcher and searches for purpose."),
-        item("black-panther-wakanda-forever", "Black Panther: Wakanda Forever", "2022", "tt9114286", 505642, "Phase Four", "Multiverse Saga", 30, 30, "161 min", listOf("Action", "Adventure", "Drama"), "Wakanda grieves and defends its future after T'Challa."),
-        item("ant-man-quantumania", "Ant-Man and the Wasp: Quantumania", "2023", "tt10954600", 640146, "Phase Five", "Multiverse Saga", 31, 31, "124 min", listOf("Action", "Adventure", "Comedy"), "The Ant-Man family encounters Kang in the Quantum Realm."),
-        item("guardians-galaxy-vol-3", "Guardians of the Galaxy Vol. 3", "2023", "tt6791350", 447365, "Phase Five", "Multiverse Saga", 32, 32, "150 min", listOf("Action", "Adventure", "Comedy"), "The Guardians rally around Rocket's past and their future."),
-        item("the-marvels", "The Marvels", "2023", "tt10676048", 609681, "Phase Five", "Multiverse Saga", 33, 33, "105 min", listOf("Action", "Adventure", "Fantasy"), "Carol Danvers, Monica Rambeau, and Kamala Khan become linked across space."),
-        item("deadpool-wolverine", "Deadpool & Wolverine", "2024", "tt6263850", 533535, "Phase Five", "Multiverse Saga", 34, 34, "128 min", listOf("Action", "Comedy", "Sci-Fi"), "Deadpool and Wolverine collide in a multiverse adventure.")
+    private val marvelCore = listOf(
+        item("captain-america-first-avenger","Captain America: The First Avenger","2011-07-22","tt0458339",1771,"Marvel","MCU","Phase One","Infinity Saga","Captain America Collection",5,1,"124 min","Joe Johnston","Christopher Markus, Stephen McFeely","Chris Evans, Hayley Atwell, Hugo Weaving","Steve Rogers becomes Captain America during World War II."),
+        item("agent-carter-one-shot","Marvel One-Shot: Agent Carter","2013-09-03","tt3067038",211387,"Marvel","MCU","One-Shots","Infinity Saga","Marvel One-Shots",8,2,"15 min","Louis D'Esposito","Eric Pearson","Hayley Atwell, Bradley Whitford","Peggy Carter takes on a solo mission after World War II.", type=ViewingType.ONE_SHOT),
+        item("captain-marvel","Captain Marvel","2019-03-08","tt4154664",299537,"Marvel","MCU","Phase Three","Infinity Saga","Captain Marvel / Ms. Marvel",21,3,"123 min","Anna Boden, Ryan Fleck","Anna Boden, Ryan Fleck, Geneva Robertson-Dworet","Brie Larson, Samuel L. Jackson, Ben Mendelsohn","Carol Danvers discovers her powers and past in the 1990s."),
+        item("iron-man","Iron Man","2008-05-02","tt0371746",1726,"Marvel","MCU","Phase One","Infinity Saga","Iron Man Collection",1,4,"126 min","Jon Favreau","Mark Fergus, Hawk Ostby, Art Marcum, Matt Holloway","Robert Downey Jr., Gwyneth Paltrow, Jeff Bridges","Tony Stark builds the first Iron Man armor and begins a new cinematic universe."),
+        item("iron-man-2","Iron Man 2","2010-05-07","tt1228705",10138,"Marvel","MCU","Phase One","Infinity Saga","Iron Man Collection",3,5,"124 min","Jon Favreau","Justin Theroux","Robert Downey Jr., Gwyneth Paltrow, Mickey Rourke","Tony Stark faces legacy, rivalry, and the consequences of revealing his identity."),
+        item("incredible-hulk","The Incredible Hulk","2008-06-13","tt0800080",1724,"Marvel","MCU","Phase One","Infinity Saga","Hulk Collection",2,6,"112 min","Louis Leterrier","Zak Penn","Edward Norton, Liv Tyler, Tim Roth","Bruce Banner searches for a cure while being hunted by forces that want his power."),
+        item("funny-thing-thor-hammer","Marvel One-Shot: A Funny Thing Happened on the Way to Thor's Hammer","2011-10-25","tt2011109",76122,"Marvel","MCU","One-Shots","Infinity Saga","Marvel One-Shots",4,7,"4 min","Leythum","Eric Pearson","Clark Gregg, Jessica Manuel","Agent Coulson handles a convenience-store robbery on his way to New Mexico.", type=ViewingType.ONE_SHOT),
+        item("thor","Thor","2011-05-06","tt0800369",10195,"Marvel","MCU","Phase One","Infinity Saga","Thor Collection",4,8,"115 min","Kenneth Branagh","Ashley Miller, Zack Stentz, Don Payne","Chris Hemsworth, Natalie Portman, Tom Hiddleston","A banished Asgardian prince learns humility on Earth."),
+        item("consultant-one-shot","Marvel One-Shot: The Consultant","2011-09-13","tt2011118",76122,"Marvel","MCU","One-Shots","Infinity Saga","Marvel One-Shots",6,9,"4 min","Leythum","Eric Pearson","Clark Gregg, Maximiliano Hernández","S.H.I.E.L.D. agents discuss a delicate Avengers Initiative problem.", type=ViewingType.ONE_SHOT),
+        item("the-avengers","The Avengers","2012-05-04","tt0848228",24428,"Marvel","MCU","Phase One","Infinity Saga","Avengers Collection",6,10,"143 min","Joss Whedon","Joss Whedon","Robert Downey Jr., Chris Evans, Scarlett Johansson","Earth's mightiest heroes assemble against Loki and the Chitauri."),
+        item("item-47","Marvel One-Shot: Item 47","2012-09-25","tt2247732",119569,"Marvel","MCU","One-Shots","Infinity Saga","Marvel One-Shots",7,11,"12 min","Louis D'Esposito","Eric Pearson","Lizzy Caplan, Jesse Bradford","Two civilians find a Chitauri weapon after the Battle of New York.", type=ViewingType.ONE_SHOT),
+        item("thor-dark-world","Thor: The Dark World","2013-11-08","tt1981115",76338,"Marvel","MCU","Phase Two","Infinity Saga","Thor Collection",8,12,"112 min","Alan Taylor","Christopher Markus, Stephen McFeely, Christopher Yost","Chris Hemsworth, Natalie Portman, Tom Hiddleston","Thor battles the Dark Elves as the Nine Realms align."),
+        item("iron-man-3","Iron Man 3","2013-05-03","tt1300854",68721,"Marvel","MCU","Phase Two","Infinity Saga","Iron Man Collection",7,13,"130 min","Shane Black","Drew Pearce, Shane Black","Robert Downey Jr., Gwyneth Paltrow, Don Cheadle","Tony Stark confronts trauma and a mysterious terrorist threat."),
+        item("all-hail-the-king","Marvel One-Shot: All Hail the King","2014-02-25","tt3438640",253980,"Marvel","MCU","One-Shots","Infinity Saga","Marvel One-Shots",9,14,"14 min","Drew Pearce","Drew Pearce","Ben Kingsley, Scoot McNairy","Trevor Slattery reckons with the Mandarin myth in prison.", type=ViewingType.ONE_SHOT),
+        item("captain-america-winter-soldier","Captain America: The Winter Soldier","2014-04-04","tt1843866",100402,"Marvel","MCU","Phase Two","Infinity Saga","Captain America Collection",9,15,"136 min","Anthony Russo, Joe Russo","Christopher Markus, Stephen McFeely","Chris Evans, Scarlett Johansson, Sebastian Stan","Steve Rogers uncovers a conspiracy inside S.H.I.E.L.D."),
+        item("guardians-galaxy","Guardians of the Galaxy","2014-08-01","tt2015381",118340,"Marvel","MCU","Phase Two","Infinity Saga","Guardians Collection",10,16,"121 min","James Gunn","James Gunn, Nicole Perlman","Chris Pratt, Zoe Saldaña, Dave Bautista","A band of misfits becomes an unlikely cosmic family."),
+        item("guardians-galaxy-vol-2","Guardians of the Galaxy Vol. 2","2017-05-05","tt3896198",283995,"Marvel","MCU","Phase Three","Infinity Saga","Guardians Collection",15,17,"136 min","James Gunn","James Gunn","Chris Pratt, Zoe Saldaña, Dave Bautista","The Guardians learn more about Peter Quill's origins."),
+        item("i-am-groot-s1","I Am Groot: Season 1","2022-08-10","tt13623148",111110,"Marvel","MCU","Shorts","Infinity Saga","I Am Groot",39,18,"20 min","Kirsten Lepore","Kirsten Lepore","Vin Diesel, Bradley Cooper","Baby Groot stars in bite-sized adventures.", type=ViewingType.SHORT),
+        item("i-am-groot-s2","I Am Groot: Season 2","2023-09-06","tt13623148",111110,"Marvel","MCU","Shorts","Infinity Saga","I Am Groot",48,19,"20 min","Kirsten Lepore","Kirsten Lepore","Vin Diesel","More small-scale mischief with Groot.", type=ViewingType.SHORT),
+        item("daredevil-s1","Daredevil: Season 1","2015-04-10","tt3322312",61889,"Marvel","Defenders Saga","Defenders Saga","Infinity Saga","Defenders Saga",11,20,"13 episodes","Various","Drew Goddard","Charlie Cox, Deborah Ann Woll, Elden Henson","Matt Murdock fights crime in Hell's Kitchen.", type=ViewingType.SERIES),
+        item("jessica-jones-s1","Jessica Jones: Season 1","2015-11-20","tt2357547",38472,"Marvel","Defenders Saga","Defenders Saga","Infinity Saga","Defenders Saga",13,21,"13 episodes","Various","Melissa Rosenberg","Krysten Ritter, Rachael Taylor, David Tennant","Jessica Jones confronts trauma and Kilgrave.", type=ViewingType.SERIES),
+        item("avengers-age-ultron","Avengers: Age of Ultron","2015-05-01","tt2395427",99861,"Marvel","MCU","Phase Two","Infinity Saga","Avengers Collection",11,22,"141 min","Joss Whedon","Joss Whedon","Robert Downey Jr., Chris Evans, Mark Ruffalo","The Avengers face Ultron after a peacekeeping program goes wrong."),
+        item("ant-man","Ant-Man","2015-07-17","tt0478970",102899,"Marvel","MCU","Phase Two","Infinity Saga","Ant-Man Collection",12,23,"117 min","Peyton Reed","Edgar Wright, Joe Cornish, Adam McKay, Paul Rudd","Paul Rudd, Evangeline Lilly, Michael Douglas","Scott Lang learns to use a shrinking suit for a heist with heroic stakes."),
+        item("captain-america-civil-war","Captain America: Civil War","2016-05-06","tt3498820",271110,"Marvel","MCU","Phase Three","Infinity Saga","Captain America Collection",13,24,"147 min","Anthony Russo, Joe Russo","Christopher Markus, Stephen McFeely","Chris Evans, Robert Downey Jr., Scarlett Johansson","The Avengers fracture over accountability and loyalty."),
+        item("black-widow","Black Widow","2021-07-09","tt3480822",497698,"Marvel","MCU","Phase Four","Multiverse Saga","Black Widow",24,25,"134 min","Cate Shortland","Eric Pearson","Scarlett Johansson, Florence Pugh, David Harbour","Natasha Romanoff confronts the history she left behind."),
+        item("black-panther","Black Panther","2018-02-16","tt1825683",284054,"Marvel","MCU","Phase Three","Infinity Saga","Black Panther Collection",18,26,"134 min","Ryan Coogler","Ryan Coogler, Joe Robert Cole","Chadwick Boseman, Michael B. Jordan, Lupita Nyong'o","T'Challa returns to Wakanda and faces a challenge to the throne."),
+        item("spider-man-homecoming","Spider-Man: Homecoming","2017-07-07","tt2250912",315635,"Marvel","MCU","Phase Three","Infinity Saga","Spider-Man Collection",16,27,"133 min","Jon Watts","Jonathan Goldstein, John Francis Daley","Tom Holland, Michael Keaton, Robert Downey Jr.","Peter Parker balances school life with being Spider-Man."),
+        item("doctor-strange","Doctor Strange","2016-11-04","tt1211837",284052,"Marvel","MCU","Phase Three","Infinity Saga","Doctor Strange Collection",14,28,"115 min","Scott Derrickson","Jon Spaihts, Scott Derrickson, C. Robert Cargill","Benedict Cumberbatch, Chiwetel Ejiofor, Rachel McAdams","A surgeon discovers mystic arts and a larger universe."),
+        item("thor-ragnarok","Thor: Ragnarok","2017-11-03","tt3501632",284053,"Marvel","MCU","Phase Three","Infinity Saga","Thor Collection",17,29,"130 min","Taika Waititi","Eric Pearson, Craig Kyle, Christopher Yost","Chris Hemsworth, Tom Hiddleston, Cate Blanchett","Thor races to save Asgard from Hela."),
+        item("ant-man-wasp","Ant-Man and the Wasp","2018-07-06","tt5095030",363088,"Marvel","MCU","Phase Three","Infinity Saga","Ant-Man Collection",20,30,"118 min","Peyton Reed","Chris McKenna, Erik Sommers","Paul Rudd, Evangeline Lilly, Michael Douglas","Scott Lang and Hope van Dyne explore the Quantum Realm."),
+        item("avengers-infinity-war","Avengers: Infinity War","2018-04-27","tt4154756",299536,"Marvel","MCU","Phase Three","Infinity Saga","Avengers Collection",19,31,"149 min","Anthony Russo, Joe Russo","Christopher Markus, Stephen McFeely","Robert Downey Jr., Chris Hemsworth, Josh Brolin","The Avengers and Guardians try to stop Thanos from completing the Infinity Gauntlet."),
+        item("avengers-endgame","Avengers: Endgame","2019-04-26","tt4154796",299534,"Marvel","MCU","Phase Three","Infinity Saga","Avengers Collection",22,32,"181 min","Anthony Russo, Joe Russo","Christopher Markus, Stephen McFeely","Robert Downey Jr., Chris Evans, Mark Ruffalo","The remaining heroes attempt to undo Thanos' snap."),
+        item("loki-s1","Loki: Season 1","2021-06-09","tt9140554",84958,"Marvel","MCU","Disney+ Series","Multiverse Saga","Loki",23,33,"6 episodes","Kate Herron","Michael Waldron","Tom Hiddleston, Sophia Di Martino, Owen Wilson","Loki is pulled into a timeline mystery by the TVA.", type=ViewingType.SERIES),
+        item("what-if-s1","What If...?: Season 1","2021-08-11","tt10168312",91363,"Marvel","MCU","Animated Marvel","Multiverse Saga","What If...?",26,34,"9 episodes","Bryan Andrews","A.C. Bradley","Jeffrey Wright, Hayley Atwell","The Watcher observes alternate realities.", type=ViewingType.SERIES),
+        item("wandavision","WandaVision","2021-01-15","tt9140560",85271,"Marvel","MCU","Disney+ Series","Multiverse Saga","Wanda Collection",23,35,"9 episodes","Matt Shakman","Jac Schaeffer","Elizabeth Olsen, Paul Bettany, Kathryn Hahn","Wanda and Vision's suburban life hides a painful mystery.", type=ViewingType.SERIES),
+        item("shang-chi","Shang-Chi and the Legend of the Ten Rings","2021-09-03","tt9376612",566525,"Marvel","MCU","Phase Four","Multiverse Saga","Shang-Chi",25,36,"132 min","Destin Daniel Cretton","Dave Callaham, Destin Daniel Cretton, Andrew Lanham","Simu Liu, Awkwafina, Tony Leung","Shang-Chi confronts his family legacy and the Ten Rings."),
+        item("falcon-winter-soldier","The Falcon and the Winter Soldier","2021-03-19","tt9208876",88396,"Marvel","MCU","Disney+ Series","Multiverse Saga","Captain America Collection",24,37,"6 episodes","Kari Skogland","Malcolm Spellman","Anthony Mackie, Sebastian Stan, Wyatt Russell","Sam Wilson and Bucky Barnes face a world after Steve Rogers.", type=ViewingType.SERIES),
+        item("spider-man-far-from-home","Spider-Man: Far From Home","2019-07-02","tt6320628",429617,"Marvel","MCU","Phase Three","Infinity Saga","Spider-Man Collection",23,38,"129 min","Jon Watts","Chris McKenna, Erik Sommers","Tom Holland, Samuel L. Jackson, Jake Gyllenhaal","Peter Parker faces grief, illusions, and responsibility abroad."),
+        item("eternals","Eternals","2021-11-05","tt9032400",524434,"Marvel","MCU","Phase Four","Multiverse Saga","Eternals",26,39,"156 min","Chloé Zhao","Chloé Zhao, Patrick Burleigh","Gemma Chan, Richard Madden, Angelina Jolie","Ancient immortal protectors emerge from hiding."),
+        item("doctor-strange-mom","Doctor Strange in the Multiverse of Madness","2022-05-06","tt9419884",453395,"Marvel","MCU","Phase Four","Multiverse Saga","Doctor Strange Collection",28,40,"126 min","Sam Raimi","Michael Waldron","Benedict Cumberbatch, Elizabeth Olsen, Chiwetel Ejiofor","Doctor Strange faces dangerous multiversal consequences."),
+        item("hawkeye","Hawkeye","2021-11-24","tt10160804",88329,"Marvel","MCU","Disney+ Series","Multiverse Saga","Hawkeye",27,41,"6 episodes","Rhys Thomas, Bert & Bertie","Jonathan Igla","Jeremy Renner, Hailee Steinfeld, Vera Farmiga","Clint Barton teams with Kate Bishop during the holidays.", type=ViewingType.SERIES),
+        item("moon-knight","Moon Knight","2022-03-30","tt10234724",92749,"Marvel","MCU","Disney+ Series","Multiverse Saga","Moon Knight",28,42,"6 episodes","Mohamed Diab","Jeremy Slater","Oscar Isaac, Ethan Hawke, May Calamawy","A man with dissociative identity disorder is pulled into Egyptian mythology.", type=ViewingType.SERIES),
+        item("black-panther-wakanda-forever","Black Panther: Wakanda Forever","2022-11-11","tt9114286",505642,"Marvel","MCU","Phase Four","Multiverse Saga","Black Panther Collection",30,43,"161 min","Ryan Coogler","Ryan Coogler, Joe Robert Cole","Letitia Wright, Lupita Nyong'o, Danai Gurira","Wakanda mourns T'Challa and faces Namor."),
+        item("echo","Echo","2024-01-09","tt13966962",122226,"Marvel","MCU","Disney+ Series","Multiverse Saga","Daredevil / Street-Level",50,44,"5 episodes","Sydney Freeland, Catriona McKenzie","Marion Dayre","Alaqua Cox, Vincent D'Onofrio, Zahn McClarnon","Maya Lopez returns home and confronts her past.", type=ViewingType.SERIES),
+        item("she-hulk","She-Hulk: Attorney at Law","2022-08-18","tt10857160",92783,"Marvel","MCU","Disney+ Series","Multiverse Saga","Hulk Collection",31,45,"9 episodes","Kat Coiro, Anu Valia","Jessica Gao","Tatiana Maslany, Mark Ruffalo, Tim Roth","Jennifer Walters balances law, fame, and Hulk powers.", type=ViewingType.SERIES),
+        item("ms-marvel","Ms. Marvel","2022-06-08","tt10857164",92782,"Marvel","MCU","Disney+ Series","Multiverse Saga","Captain Marvel / Ms. Marvel",29,46,"6 episodes","Adil El Arbi, Bilall Fallah","Bisha K. Ali","Iman Vellani, Matt Lintz, Zenobia Shroff","Kamala Khan becomes a Jersey City superhero.", type=ViewingType.SERIES),
+        item("thor-love-thunder","Thor: Love and Thunder","2022-07-08","tt10648342",616037,"Marvel","MCU","Phase Four","Multiverse Saga","Thor Collection",29,47,"119 min","Taika Waititi","Taika Waititi, Jennifer Kaytin Robinson","Chris Hemsworth, Natalie Portman, Christian Bale","Thor faces Gorr while Jane Foster wields Mjolnir."),
+        item("werewolf-by-night","Werewolf by Night","2022-10-07","tt15318872",894205,"Marvel","MCU","Special Presentations","Multiverse Saga","Specials",30,48,"53 min","Michael Giacchino","Heather Quinn, Peter Cameron","Gael García Bernal, Laura Donnelly, Harriet Sansom Harris","Monster hunters gather for a macabre competition.", type=ViewingType.SPECIAL),
+        item("guardians-holiday-special","The Guardians of the Galaxy Holiday Special","2022-11-25","tt13623136",774752,"Marvel","MCU","Special Presentations","Multiverse Saga","Guardians Collection",31,49,"44 min","James Gunn","James Gunn","Chris Pratt, Dave Bautista, Pom Klementieff","The Guardians try to give Star-Lord a Christmas gift.", type=ViewingType.SPECIAL),
+        item("ant-man-quantumania","Ant-Man and the Wasp: Quantumania","2023-02-17","tt10954600",640146,"Marvel","MCU","Phase Five","Multiverse Saga","Ant-Man Collection",32,50,"124 min","Peyton Reed","Jeff Loveness","Paul Rudd, Evangeline Lilly, Jonathan Majors","The Ant-Man family encounters Kang in the Quantum Realm."),
+        item("guardians-galaxy-vol-3","Guardians of the Galaxy Vol. 3","2023-05-05","tt6791350",447365,"Marvel","MCU","Phase Five","Multiverse Saga","Guardians Collection",33,51,"150 min","James Gunn","James Gunn","Chris Pratt, Zoe Saldaña, Dave Bautista","The Guardians rally around Rocket's past and their future."),
+        item("secret-invasion","Secret Invasion","2023-06-21","tt13157618",114472,"Marvel","MCU","Disney+ Series","Multiverse Saga","Nick Fury",34,52,"6 episodes","Ali Selim","Kyle Bradstreet","Samuel L. Jackson, Ben Mendelsohn, Emilia Clarke","Nick Fury uncovers a Skrull conspiracy.", type=ViewingType.SERIES),
+        item("the-marvels","The Marvels","2023-11-10","tt10676048",609681,"Marvel","MCU","Phase Five","Multiverse Saga","Captain Marvel / Ms. Marvel",35,53,"105 min","Nia DaCosta","Nia DaCosta, Megan McDonnell, Elissa Karasik","Brie Larson, Teyonah Parris, Iman Vellani","Carol Danvers, Monica Rambeau, and Kamala Khan become linked across space."),
+        item("loki-s2","Loki: Season 2","2023-10-05","tt9140554",84958,"Marvel","MCU","Disney+ Series","Multiverse Saga","Loki",36,54,"6 episodes","Justin Benson, Aaron Moorhead","Eric Martin","Tom Hiddleston, Sophia Di Martino, Owen Wilson","Loki and Mobius race to stabilize branching timelines.", type=ViewingType.SERIES),
+        item("deadpool-wolverine","Deadpool & Wolverine","2024-07-26","tt6263850",533535,"Marvel","MCU","Phase Five","Multiverse Saga","Deadpool / X-Men Legacy",37,55,"128 min","Shawn Levy","Ryan Reynolds, Rhett Reese, Paul Wernick","Ryan Reynolds, Hugh Jackman, Emma Corrin","Deadpool and Wolverine collide in a multiverse adventure."),
+        item("agatha-all-along","Agatha All Along","2024-09-18","tt15571732",138501,"Marvel","MCU","Disney+ Series","Multiverse Saga","Wanda Collection",38,56,"9 episodes","Jac Schaeffer","Jac Schaeffer","Kathryn Hahn, Joe Locke, Aubrey Plaza","Agatha Harkness gathers a coven for the Witches' Road.", type=ViewingType.SERIES),
+        item("daredevil-born-again-s1","Daredevil: Born Again: Season 1","2025-03-04","tt18923754",202555,"Marvel","MCU","Disney+ Series","Multiverse Saga","Daredevil / Street-Level",39,57,"9 episodes","Various","Dario Scardapane","Charlie Cox, Vincent D'Onofrio, Margarita Levieva","Matt Murdock and Wilson Fisk return to New York power struggles.", type=ViewingType.SERIES),
+        item("captain-america-brave-new-world","Captain America: Brave New World","2025-02-14","tt14513804",822119,"Marvel","MCU","Phase Five","Multiverse Saga","Captain America Collection",40,58,"118 min","Julius Onah","Rob Edwards, Malcolm Spellman","Anthony Mackie, Harrison Ford, Danny Ramirez","Sam Wilson faces a global incident after meeting the new U.S. president."),
+        item("thunderbolts","Thunderbolts*","2025-05-02","tt20969586",986056,"Marvel","MCU","Phase Five","Multiverse Saga","Thunderbolts",41,59,"126 min","Jake Schreier","Eric Pearson, Joanna Calo","Florence Pugh, Sebastian Stan, David Harbour","An unlikely team of antiheroes is forced into a dangerous mission."),
+        item("fantastic-four-first-steps","The Fantastic Four: First Steps","2025-07-25","tt10676052",617126,"Marvel","MCU","Phase Six","Multiverse Saga","Fantastic Four",42,60,"115 min","Matt Shakman","Josh Friedman, Eric Pearson","Pedro Pascal, Vanessa Kirby, Joseph Quinn","Marvel's First Family arrives in a retro-futurist universe.", status=ViewingStatus.UPCOMING)
     )
 
-    val allItems: List<ViewingItem> = releaseItems
+    private val dcCore = listOf(
+        dc("man-of-steel","Man of Steel","2013-06-14","tt0770828",49521,"DCEU","DCEU","Superman Collection",1,1,"143 min","Zack Snyder","David S. Goyer","Henry Cavill, Amy Adams, Michael Shannon","Clark Kent chooses his place as Superman."),
+        dc("batman-v-superman","Batman v Superman: Dawn of Justice","2016-03-25","tt2975590",209112,"DCEU","DCEU","Justice League Collection",2,2,"151 min","Zack Snyder","Chris Terrio, David S. Goyer","Ben Affleck, Henry Cavill, Gal Gadot","Batman and Superman clash as Lex Luthor manipulates fear."),
+        dc("suicide-squad","Suicide Squad","2016-08-05","tt1386697",297761,"DCEU","DCEU","Suicide Squad Collection",3,3,"123 min","David Ayer","David Ayer","Will Smith, Margot Robbie, Jared Leto","Imprisoned villains are recruited for a black-ops mission."),
+        dc("wonder-woman","Wonder Woman","2017-06-02","tt0451279",297762,"DCEU","DCEU","Wonder Woman Collection",4,0,"141 min","Patty Jenkins","Allan Heinberg","Gal Gadot, Chris Pine, Robin Wright","Diana leaves Themyscira during World War I."),
+        dc("justice-league","Justice League","2017-11-17","tt0974015",141052,"DCEU","DCEU","Justice League Collection",5,4,"120 min","Zack Snyder","Chris Terrio, Joss Whedon","Ben Affleck, Gal Gadot, Jason Momoa","Heroes unite against Steppenwolf."),
+        dc("aquaman","Aquaman","2018-12-21","tt1477834",297802,"DCEU","DCEU","Aquaman Collection",6,5,"143 min","James Wan","David Leslie Johnson-McGoldrick, Will Beall","Jason Momoa, Amber Heard, Willem Dafoe","Arthur Curry claims his Atlantean destiny."),
+        dc("shazam","Shazam!","2019-04-05","tt0448115",287947,"DCEU","DCEU","Shazam Collection",7,6,"132 min","David F. Sandberg","Henry Gayden","Zachary Levi, Asher Angel, Mark Strong","A foster kid transforms into an adult superhero."),
+        dc("birds-of-prey","Birds of Prey","2020-02-07","tt7713068",495764,"DCEU","DCEU","Suicide Squad Collection",8,7,"109 min","Cathy Yan","Christina Hodson","Margot Robbie, Mary Elizabeth Winstead, Jurnee Smollett","Harley Quinn crosses paths with Gotham vigilantes."),
+        dc("wonder-woman-1984","Wonder Woman 1984","2020-12-25","tt7126948",464052,"DCEU","DCEU","Wonder Woman Collection",9,8,"151 min","Patty Jenkins","Patty Jenkins, Geoff Johns, Dave Callaham","Gal Gadot, Chris Pine, Kristen Wiig","Diana faces Maxwell Lord and the Dreamstone in 1984."),
+        dc("zack-snyder-justice-league","Zack Snyder's Justice League","2021-03-18","tt12361974",791373,"DCEU","DCEU","Justice League Collection",10,4,"242 min","Zack Snyder","Chris Terrio","Ben Affleck, Henry Cavill, Gal Gadot","The expanded Justice League assembly against Darkseid's forces."),
+        dc("the-suicide-squad","The Suicide Squad","2021-08-06","tt6334354",436969,"DCEU","DCEU","Suicide Squad Collection",11,9,"132 min","James Gunn","James Gunn","Margot Robbie, Idris Elba, John Cena","Task Force X invades Corto Maltese."),
+        dc("black-adam","Black Adam","2022-10-21","tt6443346",436270,"DCEU","DCEU","Shazam Collection",12,10,"125 min","Jaume Collet-Serra","Adam Sztykiel, Rory Haines, Sohrab Noshirvani","Dwayne Johnson, Aldis Hodge, Pierce Brosnan","Teth-Adam awakens in Kahndaq."),
+        dc("shazam-fury-gods","Shazam! Fury of the Gods","2023-03-17","tt10151854",594767,"DCEU","DCEU","Shazam Collection",13,11,"130 min","David F. Sandberg","Henry Gayden, Chris Morgan","Zachary Levi, Asher Angel, Helen Mirren","The Shazam family faces the Daughters of Atlas."),
+        dc("the-flash","The Flash","2023-06-16","tt0439572",298618,"DCEU","DCEU","Justice League Collection",14,12,"144 min","Andy Muschietti","Christina Hodson","Ezra Miller, Michael Keaton, Sasha Calle","Barry Allen changes history and collides with alternate heroes."),
+        dc("blue-beetle","Blue Beetle","2023-08-18","tt9362930",565770,"DCEU","DCEU","Blue Beetle",15,13,"127 min","Ángel Manuel Soto","Gareth Dunnet-Alcocer","Xolo Maridueña, Bruna Marquezine, Susan Sarandon","Jaime Reyes bonds with the Scarab."),
+        dc("aquaman-lost-kingdom","Aquaman and the Lost Kingdom","2023-12-22","tt9663764",572802,"DCEU","DCEU","Aquaman Collection",16,14,"124 min","James Wan","David Leslie Johnson-McGoldrick","Jason Momoa, Patrick Wilson, Yahya Abdul-Mateen II","Arthur and Orm confront Black Manta's new power."),
+        dc("creature-commandos","Creature Commandos","2024-12-05","tt26545355",202411,"DCU","DCU Chapter One","DCU Chapter",1,1,"7 episodes","Various","James Gunn","Indira Varma, Sean Gunn, Alan Tudyk","A secret team of incarcerated monsters takes dangerous missions.", type=ViewingType.SERIES),
+        dc("superman-2025","Superman","2025-07-11","tt5950044",1061474,"DCU","DCU Chapter One","Superman Collection",2,2,"129 min","James Gunn","James Gunn","David Corenswet, Rachel Brosnahan, Nicholas Hoult","DC Studios' first feature in the newly imagined DC universe.", status=ViewingStatus.RELEASED),
+        dc("joker","Joker","2019-10-04","tt7286456",475557,"Elseworlds","DC Elseworlds","Joker Collection",1,1,"122 min","Todd Phillips","Todd Phillips, Scott Silver","Joaquin Phoenix, Robert De Niro, Zazie Beetz","Arthur Fleck descends into a Gotham legend."),
+        dc("joker-folie-a-deux","Joker: Folie à Deux","2024-10-04","tt11315808",889737,"Elseworlds","DC Elseworlds","Joker Collection",2,2,"138 min","Todd Phillips","Todd Phillips, Scott Silver","Joaquin Phoenix, Lady Gaga, Brendan Gleeson","Arthur Fleck meets Lee Quinzel amid a musical legal storm."),
+        dc("the-batman","The Batman","2022-03-04","tt1877830",414906,"Elseworlds","DC Elseworlds","Batman Collection",3,3,"176 min","Matt Reeves","Matt Reeves, Peter Craig","Robert Pattinson, Zoë Kravitz, Paul Dano","Batman investigates the Riddler's Gotham conspiracy."),
+        dc("the-penguin","The Penguin","2024-09-19","tt15435876",194764,"Elseworlds","DC Elseworlds","Batman Collection",4,4,"8 episodes","Various","Lauren LeFranc","Colin Farrell, Cristin Milioti, Rhenzy Feliz","Oz Cobb claws for power after Gotham's flood.", type=ViewingType.SERIES)
+    )
 
-    val allLists: List<ViewingList> = buildList {
-        add(ViewingList("infinity-release", "Infinity Saga Release Order", "The core Infinity Saga in theatrical release order.", phase = "Phases One–Three", saga = "Infinity Saga", franchise = "Marvel Cinematic Universe", items = releaseItems.filter { it.saga == "Infinity Saga" }))
-        add(ViewingList("infinity-chronological", "Infinity Saga Chronological Order", "The Infinity Saga arranged by story timeline.", phase = "Phases One–Three", saga = "Infinity Saga", franchise = "Marvel Cinematic Universe", items = releaseItems.filter { it.saga == "Infinity Saga" }.sortedBy { it.chronologicalOrder ?: it.releaseOrder ?: Int.MAX_VALUE }))
-        add(ViewingList("multiverse-release", "Multiverse Saga Release Order", "Phase Four and Five titles in release order.", phase = "Phases Four–Five", saga = "Multiverse Saga", franchise = "Marvel Cinematic Universe", items = releaseItems.filter { it.saga == "Multiverse Saga" }))
-        listOf("Phase One", "Phase Two", "Phase Three", "Phase Four", "Phase Five").forEach { phase ->
-            add(ViewingList(phase.lowercase().replace(" ", "-"), phase, "A focused collection for $phase.", phase = phase, franchise = "Marvel Cinematic Universe", items = releaseItems.filter { it.phase == phase }))
-        }
-        add(ViewingList("specials-one-shots", "Specials / One-Shots", "A reserved list for specials, shorts, and bonus timeline entries.", phase = "Specials", saga = "Curated", franchise = "Marvel Cinematic Universe", items = emptyList()))
-        add(ViewingList("avengers", "Avengers Collection", "Team-up milestones and ensemble event titles.", saga = "Infinity Saga", franchise = "Marvel Cinematic Universe", items = releaseItems.filter { it.title.contains("Avengers") || it.title == "Captain America: Civil War" }))
-        add(ViewingList("guardians", "Guardians Collection", "Cosmic Guardians adventures.", saga = "Infinity Saga", franchise = "Marvel Cinematic Universe", items = releaseItems.filter { it.title.contains("Guardians") }))
-        add(ViewingList("spider-man", "Spider-Man Collection", "Peter Parker's MCU arc and multiverse crossover.", saga = "Infinity Saga / Multiverse Saga", franchise = "Marvel Cinematic Universe", items = releaseItems.filter { it.title.contains("Spider-Man") }))
-        add(ViewingList("doctor-strange", "Doctor Strange Collection", "Mystic and multiverse-focused entries.", saga = "Multiverse Saga", franchise = "Marvel Cinematic Universe", items = releaseItems.filter { it.title.contains("Doctor Strange") }))
-        add(ViewingList("black-panther", "Black Panther Collection", "Wakanda-focused stories.", saga = "Infinity Saga / Multiverse Saga", franchise = "Marvel Cinematic Universe", items = releaseItems.filter { it.title.contains("Black Panther") }))
-    }
-
-    val featuredList: ViewingList = allLists.first()
-    val featuredItem: ViewingItem = releaseItems.first { it.id == "avengers-endgame" }
+    val allItems: List<ViewingItem> = (marvelCore + dcCore).sortedWith(compareBy<ViewingItem> { it.releaseDate ?: "9999" }.thenBy { it.releaseOrder ?: Int.MAX_VALUE })
+    val allLists: List<ViewingList> = buildLists(allItems)
+    val featuredList: ViewingList = allLists.first { it.id == "mcu-release" }
+    val featuredItem: ViewingItem = allItems.first { it.id == "avengers-endgame" }
 
     fun findItem(id: String): ViewingItem? = allItems.firstOrNull { it.id == id || it.imdbId == id || it.tmdbId?.toString() == id }
     fun findList(id: String): ViewingList? = allLists.firstOrNull { it.id == id }
 
-    fun search(query: String): Pair<List<ViewingItem>, List<ViewingList>> {
-        val normalized = query.trim().lowercase()
-        if (normalized.isBlank()) return allItems.take(8) to allLists.take(6)
-        return allItems.filter { item ->
-            listOfNotNull(item.title, item.year, item.phase, item.saga, item.franchise, item.director)
-                .any { it.lowercase().contains(normalized) } ||
-                item.genres.any { it.lowercase().contains(normalized) } ||
-                item.actors.any { it.lowercase().contains(normalized) }
-        } to allLists.filter { list ->
-            listOfNotNull(list.title, list.description, list.phase, list.saga, list.franchise)
-                .any { it.lowercase().contains(normalized) } ||
-                list.items.any { it.title.lowercase().contains(normalized) }
+    private fun buildLists(items: List<ViewingItem>): List<ViewingList> = buildList {
+        fun addList(id: String, title: String, description: String, universe: String?, category: String?, filtered: List<ViewingItem>) {
+            if (filtered.isNotEmpty()) add(ViewingList(id, title, description, phase = filtered.firstOrNull()?.phase, saga = filtered.firstOrNull()?.saga, franchise = filtered.firstOrNull()?.franchise, universe = universe, category = category, itemIds = filtered.map { it.id }, items = filtered.sortedWith(compareBy<ViewingItem> { it.releaseDate ?: "9999" }.thenBy { it.releaseOrder ?: Int.MAX_VALUE })))
         }
+        val marvel = items.filter { it.universe == "Marvel" }
+        val dc = items.filter { it.universe == "DC" }
+        addList("mcu-release", "MCU Release Order", "Marvel Studios films, series, specials, one-shots, and Defenders entries by public release date.", "Marvel", "Release Order", marvel.filter { it.franchise == "MCU" || it.franchise == "Defenders Saga" })
+        add(ViewingList("mcu-chronological", "MCU Chronological Order", "Official Disney+ style MCU timeline; multiverse entries remain labeled by saga.", universe = "Marvel", category = "Chronological Order", items = marvel.sortedBy { it.chronologicalOrder ?: Int.MAX_VALUE }))
+        addList("marvel-one-shots", "Marvel One-Shots", "Short-form MCU connective tissue.", "Marvel", "Shorts", marvel.filter { it.type == ViewingType.ONE_SHOT })
+        addList("marvel-specials", "Specials", "Marvel Studios Special Presentations and holiday specials.", "Marvel", "Specials", marvel.filter { it.type == ViewingType.SPECIAL })
+        addList("disney-series", "Disney+ Series", "Streaming series in the Marvel Studios timeline.", "Marvel", "Series", marvel.filter { it.phase == "Disney+ Series" })
+        addList("defenders-saga", "Defenders Saga", "Street-level Marvel Television seasons included as a clearly labeled saga.", "Marvel", "Series", marvel.filter { it.franchise == "Defenders Saga" })
+        listOf("Phase One","Phase Two","Phase Three","Phase Four","Phase Five","Phase Six","Infinity Saga","Multiverse Saga").forEach { key ->
+            addList(key.slug(), key, "Titles grouped as $key.", "Marvel", if (key.startsWith("Phase")) "Phase" else "Saga", marvel.filter { it.phase == key || it.saga == key })
+        }
+        listOf("Avengers Collection","Iron Man Collection","Captain America Collection","Thor Collection","Guardians Collection","Spider-Man Collection","Doctor Strange Collection","Black Panther Collection","Ant-Man Collection","Captain Marvel / Ms. Marvel","Deadpool / X-Men Legacy","Fantastic Four").forEach { c -> addList(c.slug(), c, "Curated $c viewing list.", "Marvel", "Collection", marvel.filter { it.category == c }) }
+        addList("dcu-release", "DCU Release Order", "DC Studios DCU projects by release date.", "DC", "Release Order", dc.filter { it.franchise == "DCU" })
+        add(ViewingList("dceu-chronological", "DCEU Chronological Order", "DCEU projects arranged by story placement where useful.", universe = "DC", category = "Chronological Order", items = dc.filter { it.franchise == "DCEU" }.sortedBy { it.chronologicalOrder ?: it.releaseOrder ?: Int.MAX_VALUE }))
+        addList("dceu-release", "DCEU Release Order", "The DC Extended Universe theatrical/HBO Max release sequence.", "DC", "Release Order", dc.filter { it.franchise == "DCEU" })
+        addList("dc-elseworlds", "DC Elseworlds", "Standalone DC continuities including Joker and The Batman universes.", "DC", "Elseworlds", dc.filter { it.franchise == "Elseworlds" })
+        listOf("Batman Collection","Superman Collection","Wonder Woman Collection","Aquaman Collection","Suicide Squad Collection","Justice League Collection","Shazam Collection","Joker Collection").forEach { c -> addList(c.slug(), c, "Curated $c viewing list.", "DC", "Collection", dc.filter { it.category == c }) }
     }
 
-    private fun item(
-        id: String,
-        title: String,
-        year: String,
-        imdbId: String,
-        tmdbId: Int,
-        phase: String,
-        saga: String,
-        releaseOrder: Int,
-        chronologicalOrder: Int,
-        runtime: String,
-        genres: List<String>,
-        plot: String
-    ) = ViewingItem(
-        id = id,
-        title = title,
-        year = year,
-        imdbId = imdbId,
-        tmdbId = tmdbId,
-        phase = phase,
-        saga = saga,
-        franchise = "Marvel Cinematic Universe",
-        studio = "Marvel Studios",
-        releaseOrder = releaseOrder,
-        chronologicalOrder = chronologicalOrder,
-        phaseOrder = releaseOrder,
-        runtime = runtime,
-        genres = genres,
-        plot = plot,
-        overview = plot,
-        trailerUrl = "https://www.youtube.com/results?search_query=${title.replace(" ", "+")}+trailer",
-        trailerSource = TrailerSource.MANUAL
-    )
+    private fun item(id: String,title: String,releaseDate: String,imdbId: String,tmdbId: Int,universe: String,franchise: String,phase: String,saga: String,category: String,releaseOrder: Int,chronologicalOrder: Int,runtime: String,director: String,writer: String,actors: String,plot: String,type: ViewingType=ViewingType.MOVIE,status: ViewingStatus=ViewingStatus.RELEASED) = ViewingItem(
+        id=id,title=title,year=releaseDate.take(4),releaseDate=releaseDate,imdbId=imdbId,tmdbId=tmdbId,type=type,phase=phase,saga=saga,franchise=franchise,studio=if (universe=="Marvel") "Marvel Studios" else "DC Studios / Warner Bros.",universe=universe,category=category,releaseOrder=releaseOrder,chronologicalOrder=chronologicalOrder,phaseOrder=releaseOrder,collectionOrder=releaseOrder,runtime=runtime,genres=listOf("Action","Adventure","Superhero"),plot=plot,overview=plot,director=director,writer=writer,actors=actors.split(',').map{it.trim()},language="English",country="United States",trailerUrl="https://www.youtube.com/results?search_query=${title.replace(" ", "+")}+official+trailer",youtubeVideoId=null,trailerSource=TrailerSource.MANUAL, metadataSource=MetadataSource.LOCAL,status=status)
+    private fun dc(id: String,title: String,releaseDate: String,imdbId: String,tmdbId: Int,franchise: String,saga: String,category: String,releaseOrder: Int,chronologicalOrder: Int,runtime: String,director: String,writer: String,actors: String,plot: String,type: ViewingType=ViewingType.MOVIE,status: ViewingStatus=ViewingStatus.RELEASED) = item(id,title,releaseDate,imdbId,tmdbId,"DC",franchise,saga,saga,category,releaseOrder,chronologicalOrder,runtime,director,writer,actors,plot,type,status)
+    private fun String.slug(): String = lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
 }

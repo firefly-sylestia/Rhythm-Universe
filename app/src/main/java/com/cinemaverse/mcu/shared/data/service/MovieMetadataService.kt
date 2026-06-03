@@ -80,6 +80,7 @@ class MovieMetadataService(
         backdrop = local.backdrop ?: api.backdrop,
         tmdbBackdrop = local.tmdbBackdrop ?: api.tmdbBackdrop,
         trailerUrl = local.trailerUrl ?: api.trailerUrl,
+        youtubeVideoId = local.youtubeVideoId ?: api.youtubeVideoId,
         trailerSource = local.trailerSource ?: api.trailerSource,
         director = local.director ?: api.director,
         writer = local.writer ?: api.writer,
@@ -91,6 +92,9 @@ class MovieMetadataService(
         ratings = local.ratings.ifEmpty { api.ratings },
         awards = local.awards ?: api.awards,
         language = local.language ?: api.language,
-        country = local.country ?: api.country
+        country = local.country ?: api.country,
+        watchProviders = local.watchProviders.ifEmpty { api.watchProviders },
+        metadataSource = if (api.metadataSource != MetadataSource.LOCAL) api.metadataSource else local.metadataSource,
+        lastUpdated = api.lastUpdated ?: local.lastUpdated
     )
 }

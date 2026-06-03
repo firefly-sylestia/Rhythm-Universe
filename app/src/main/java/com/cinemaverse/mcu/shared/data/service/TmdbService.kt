@@ -31,7 +31,14 @@ class TmdbService(
 
     suspend fun getTmdbMovieDetails(movieId: Int): Result<ViewingItem> = withContext(Dispatchers.IO) {
         if (!hasCredentials) return@withContext Result.failure(IllegalStateException("TMDB API key/token is missing; using local viewing-list data."))
+        // TMDb documents append_to_response for details, credits, images, videos, and external IDs:
+        // https://developer.themoviedb.org/docs/getting-started
         runCatching { normalizeTmdbMovie(request("/movie/$movieId", "append_to_response=credits,videos,recommendations,images,external_ids")) }
+    }
+
+    suspend fun getTmdbTvDetails(seriesId: Int): Result<ViewingItem> = withContext(Dispatchers.IO) {
+        if (!hasCredentials) return@withContext Result.failure(IllegalStateException("TMDB API key/token is missing; using local viewing-list data."))
+        runCatching { normalizeTmdbMovie(request("/tv/$seriesId", "append_to_response=credits,videos,recommendations,images,external_ids")) }
     }
 
     suspend fun getTmdbMovieVideos(movieId: Int): Result<List<String>> = withContext(Dispatchers.IO) {
@@ -88,13 +95,15 @@ class TmdbService(
             tmdbBackdrop = ViewingArtworkUtils.tmdbBackdrop(json.optString("backdrop_path").takeUsable()),
             backdrop = ViewingArtworkUtils.tmdbBackdrop(json.optString("backdrop_path").takeUsable()),
             trailerUrl = trailer,
+            youtubeVideoId = trailer?.let { com.cinemaverse.mcu.shared.data.viewing.extractYouTubeVideoId(it) },
             trailerSource = trailer?.let { TrailerSource.TMDB },
             cast = credits.first,
             crew = credits.second,
             director = credits.second.firstOrNull { it.job == "Director" }?.name,
             writer = credits.second.filter { it.job?.contains("Writer", true) == true || it.job?.contains("Screenplay", true) == true }.joinToString { it.name }.takeUsable(),
             actors = credits.first.take(8).map { it.name },
-            tmdbRating = json.optDouble("vote_average").takeIf { it > 0.0 }
+            tmdbRating = json.optDouble("vote_average").takeIf { it > 0.0 },
+            metadataSource = com.cinemaverse.mcu.shared.data.viewing.MetadataSource.TMDB
         )
     }
 

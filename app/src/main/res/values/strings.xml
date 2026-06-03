@@ -160,14 +160,14 @@
     <string name="operation_importing_playlist">Importing playlist file…</string>
     <string name="notification_operations_channel_name">Marvel Spectrum Library</string>
     <string name="notification_operations_channel_desc">Progress and results for library scans and playlist actions</string>
-    <string name="notification_media_scan_title">Marvel Spectrum Library Scan</string>
-    <string name="notification_media_scan_stage_songs">Scanning device storage for audio tracks…</string>
-    <string name="notification_media_scan_stage_saving">Optimizing and saving audio track database…</string>
-    <string name="notification_media_scan_stage_finishing">Completing audio indexing…</string>
-    <string name="notification_media_scan_complete_summary">Library scan completed: %1$d tracks, %2$d albums, %3$d artists indexed</string>
-    <string name="notification_media_scan_complete_pending_setup">Audio scanning finished, initializing background tasks…</string>
-    <string name="notification_media_scan_cancelled">Library scan was cancelled.</string>
-    <string name="notification_media_scan_failed">Library scan failed. Check storage permissions and try again.</string>
+    <string name="notification_media_scan_title">Cinemaverse Poster &amp; Database Fetch</string>
+    <string name="notification_media_scan_stage_songs">Fetching posters and title metadata…</string>
+    <string name="notification_media_scan_stage_saving">Caching poster and backdrop URLs…</string>
+    <string name="notification_media_scan_stage_finishing">Completing title indexing…</string>
+    <string name="notification_media_scan_complete_summary">Catalog fetch completed: %1$d titles, %2$d collections, %3$d universes indexed</string>
+    <string name="notification_media_scan_complete_pending_setup">Catalog fetch finished, initializing background tasks…</string>
+    <string name="notification_media_scan_cancelled">Catalog fetch was cancelled.</string>
+    <string name="notification_media_scan_failed">Catalog fetch failed. Check network/API settings and try again.</string>
     <string name="notification_playlist_export_title">Marvel Spectrum Library Export</string>
     <string name="notification_playlist_import_title">Marvel Spectrum Library Import</string>
     <string name="notification_library_setup_title">Marvel Spectrum Library Setup</string>
@@ -743,7 +743,7 @@
     <string name="onboarding_storage_desc">Manage cache size and storage in Settings > Cache Management</string>
     
     <string name="onboarding_complete_title">You\'re All Set!</string>
-    <string name="onboarding_complete_desc">Marvel Spectrum is ready to play! Your music library is being scanned in the background. Here\'s what\'s configured:</string>
+    <string name="onboarding_complete_desc">Cinemaverse is ready. Your offline Marvel/DC catalog is enabled and poster metadata can refresh in the background. Here\'s what\'s configured:</string>
     <string name="onboarding_whats_next">What\'s Next?</string>
     <string name="onboarding_next_browse">Browse your songs, albums, and artists</string>
     <string name="onboarding_next_create">Create your first playlist</string>
@@ -3262,11 +3262,11 @@
 
     <!-- Library Screen scanning overlay -->
     <string name="settings_scanning">Scanning</string>
-    <string name="scan_songs">Scanning songs…</string>
-    <string name="scan_albums">Processing albums…</string>
-    <string name="scan_artists">Processing artists…</string>
+    <string name="scan_songs">Fetching posters and title metadata…</string>
+    <string name="scan_albums">Processing collections…</string>
+    <string name="scan_artists">Processing universes…</string>
     <string name="scan_genres">Detecting genres…</string>
-    <string name="scan_media">Scanning media…</string>
+    <string name="scan_media">Fetching poster database…</string>
     <string name="scan_progress">%1$d / %2$d</string>
 
     <!-- Settings Search -->
@@ -3664,4 +3664,11 @@
     <string name="festivethemeexamples_christmas">🎄 Christmas</string>
     <string name="festivethemeexamples_new_year">🎉 New Year</string>
     <string name="festivethemeexamples_using_app_settings">Using App Settings</string>
+    <!-- Cinemaverse viewing mode -->
+    <string name="cinemaverse_title">Cinemaverse</string>
+    <string name="cinemaverse_subtitle">Marvel • DC • Release orders • Trailers</string>
+    <string name="viewing_poster_database_fetch">Poster &amp; database fetch</string>
+    <string name="viewing_titles_indexed">Titles indexed</string>
+    <string name="viewing_trailer_unavailable">Trailer unavailable</string>
+
 </resources>

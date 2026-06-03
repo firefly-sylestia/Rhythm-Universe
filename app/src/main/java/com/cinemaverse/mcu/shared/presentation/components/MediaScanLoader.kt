@@ -74,9 +74,9 @@ import kotlin.math.sin
 import androidx.compose.ui.res.stringResource
 
 /**
- * Media Scan Loader Screen
- * Shows a beautiful loading animation while scanning for media files
- * Will not exit until media scanning is complete
+ * Poster & Database Fetch Loader Screen
+ * Shows a beautiful loading animation while fetching posters and title metadata
+ * Will not exit until catalog fetch is complete
  */
 @Composable
 fun MediaScanLoader(
@@ -88,13 +88,13 @@ fun MediaScanLoader(
     val albums by musicViewModel.filteredAlbums.collectAsState()
     val artists by musicViewModel.filteredArtists.collectAsState()
     val scanProgress by musicViewModel.scanProgress.collectAsState()
-    val songsFound = songs.size
-    val albumsFound = albums.size
-    val artistsFound = artists.size
+    val titlesIndexed = songs.size
+    val collectionsIndexed = albums.size
+    val universesIndexed = artists.size
     
     // Track scanning progress
     var displayProgress by remember { mutableStateOf(0f) }
-    var currentStep by remember { mutableStateOf("Initializing...") }
+    var currentStep by remember { mutableStateOf("Loading offline catalog...") }
     var isComplete by remember { mutableStateOf(false) }
     
     // Breathing animation for the main loader
@@ -136,7 +136,7 @@ fun MediaScanLoader(
         when (scanProgress.stage) {
             "Idle" -> {
                 displayProgress = 0f
-                currentStep = "Initializing..."
+                currentStep = "Loading offline catalog..."
             }
             "Songs" -> {
                 // Calculate progress based on current/total
@@ -146,7 +146,7 @@ fun MediaScanLoader(
                     0.1f
                 }
                 displayProgress = progress
-                currentStep = "Scanning: ${scanProgress.current} of ${scanProgress.total} files..."
+                currentStep = "Fetching posters and title metadata: ${scanProgress.current} of ${scanProgress.total} titles..."
             }
             "Incremental" -> {
                 val progress = if (scanProgress.total > 0) {
@@ -155,14 +155,14 @@ fun MediaScanLoader(
                     0.5f
                 }
                 displayProgress = progress
-                currentStep = "Checking for new music: ${scanProgress.current} of ${scanProgress.total}..."
+                currentStep = "Checking TMDb/OMDb fallback metadata: ${scanProgress.current} of ${scanProgress.total}..."
             }
             "Complete" -> {
                 displayProgress = 0.95f
-                currentStep = "Finalizing scan (${scanProgress.estimatedTimeMs}ms)..."
+                currentStep = "Caching poster/backdrop URLs (${scanProgress.estimatedTimeMs}ms)..."
                 delay(500)
                 displayProgress = 1.0f
-                currentStep = "Media scan complete!"
+                currentStep = "Poster & database fetch complete!"
                 delay(1000)
                 if (!isComplete) {
                     isComplete = true
@@ -172,11 +172,11 @@ fun MediaScanLoader(
             }
             "Error" -> {
                 displayProgress = 0.5f
-                currentStep = "Error during scan - using cached data..."
+                currentStep = "Fetch issue — using offline catalog cache..."
                 delay(2000)
                 if (!isComplete) {
                     displayProgress = 1.0f
-                    currentStep = "Continuing with available media..."
+                    currentStep = "Continuing with offline catalog..."
                     delay(1000)
                     isComplete = true
                     delay(500)
@@ -186,7 +186,7 @@ fun MediaScanLoader(
             else -> {
                 // Fallback to old behavior for unknown stages
                 displayProgress = 0.3f
-                currentStep = "Processing media..."
+                currentStep = "Processing catalog metadata..."
             }
         }
     }
@@ -195,12 +195,12 @@ fun MediaScanLoader(
     LaunchedEffect(Unit) {
         delay(90000) // 1.5 minutes maximum wait time (reduced from 2 minutes)
         if (!isComplete) {
-            Log.w("MediaScanLoader", "Media scan timeout reached. Completing with current state: songs=$songsFound, albums=$albumsFound, artists=$artistsFound")
+            Log.w("MediaScanLoader", "Poster/database fetch timeout reached. Completing with current state: titles=$titlesIndexed, collections=$collectionsIndexed, universes=$universesIndexed")
             displayProgress = 1.0f
-            currentStep = if (songsFound == 0 && albumsFound == 0 && artistsFound == 0) {
-                "No media files found - continuing..."
+            currentStep = if (titlesIndexed == 0 && collectionsIndexed == 0 && universesIndexed == 0) {
+                "No remote posters fetched — offline catalog ready."
             } else {
-                "Media scan complete!"
+                "Poster & database fetch complete!"
             }
             delay(1000)
             isComplete = true
@@ -221,7 +221,7 @@ fun MediaScanLoader(
     
     // Trigger initial media scan
     LaunchedEffect(Unit) {
-        currentStep = "Starting media scan..."
+        currentStep = "Starting poster & database fetch..."
         delay(500)
         musicViewModel.refreshLibrary()
     }
@@ -317,14 +317,14 @@ fun MediaScanLoader(
                         
                         // Statistics
                         AnimatedVisibility(
-                            visible = songsFound > 0 || albumsFound > 0 || artistsFound > 0,
+                            visible = titlesIndexed > 0 || collectionsIndexed > 0 || universesIndexed > 0,
                             enter = fadeIn() + scaleIn(),
                             exit = fadeOut() + scaleOut()
                         ) {
                             MediaScanStats(
-                                songsFound = songsFound,
-                                albumsFound = albumsFound,
-                                artistsFound = artistsFound
+                                titlesIndexed = titlesIndexed,
+                                collectionsIndexed = collectionsIndexed,
+                                universesIndexed = universesIndexed
                             )
                         }
                     }
@@ -366,9 +366,9 @@ fun MediaScanLoader(
 
 @Composable
 private fun MediaScanStats(
-    songsFound: Int,
-    albumsFound: Int,
-    artistsFound: Int
+    titlesIndexed: Int,
+    collectionsIndexed: Int,
+    universesIndexed: Int
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -376,22 +376,22 @@ private fun MediaScanStats(
     ) {
         StatItem(
             icon = RhythmIcons.MusicNote,
-            count = songsFound,
-            label = "Songs",
+            count = titlesIndexed,
+            label = "Titles",
             color = MaterialTheme.colorScheme.primary
         )
         
         StatItem(
             icon = RhythmIcons.Album,
-            count = albumsFound,
-            label = "Albums",
+            count = collectionsIndexed,
+            label = "Collections",
             color = MaterialTheme.colorScheme.secondary
         )
         
         StatItem(
             icon = RhythmIcons.Artist,
-            count = artistsFound,
-            label = "Artists",
+            count = universesIndexed,
+            label = "Universes",
             color = MaterialTheme.colorScheme.tertiary
         )
     }
@@ -445,7 +445,7 @@ private fun StatItem(
 @Composable
 private fun DecorativeBackground(rotation: Float) {
     Box(modifier = Modifier.fillMaxSize()) {
-        // Floating music notes
+        // Floating catalog particles
         repeat(8) { index ->
             val angle = (index * 45f) + rotation
             val radius = 200.dp
