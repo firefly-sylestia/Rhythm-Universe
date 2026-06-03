@@ -7,11 +7,11 @@ import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -30,11 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -49,7 +45,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -65,7 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -81,7 +76,45 @@ import chromahub.rhythm.app.shared.data.viewing.ViewingItem
 import chromahub.rhythm.app.shared.data.viewing.ViewingList
 import chromahub.rhythm.app.shared.data.viewing.ViewingLists
 import chromahub.rhythm.app.shared.data.viewing.ViewingSortMode
+import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShapeTarget
+import chromahub.rhythm.app.shared.presentation.components.common.rememberExpressiveShapeFor
 import chromahub.rhythm.app.shared.util.ViewingArtworkUtils
+
+private object ViewingUiDefaults {
+    val ScreenHorizontalPadding = 20.dp
+    val ScreenTopPadding = 24.dp
+    val ScreenBottomPadding = 128.dp
+    val DetailBottomPadding = 36.dp
+    val SectionSpacing = 22.dp
+    val CardSpacing = 14.dp
+    val CompactSpacing = 10.dp
+    val TinySpacing = 6.dp
+    val MicroSpacing = 8.dp
+    val DetailContentSpacing = 18.dp
+    val EmptyStatePadding = 18.dp
+    val CardPadding = 16.dp
+    val CompactCardPadding = 14.dp
+    val DenseCardPadding = 12.dp
+    val DetailHeroHeight = 420.dp
+    val HomeHeroHeight = 300.dp
+    val ListArtworkHeight = 126.dp
+    val PosterWidth = 150.dp
+    val ListCardWidth = 220.dp
+    val DetailPosterWidth = 150.dp
+    val DetailPosterHeight = 225.dp
+    val RowPosterWidth = 62.dp
+    val RowPosterHeight = 92.dp
+
+    fun subtlePressSpec() = tween<Float>(
+        durationMillis = 160,
+        easing = FastOutSlowInEasing
+    )
+
+    fun subtleColorSpec() = tween<androidx.compose.ui.graphics.Color>(
+        durationMillis = 160,
+        easing = FastOutSlowInEasing
+    )
+}
 
 @Composable
 fun ViewingHomeScreen(
@@ -100,8 +133,8 @@ fun ViewingHomeScreen(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 128.dp),
-        verticalArrangement = Arrangement.spacedBy(22.dp)
+        contentPadding = PaddingValues(start = ViewingUiDefaults.ScreenHorizontalPadding, end = ViewingUiDefaults.ScreenHorizontalPadding, top = ViewingUiDefaults.ScreenTopPadding, bottom = ViewingUiDefaults.ScreenBottomPadding),
+        verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.SectionSpacing)
     ) {
         item {
             HeroViewingCard(
@@ -117,8 +150,8 @@ fun ViewingHomeScreen(
         }
         item {
             SectionHeader("Continue browsing", "Recently viewed and watchlist-ready picks", action = "Search", onAction = onOpenSearch)
-            Spacer(Modifier.height(12.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Spacer(Modifier.height(ViewingUiDefaults.DenseCardPadding))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CardSpacing)) {
                 items(ViewingLists.allItems.drop(18).take(8)) { item ->
                     PosterCard(item = item, onClick = onOpenDetail)
                 }
@@ -126,8 +159,8 @@ fun ViewingHomeScreen(
         }
         item {
             SectionHeader("Featured lists", "Curated release, timeline, phase, and collection orders", action = "View all", onAction = onOpenLibrary)
-            Spacer(Modifier.height(12.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Spacer(Modifier.height(ViewingUiDefaults.DenseCardPadding))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CardSpacing)) {
                 items(ViewingLists.allLists.take(8)) { list ->
                     ViewingListCard(list = list, onClick = onOpenLibrary)
                 }
@@ -135,8 +168,8 @@ fun ViewingHomeScreen(
         }
         item {
             SectionHeader("Phase-based sections", "Browse by MCU-style phases without changing Rhythm's navigation")
-            Spacer(Modifier.height(12.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(ViewingUiDefaults.DenseCardPadding))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CompactSpacing)) {
                 items(ViewingLists.allLists.filter { it.phase?.startsWith("Phase") == true }) { list ->
                     AssistChip(onClick = onOpenLibrary, label = { Text("${list.title} • ${list.items.size}") })
                 }
@@ -165,8 +198,8 @@ fun ViewingLibraryScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 128.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        contentPadding = PaddingValues(start = ViewingUiDefaults.ScreenHorizontalPadding, end = ViewingUiDefaults.ScreenHorizontalPadding, top = ViewingUiDefaults.ScreenTopPadding, bottom = ViewingUiDefaults.ScreenBottomPadding),
+        verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.ScreenHorizontalPadding)
     ) {
         item {
             Text("Library", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
@@ -174,15 +207,15 @@ fun ViewingLibraryScreen(
         }
         item {
             SectionHeader("Lists / Collections", "All bundled viewing lists remain editable in the local data file")
-            Spacer(Modifier.height(12.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Spacer(Modifier.height(ViewingUiDefaults.DenseCardPadding))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CardSpacing)) {
                 items(ViewingLists.allLists) { list -> ViewingListCard(list, onClick = {}) }
             }
         }
         item {
             SectionHeader("Viewing Order", "Switch between release, chronological, phase, and custom order")
-            Spacer(Modifier.height(10.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(Modifier.height(ViewingUiDefaults.CompactSpacing))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(ViewingUiDefaults.MicroSpacing)) {
                 items(ViewingSortMode.values().toList()) { mode ->
                     FilterChip(selected = sortMode == mode, onClick = { sortMode = mode }, label = { Text(mode.label) })
                 }
@@ -221,8 +254,8 @@ fun ViewingSearchScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 128.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(start = ViewingUiDefaults.ScreenHorizontalPadding, end = ViewingUiDefaults.ScreenHorizontalPadding, top = ViewingUiDefaults.DenseCardPadding, bottom = ViewingUiDefaults.ScreenBottomPadding),
+            verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CardPadding)
         ) {
             item {
                 OutlinedTextField(
@@ -282,21 +315,21 @@ fun ViewingDetailScreen(
     val item = result.item
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 36.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        contentPadding = PaddingValues(bottom = ViewingUiDefaults.DetailBottomPadding),
+        verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.DetailContentSpacing)
     ) {
         item {
             DetailHero(item = item, isLoading = isLoading, onBack = onBack)
         }
         item {
-            Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.padding(horizontal = ViewingUiDefaults.ScreenHorizontalPadding), verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CardSpacing)) {
                 Text(item.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Text(listOfNotNull(item.year, item.phase, item.runtime, item.genres.take(2).joinToString(" / ").takeIf { it.isNotBlank() }).joinToString(" • "), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CompactSpacing)) {
                     FilledTonalButton(onClick = { isWatchlisted = !isWatchlisted }) { Text(if (isWatchlisted) "In Watchlist" else "Add to Watchlist") }
                     OutlinedButton(onClick = { isWatched = !isWatched }) { Text(if (isWatched) "Watched" else "Mark watched") }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CompactSpacing)) {
                     Button(onClick = { openUrl(context, item.trailerUrl) }, enabled = !item.trailerUrl.isNullOrBlank()) { Text("Watch trailer") }
                     OutlinedButton(onClick = { isFavorite = !isFavorite }) { Text(if (isFavorite) "Favorited" else "Favorite") }
                 }
@@ -313,21 +346,21 @@ fun ViewingDetailScreen(
 @Composable
 private fun HeroViewingCard(item: ViewingItem, list: ViewingList, subtitle: String, onOpenDetail: () -> Unit, onOpenLibrary: () -> Unit) {
     ElevatedCard(
-        shape = RoundedCornerShape(32.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Box(Modifier.fillMaxWidth().height(300.dp)) {
+        Box(Modifier.fillMaxWidth().height(ViewingUiDefaults.HomeHeroHeight)) {
             PosterBackdrop(item = item, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, MaterialTheme.colorScheme.surfaceContainerHigh))))
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0f), MaterialTheme.colorScheme.surfaceContainerHigh))))
             Column(
-                Modifier.align(Alignment.BottomStart).padding(22.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                Modifier.align(Alignment.BottomStart).padding(ViewingUiDefaults.SectionSpacing),
+                verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.MicroSpacing)
             ) {
                 Text("Selected Movie", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                 Text(item.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 2)
                 Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CompactSpacing)) {
                     Button(onClick = onOpenDetail) { Text("Open detail") }
                     OutlinedButton(onClick = onOpenLibrary) { Text("View list") }
                 }
@@ -338,9 +371,15 @@ private fun HeroViewingCard(item: ViewingItem, list: ViewingList, subtitle: Stri
 
 @Composable
 private fun PosterCard(item: ViewingItem, onClick: () -> Unit) {
-    PressableCard(onClick = onClick, modifier = Modifier.width(150.dp)) {
-        PosterBackdrop(item = item, modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(20.dp)), contentScale = ContentScale.Crop)
-        Spacer(Modifier.height(8.dp))
+    val posterShape = rememberExpressiveShapeFor(ExpressiveShapeTarget.SONG_ART, MaterialTheme.shapes.medium)
+    PressableCard(onClick = onClick, modifier = Modifier.width(ViewingUiDefaults.PosterWidth)) {
+        PosterBackdrop(
+            item = item,
+            modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f),
+            contentScale = ContentScale.Crop,
+            shape = posterShape
+        )
+        Spacer(Modifier.height(ViewingUiDefaults.MicroSpacing))
         Text(item.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(listOfNotNull(item.year, item.phase).joinToString(" • "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
@@ -348,14 +387,15 @@ private fun PosterCard(item: ViewingItem, onClick: () -> Unit) {
 
 @Composable
 private fun ViewingListCard(list: ViewingList, onClick: () -> Unit) {
-    PressableCard(onClick = onClick, modifier = Modifier.width(220.dp)) {
-        Box(Modifier.fillMaxWidth().height(126.dp).clip(RoundedCornerShape(24.dp))) {
+    val playlistShape = rememberExpressiveShapeFor(ExpressiveShapeTarget.PLAYLIST_ART, MaterialTheme.shapes.large)
+    PressableCard(onClick = onClick, modifier = Modifier.width(ViewingUiDefaults.ListCardWidth)) {
+        Box(Modifier.fillMaxWidth().height(ViewingUiDefaults.ListArtworkHeight).clip(playlistShape)) {
             val poster = ViewingArtworkUtils.resolveBackdrop(list) ?: ViewingArtworkUtils.resolvePoster(list)
             ArtworkImage(data = poster, description = "${list.title} collection artwork", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)))))
-            Text("${list.items.size} titles", modifier = Modifier.align(Alignment.BottomStart).padding(12.dp), color = MaterialTheme.colorScheme.onSurface)
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.surface.copy(alpha = 0f), MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)))))
+            Text("${list.items.size} titles", modifier = Modifier.align(Alignment.BottomStart).padding(ViewingUiDefaults.DenseCardPadding), color = MaterialTheme.colorScheme.onSurface)
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(ViewingUiDefaults.MicroSpacing))
         Text(list.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2)
         Text(list.description ?: list.phase ?: "Viewing list", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
     }
@@ -363,10 +403,16 @@ private fun ViewingListCard(list: ViewingList, onClick: () -> Unit) {
 
 @Composable
 private fun ViewingOrderRow(item: ViewingItem, order: Int, onClick: () -> Unit) {
-    Card(onClick = onClick, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer), shape = RoundedCornerShape(22.dp)) {
-        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Card(onClick = onClick, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer), shape = MaterialTheme.shapes.large) {
+        Row(Modifier.fillMaxWidth().padding(ViewingUiDefaults.DenseCardPadding), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ViewingUiDefaults.DenseCardPadding)) {
             Text(order.toString().padStart(2, '0'), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            PosterBackdrop(item = item, modifier = Modifier.size(62.dp, 92.dp).clip(RoundedCornerShape(14.dp)), contentScale = ContentScale.Crop)
+            val rowPosterShape = rememberExpressiveShapeFor(ExpressiveShapeTarget.SONG_ART, MaterialTheme.shapes.small)
+            PosterBackdrop(
+                item = item,
+                modifier = Modifier.size(ViewingUiDefaults.RowPosterWidth, ViewingUiDefaults.RowPosterHeight),
+                contentScale = ContentScale.Crop,
+                shape = rowPosterShape
+            )
             Column(Modifier.weight(1f)) {
                 Text(item.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(listOfNotNull(item.year, item.phase, item.runtime).joinToString(" • "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
@@ -378,12 +424,18 @@ private fun ViewingOrderRow(item: ViewingItem, order: Int, onClick: () -> Unit) 
 
 @Composable
 private fun DetailHero(item: ViewingItem, isLoading: Boolean, onBack: () -> Unit) {
-    Box(Modifier.fillMaxWidth().height(420.dp)) {
+    Box(Modifier.fillMaxWidth().height(ViewingUiDefaults.DetailHeroHeight)) {
         PosterBackdrop(item = item, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.surface.copy(alpha = 0.35f), MaterialTheme.colorScheme.background))))
-        Column(Modifier.align(Alignment.BottomStart).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.align(Alignment.BottomStart).padding(ViewingUiDefaults.ScreenHorizontalPadding), verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.DenseCardPadding)) {
             TextButton(onClick = onBack) { Text("Back") }
-            PosterBackdrop(item = item, modifier = Modifier.size(150.dp, 225.dp).clip(RoundedCornerShape(28.dp)), contentScale = ContentScale.Crop)
+            val detailPosterShape = rememberExpressiveShapeFor(ExpressiveShapeTarget.PLAYER_ART, MaterialTheme.shapes.extraLarge)
+            PosterBackdrop(
+                item = item,
+                modifier = Modifier.size(ViewingUiDefaults.DetailPosterWidth, ViewingUiDefaults.DetailPosterHeight),
+                contentScale = ContentScale.Crop,
+                shape = detailPosterShape
+            )
             AnimatedVisibility(visible = isLoading, enter = fadeIn(), exit = fadeOut()) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
@@ -393,7 +445,7 @@ private fun DetailHero(item: ViewingItem, isLoading: Boolean, onBack: () -> Unit
 
 @Composable
 private fun InfoPanel(item: ViewingItem) {
-    Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.padding(horizontal = ViewingUiDefaults.ScreenHorizontalPadding), verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CardPadding)) {
         SectionHeader("Detailed movie information", "Overview, cast & crew, ratings, release details, and order placement")
         MetadataSection("Overview", listOf("Plot" to (item.plot ?: item.overview ?: "No overview available."), "Genres" to item.genres.joinToString(", ").ifBlank { "Not available" }))
         MetadataSection("Cast & Crew", listOf("Director" to (item.director ?: "Not available"), "Writer" to (item.writer ?: "Not available"), "Actors" to (item.actors.joinToString(", ").ifBlank { item.cast.take(6).joinToString { it.name }.ifBlank { "Not available" } })))
@@ -405,10 +457,10 @@ private fun InfoPanel(item: ViewingItem) {
 
 @Composable
 private fun TrailerPanel(item: ViewingItem) {
-    Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.padding(horizontal = ViewingUiDefaults.ScreenHorizontalPadding), verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.DenseCardPadding)) {
         SectionHeader("Trailer", "Rhythm's focused media space is now a trailer panel")
-        Card(shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
-            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Card(shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
+            Column(Modifier.fillMaxWidth().padding(ViewingUiDefaults.EmptyStatePadding), verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CompactSpacing)) {
                 if (item.trailerUrl.isNullOrBlank()) {
                     EmptyState("Trailer unavailable", "Add a manual trailerUrl in ViewingLists.kt or configure TMDB videos.")
                 } else {
@@ -424,8 +476,8 @@ private fun TrailerPanel(item: ViewingItem) {
 
 @Composable
 private fun MetadataSection(title: String, rows: List<Pair<String, String>>) {
-    Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+        Column(Modifier.fillMaxWidth().padding(ViewingUiDefaults.CardPadding), verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.CompactSpacing)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             rows.forEach { (label, value) ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -440,8 +492,8 @@ private fun MetadataSection(title: String, rows: List<Pair<String, String>>) {
 
 @Composable
 private fun ApiStateCard(message: String, onOpenSettings: (() -> Unit)? = null) {
-    Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+        Row(Modifier.fillMaxWidth().padding(ViewingUiDefaults.CardPadding), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ViewingUiDefaults.DenseCardPadding)) {
             Column(Modifier.weight(1f)) {
                 Text("Offline-safe metadata", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
                 Text(message, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.78f))
@@ -453,8 +505,8 @@ private fun ApiStateCard(message: String, onOpenSettings: (() -> Unit)? = null) 
 
 @Composable
 private fun WatchlistShortcut(onClick: () -> Unit) {
-    Card(onClick = onClick, shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Card(onClick = onClick, shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+        Column(Modifier.fillMaxWidth().padding(ViewingUiDefaults.ScreenHorizontalPadding), verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.TinySpacing)) {
             Text("Watchlist shortcut", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
             Text("Use detail cards to save favorites, mark watched, and keep a personal viewing queue.", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.76f))
         }
@@ -474,8 +526,8 @@ private fun SectionHeader(title: String, subtitle: String, action: String? = nul
 
 @Composable
 private fun CompactListResult(list: ViewingList) {
-    Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp)) {
+    Card(shape = MaterialTheme.shapes.medium, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+        Column(Modifier.fillMaxWidth().padding(ViewingUiDefaults.CompactCardPadding)) {
             Text(list.title, fontWeight = FontWeight.SemiBold)
             Text(listOfNotNull(list.phase, list.saga, "${list.items.size} titles").joinToString(" • "), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -484,7 +536,7 @@ private fun CompactListResult(list: ViewingList) {
 
 @Composable
 private fun EmptyState(title: String, body: String) {
-    Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.fillMaxWidth().padding(ViewingUiDefaults.EmptyStatePadding), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(ViewingUiDefaults.TinySpacing)) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(body, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -494,21 +546,29 @@ private fun EmptyState(title: String, body: String) {
 private fun PressableCard(modifier: Modifier = Modifier, onClick: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.96f else 1f, spring(), label = "pressScale")
-    val container by animateColorAsState(if (pressed) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainer, label = "cardColor")
+    val scale by animateFloatAsState(if (pressed) 0.98f else 1f, ViewingUiDefaults.subtlePressSpec(), label = "pressScale")
+    val container by animateColorAsState(if (pressed) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainer, ViewingUiDefaults.subtleColorSpec(), label = "cardColor")
     Card(
         colors = CardDefaults.cardColors(containerColor = container),
-        shape = RoundedCornerShape(24.dp),
-        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }.clickable(interactionSource = interaction, indication = null, onClick = onClick)
-    ) { Column(Modifier.padding(12.dp), content = content) }
+        shape = MaterialTheme.shapes.large,
+        onClick = onClick,
+        interactionSource = interaction,
+        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }
+    ) { Column(Modifier.padding(ViewingUiDefaults.DenseCardPadding), content = content) }
 }
 
 @Composable
-private fun PosterBackdrop(item: ViewingItem, modifier: Modifier, contentScale: ContentScale) {
+private fun PosterBackdrop(
+    item: ViewingItem,
+    modifier: Modifier,
+    contentScale: ContentScale,
+    shape: Shape? = null
+) {
+    val artworkModifier = if (shape != null) modifier.clip(shape) else modifier
     ArtworkImage(
         data = ViewingArtworkUtils.resolveBackdrop(item) ?: ViewingArtworkUtils.resolvePoster(item),
         description = "Poster for ${item.title}",
-        modifier = modifier,
+        modifier = artworkModifier,
         contentScale = contentScale
     )
 }
