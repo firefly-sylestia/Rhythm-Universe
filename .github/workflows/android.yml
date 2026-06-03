@@ -63,6 +63,15 @@ jobs:
       - name: Build universal GitHub debug and unsigned release APKs
         run: ./gradlew assembleGithubDebug assembleGithubRelease --stacktrace
 
+      - name: List all build outputs
+        if: always()
+        run: |
+          echo "=== Debug APK Outputs ===" 
+          find app/build/outputs/apk -type f -name '*.apk' | sort
+          echo ""
+          echo "=== Build Directory Structure ===" 
+          ls -la app/build/outputs/apk/github/ 2>/dev/null || echo "github directory not found"
+
       - name: Verify PR APK artifacts
         if: github.event_name == 'pull_request'
         run: |
@@ -106,3 +115,18 @@ jobs:
             app/build/outputs/apk/github/release/*.apk
             build_info.txt
           retention-days: 14
+          if-no-files-found: warn
+
+      - name: Report APK build status
+        if: always()
+        run: |
+          debug_count=$(find app/build/outputs/apk/github/debug -type f -name '*.apk' 2>/dev/null | wc -l)
+          release_count=$(find app/build/outputs/apk/github/release -type f -name '*.apk' 2>/dev/null | wc -l)
+          echo "Debug APKs found: $debug_count"
+          echo "Release APKs found: $release_count"
+          if [ "$debug_count" -gt 0 ] && [ "$release_count" -gt 0 ]; then
+            echo "✓ APK build successful - both debug and release APKs generated"
+            echo "Artifacts are available in the workflow run."
+          else
+            echo "⚠ APK count mismatch: Debug=$debug_count, Release=$release_count"
+          fi
