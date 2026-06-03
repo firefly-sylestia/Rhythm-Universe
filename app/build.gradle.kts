@@ -33,12 +33,12 @@ android {
             dimension = "distribution"
             applicationId = "chromahub.rhythm.app"
             
-            // F-Droid build: Enable all features (FOSS ethos)
-            buildConfigField("boolean", "ENABLE_YOUTUBE_MUSIC", "true")
-            buildConfigField("boolean", "ENABLE_APPLE_MUSIC", "true")
-            buildConfigField("boolean", "ENABLE_DEEZER", "true")
+            // F-Droid build: keep music/streaming integrations disabled for viewing-first mode
+            buildConfigField("boolean", "ENABLE_YOUTUBE_MUSIC", "false")
+            buildConfigField("boolean", "ENABLE_APPLE_MUSIC", "false")
+            buildConfigField("boolean", "ENABLE_DEEZER", "false")
             buildConfigField("boolean", "ENABLE_LRCLIB", "true")
-            buildConfigField("boolean", "ENABLE_SPOTIFY_SEARCH", "true")
+            buildConfigField("boolean", "ENABLE_SPOTIFY_SEARCH", "false")
             buildConfigField("String", "FLAVOR", "\"fdroid\"")
             
             versionNameSuffix = "-fdroid"
@@ -48,12 +48,12 @@ android {
             dimension = "distribution"
             applicationId = "chromahub.rhythm.universe"
             
-            // GitHub releases: Enable all features. This is the only variant built by CI.
-            buildConfigField("boolean", "ENABLE_YOUTUBE_MUSIC", "true")
-            buildConfigField("boolean", "ENABLE_APPLE_MUSIC", "true")
-            buildConfigField("boolean", "ENABLE_DEEZER", "true")
+            // GitHub releases: keep music/streaming integrations disabled for viewing-first mode. This is the only variant built by CI.
+            buildConfigField("boolean", "ENABLE_YOUTUBE_MUSIC", "false")
+            buildConfigField("boolean", "ENABLE_APPLE_MUSIC", "false")
+            buildConfigField("boolean", "ENABLE_DEEZER", "false")
             buildConfigField("boolean", "ENABLE_LRCLIB", "true")
-            buildConfigField("boolean", "ENABLE_SPOTIFY_SEARCH", "true")
+            buildConfigField("boolean", "ENABLE_SPOTIFY_SEARCH", "false")
             buildConfigField("String", "FLAVOR", "\"github\"")
             
             versionNameSuffix = "-gh"
@@ -113,6 +113,12 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    sourceSets {
+        getByName("main") {
+            assets.srcDirs("src/main/assets", "src/main/res/drawable-xxhdpi")
+        }
     }
 
     dependenciesInfo {

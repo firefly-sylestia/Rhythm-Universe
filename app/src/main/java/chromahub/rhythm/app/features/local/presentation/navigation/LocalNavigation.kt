@@ -438,18 +438,19 @@ fun LocalNavigation(
 
     // Provide dynamic mini-player padding with comprehensive navigation handling
     val showMiniPlayer =
-        currentSong != null &&
+        localExperienceMode != AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING &&
+            currentSong != null &&
             !isMiniPlayerDismissed &&
             currentRoute != Screen.Player.route &&
             currentRoute != Screen.Search.route
-    val showNavBar = remember(currentRoute) {
+    val showNavBar = remember(currentRoute, localExperienceMode) {
         currentRoute == Screen.Home.route ||
             isLibraryRoute ||
             currentRoute == Screen.Search.route ||
             currentRoute == Screen.Settings.route ||
             currentRoute == Screen.RhythmStats.route
     }
-    val showBottomNav = remember(currentRoute) {
+    val showBottomNav = remember(currentRoute, localExperienceMode) {
         currentRoute == Screen.Home.route || isLibraryRoute
     }
     

@@ -174,13 +174,50 @@ We welcome contributions! See our [CONTRIBUTING.md](https://github.com/cromaguy/
 
 </div>
 
-## Rhythm viewing-list metadata setup
+## Marvel Spectrum viewing metadata setup
 
-Rhythm now includes a movie/list viewing-order data layer while preserving the app name, navigation shell, theme system, and reusable Compose UI patterns.
+Marvel Spectrum is viewing-first: bundled MCU metadata and poster references are available offline, so the app can open directly into the viewing-order experience without scanning a music library or requiring network credentials.
 
-### OMDb and TMDB keys
+### Bundled MCU JSON
 
-The Android build reads API credentials from environment variables when Gradle configures the app:
+Local viewing metadata lives in:
+
+- `app/src/main/assets/mcu_data/mcu_titles.json`
+- `app/src/main/assets/mcu_data/posters.json`
+
+`mcu_titles.json` describes MCU titles, series, sagas, viewing order, release dates, and the JSON `posterPath`. `posters.json` provides additional poster lookups by MCU id or title. The app loader merges these records with the curated `ViewingLists.kt` data so richer hand-authored fields such as phase, runtime, plot, genres, trailer URLs, and collection membership are retained.
+
+### Bundled local posters
+
+Poster images are exposed to Android as assets at:
+
+- `app/src/main/assets/mcu_posters/`
+
+The source poster files may keep their JSON filenames, including hyphens or parentheses, because they are loaded as assets instead of Android drawable resource ids. A JSON value such as:
+
+```json
+{ "posterPath": "001-captain-america-the-first-avenger.jpg" }
+```
+
+maps to this Coil-loadable URL:
+
+```text
+file:///android_asset/mcu_posters/001-captain-america-the-first-avenger.jpg
+```
+
+Missing poster files are handled gracefully. The loader checks whether an asset exists once while building the catalog, skips missing local poster URLs, and lets the UI fall back to remote or built-in artwork.
+
+Artwork priority is:
+
+1. Bundled local asset poster/backdrop (`file:///android_asset/mcu_posters/...`)
+2. Valid local curated override
+3. TMDB poster/backdrop
+4. OMDb poster
+5. Built-in Marvel Spectrum fallback artwork
+
+### Optional OMDb and TMDB enrichment
+
+API keys are only needed for optional online enrichment. The Android build reads credentials from environment variables when Gradle configures the app:
 
 ```bash
 export OMDB_API_KEY="YOUR_OMDB_API_KEY_HERE"
@@ -189,17 +226,8 @@ export TMDB_READ_ACCESS_TOKEN="YOUR_TMDB_READ_ACCESS_TOKEN_HERE"
 ./gradlew :app:assembleGithubDebug
 ```
 
-Real keys must not be committed. `.env.example` contains placeholder names only. If keys are missing, Rhythm stays usable with bundled local viewing-list data.
-
-### Local posters and backdrops
-
-Viewing items include `localPoster` and `localBackdrop` fields in `app/src/main/java/chromahub/rhythm/app/shared/data/viewing/ViewingLists.kt`. Replace the placeholder path `[I WILL PROVIDE POSTER FOLDER PATH LATER]` with your final asset path when you provide posters. Artwork priority is:
-
-1. Local poster/backdrop override
-2. TMDB poster/backdrop
-3. OMDb poster
-4. Rhythm fallback artwork
+Real keys must not be committed. `.env.example` contains placeholder names only. Missing API keys do not break Marvel Spectrum because local JSON metadata and poster assets are bundled with the app.
 
 ### Editing viewing lists
 
-Add or edit curated lists in `ViewingLists.kt`. Local data defines membership, order, phase, saga, local artwork, and manual trailer URLs; OMDb/TMDB enrichment fills missing metadata through the service layer in `shared/data/service`.
+Add or edit curated lists in `app/src/main/java/chromahub/rhythm/app/shared/data/viewing/ViewingLists.kt`. Local curated data defines membership, order, phase, saga, manual trailers, and narrative metadata; `McuAssetDataSource.kt` enriches it with bundled JSON titles and validated local poster asset URLs.

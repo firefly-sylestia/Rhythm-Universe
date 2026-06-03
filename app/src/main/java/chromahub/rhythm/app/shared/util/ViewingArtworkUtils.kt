@@ -5,6 +5,7 @@ import chromahub.rhythm.app.shared.data.viewing.ViewingList
 
 object ViewingArtworkUtils {
     const val TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p"
+    const val MCU_POSTER_ASSET_PREFIX = "file:///android_asset/mcu_posters/"
 
     fun tmdbPoster(path: String?, size: String = "w500"): String? = path
         ?.takeIf { it.isNotBlank() }
@@ -15,6 +16,7 @@ object ViewingArtworkUtils {
         ?.let { if (it.startsWith("http")) it else "$TMDB_IMAGE_BASE_URL/$size$it" }
 
     fun resolvePoster(item: ViewingItem): String? = firstUsable(
+        item.localPoster.takeIfAssetPoster(),
         item.localPoster,
         item.tmdbPoster,
         item.poster,
@@ -22,8 +24,10 @@ object ViewingArtworkUtils {
     )
 
     fun resolvePoster(list: ViewingList): String? = firstUsable(
+        list.localPoster.takeIfAssetPoster(),
         list.localPoster,
         list.poster,
+        list.items.firstOrNull()?.localPoster.takeIfAssetPoster(),
         list.items.firstOrNull()?.localPoster,
         list.items.firstOrNull()?.tmdbPoster,
         list.items.firstOrNull()?.poster,
@@ -31,18 +35,25 @@ object ViewingArtworkUtils {
     )
 
     fun resolveBackdrop(item: ViewingItem): String? = firstUsable(
+        item.localBackdrop.takeIfAssetPoster(),
         item.localBackdrop,
         item.tmdbBackdrop,
-        item.backdrop
+        item.backdrop,
+        resolvePoster(item)
     )
 
     fun resolveBackdrop(list: ViewingList): String? = firstUsable(
+        list.localBackdrop.takeIfAssetPoster(),
         list.localBackdrop,
         list.backdrop,
+        list.items.firstOrNull()?.localBackdrop.takeIfAssetPoster(),
         list.items.firstOrNull()?.localBackdrop,
         list.items.firstOrNull()?.tmdbBackdrop,
-        list.items.firstOrNull()?.backdrop
+        list.items.firstOrNull()?.backdrop,
+        resolvePoster(list)
     )
+
+    private fun String?.takeIfAssetPoster(): String? = this?.takeIf { it.startsWith(MCU_POSTER_ASSET_PREFIX) }
 
     private fun firstUsable(vararg values: String?): String? = values.firstOrNull { value ->
         !value.isNullOrBlank() && !value.contains("[I WILL PROVIDE POSTER FOLDER PATH LATER]") && value != "N/A"
