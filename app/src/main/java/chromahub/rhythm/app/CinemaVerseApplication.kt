@@ -9,7 +9,7 @@ import com.cinemaverse.mcu.util.ANRWatchdog
 import com.cinemaverse.mcu.util.CrashReporter
 
 /**
- * Custom Application class for Rhythm Music Player.
+ * Custom Application class for CinemaVerse MCU Viewing App.
  * Handles initialization of:
  * - AppSettings
  * - CrashReporter
@@ -17,10 +17,10 @@ import com.cinemaverse.mcu.util.CrashReporter
  * - LeakCanary (debug builds)
  * - ANR Watchdog (debug builds)
  */
-class RhythmApplication : Application() {
+class CinemaVerseApplication : Application() {
     
     companion object {
-        private const val TAG = "RhythmApplication"
+        private const val TAG = "CinemaVerseApplication"
         private const val TRIM_MEMORY_RUNNING_MODERATE_LEVEL = 5
         private const val TRIM_MEMORY_RUNNING_LOW_LEVEL = 10
         private const val TRIM_MEMORY_RUNNING_CRITICAL_LEVEL = 15
@@ -29,7 +29,7 @@ class RhythmApplication : Application() {
         
         // Static reference to the application instance
         // Using a static reference is safe for Application class
-        lateinit var instance: RhythmApplication
+        lateinit var instance: CinemaVerseApplication
             private set
     }
     
@@ -41,7 +41,7 @@ class RhythmApplication : Application() {
         instance = this
         
         Log.d(TAG, "═══════════════════════════════════════════════════")
-        Log.d(TAG, "RhythmApplication onCreate")
+        Log.d(TAG, "CinemaVerseApplication onCreate")
         Log.d(TAG, "Build Type: ${BuildConfig.BUILD_TYPE}")
         Log.d(TAG, "Version: ${BuildConfig.VERSION_NAME}")
         Log.d(TAG, "═══════════════════════════════════════════════════")
@@ -104,7 +104,7 @@ class RhythmApplication : Application() {
     }
     
     override fun onTerminate() {
-        Log.d(TAG, "RhythmApplication onTerminate")
+        Log.d(TAG, "CinemaVerseApplication onTerminate")
         
         // Stop ANR watchdog
         anrWatchdog?.stopWatching()

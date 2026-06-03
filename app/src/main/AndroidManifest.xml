@@ -46,7 +46,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:localeConfig="@xml/locale_config"
-        android:theme="@style/Theme.Rhythm"
+        android:theme="@style/Theme.CinemaVerse"
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="36">
         
