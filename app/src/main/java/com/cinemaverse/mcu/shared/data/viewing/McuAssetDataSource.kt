@@ -101,7 +101,11 @@ object McuAssetDataSource {
         ) {
             if (filtered.isEmpty()) return
             val listItems = filtered.sortedWith(sort)
-            val art = listItems.firstOrNull { ViewingArtworkUtils.resolvePoster(it) != null || ViewingArtworkUtils.resolveBackdrop(it) != null }
+            val artCandidates = listItems.filter { ViewingArtworkUtils.resolvePoster(it) != null || ViewingArtworkUtils.resolveBackdrop(it) != null }
+            val representativeArt = (artCandidates.distinctBy { it.franchise ?: it.saga ?: it.universe ?: it.id } + artCandidates)
+                .distinctBy { it.id }
+                .take(4)
+            val art = representativeArt.firstOrNull()
             lists += ViewingList(
                 id = id,
                 title = title,
@@ -115,6 +119,9 @@ object McuAssetDataSource {
                 localPoster = art?.localPoster,
                 backdrop = art?.let { ViewingArtworkUtils.resolveBackdrop(it, preferLocalArtwork = false) },
                 localBackdrop = art?.localBackdrop,
+                artworkSeed = id,
+                accentLabel = category ?: phase ?: saga ?: universe ?: franchise ?: "Cinemaverse",
+                artworkItems = representativeArt,
                 itemIds = listItems.map { it.id },
                 items = listItems,
                 importance = importance
