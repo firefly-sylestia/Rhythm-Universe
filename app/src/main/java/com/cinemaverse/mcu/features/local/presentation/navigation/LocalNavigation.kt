@@ -389,6 +389,7 @@ fun LocalNavigation(
 
     // Track current destination for hiding navigation bar on player screen
     var currentRoute by remember { mutableStateOf(Screen.Home.route) }
+    var viewingHomeReselectionKey by remember { mutableStateOf(0) }
 
     // Update current route when destination changes
     LaunchedEffect(navController) {
@@ -1056,6 +1057,9 @@ private fun LocalNavigationContent(
                                                         haptic,
                                                         HapticFeedbackType.LongPress
                                                     )
+                                                    if (title == "Home" && currentRoute == Screen.Home.route && localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
+                                                        viewingHomeReselectionKey += 1
+                                                    }
                                                     navigateToTopLevel(route)
                                                 },
                                             contentAlignment = Alignment.Center
@@ -1259,7 +1263,8 @@ private fun LocalNavigationContent(
                             onOpenLibrary = { navigateToTopLevel(Screen.Library.createRoute(firstVisibleLibraryTab)) },
                             onOpenSearch = { navigateToTopLevel(Screen.Search.route) },
                             onOpenDetail = {},
-                            onOpenSettings = { navigateToTopLevel(Screen.Settings.route) }
+                            onOpenSettings = { navigateToTopLevel(Screen.Settings.route) },
+                            homeReselectionKey = viewingHomeReselectionKey
                         )
                     } else {
                         HomeScreen(

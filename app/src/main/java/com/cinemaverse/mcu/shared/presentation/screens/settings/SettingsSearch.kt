@@ -86,6 +86,16 @@ fun buildSettingsSearchIndex(context: Context): List<SearchableSettingItem> {
     return buildList {
         // ======================== MAIN SETTINGS SCREEN ========================
         
+        add(SearchableSettingItem(
+            id = "cinemaverse_api_metadata",
+            title = "Cinemaverse API and cinema metadata",
+            description = "TMDB powers posters, backdrops, trailers, and cinema metadata. OMDb is optional for IMDb-style details.",
+            keywords = listOf("tmdb", "the movie database", "movie database", "poster", "backdrop", "trailer", "youtube trailer", "omdb", "cinema metadata", "cinemaverse api", "api posters"),
+            icon = RhythmIcons.Settings,
+            route = SettingsRoutes.API_MANAGEMENT,
+            parentScreen = "API management"
+        ))
+
         // Look & Feel Section
         add(SearchableSettingItem(
             id = "theme_customization",
