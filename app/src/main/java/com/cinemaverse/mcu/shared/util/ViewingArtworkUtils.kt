@@ -12,11 +12,13 @@ object ViewingArtworkUtils {
 
     fun tmdbBackdrop(path: String?, size: String = "w1280"): String? = normalizeTmdbImage(path, size)
 
+    fun tmdbProfile(path: String?, size: String = "w185"): String? = normalizeTmdbImage(path, size)
+
     fun localPoster(fileName: String?): String? = fileName
         ?.trim()
         ?.takeIf { it.isNotBlank() }
         ?.let { if (it.startsWith("file:///android_asset/")) it else LOCAL_POSTER_BASE_URL + it.substringAfterLast('/') }
-        ?.takeIf(::isLocalAssetArtwork)
+        ?.takeIf { it.startsWith("file:///android_asset/") }
 
     fun resolvePoster(item: ViewingItem, preferLocalArtwork: Boolean = true): String? = firstUsable(
         item.localPoster?.takeIf { preferLocalArtwork && isLocalAssetArtwork(it) },
@@ -50,7 +52,7 @@ object ViewingArtworkUtils {
         list.items.firstOrNull()?.let { resolvePoster(it, preferLocalArtwork) }
     )
 
-    fun isLocalAssetArtwork(value: String): Boolean = value.startsWith(LOCAL_POSTER_BASE_URL)
+    fun isLocalAssetArtwork(value: String): Boolean = value.startsWith("file:///android_asset/")
 
     fun isUsableArtwork(value: String?): Boolean = !value.isNullOrBlank() &&
         !value.contains(PLACEHOLDER_SENTINEL) &&
