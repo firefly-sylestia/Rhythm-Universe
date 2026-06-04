@@ -176,7 +176,7 @@ private fun ViewingHomeContent(
     val isFetching by ViewingMetadataStore.isFetching
     val marvel = remember(data) { data.allItems.filter { it.universe == "MCU" }.take(14) }
     val dc = remember(data) { data.allItems.filter { it.universe in setOf("DCU", "DCEU", "Elseworlds") }.take(14) }
-    val lists = remember(data) { data.visibleManagedLists().take(8) }
+    val lists = remember(data) { data.allLists.visibleManagedLists().take(8) }
     val recent = ViewingMetadataStore.recentItems(data)
 
     LazyColumn(
