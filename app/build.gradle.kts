@@ -10,9 +10,7 @@ plugins {
 
 android {
     namespace = "com.marvelspectrum"
-    compileSdk = 37
-    // CI discovers the newest published 37.x preview build-tools package (including RCs).
-    System.getenv("ANDROID_BUILD_TOOLS_VERSION")?.let { buildToolsVersion = it }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.marvelspectrum"

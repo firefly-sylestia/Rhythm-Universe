@@ -23,14 +23,10 @@ jobs:
           cache: gradle
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3.2.2
-        with:
-          # v3 is the latest published action tag; use current tools for API 37 metadata.
-          cmdline-tools-version: 14742923
-          packages: ''
+        uses: android-actions/setup-android@v3
 
-      - name: Install and verify Android SDK 37
-        run: .github/scripts/install-android-sdk-37.sh
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Create private.properties for build
         env:
