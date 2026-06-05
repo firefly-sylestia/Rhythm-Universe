@@ -5,11 +5,15 @@ package com.marvelspectrum.shared.presentation.screens.viewing
 import android.content.Intent
 import android.net.Uri
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -31,6 +35,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyListScope
@@ -53,6 +58,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -819,10 +825,10 @@ private fun CollectionAlbumHero(list: ViewingList, onPlayFirst: () -> Unit, onSh
                             onClick = { expanded = true },
                             colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
                         ) { Icon(RhythmIcons.More, contentDescription = "More actions for ${list.title}") }
-                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                            DropdownMenuItem(text = { Text("Save list") }, onClick = { expanded = false; list.items.forEach { if (ViewingUserStatus.BOOKMARKED !in ViewingMetadataStore.statusesFor(it)) ViewingMetadataStore.toggleStatus(it, ViewingUserStatus.BOOKMARKED) } })
-                            DropdownMenuItem(text = { Text("Mark all watched") }, onClick = { expanded = false; list.items.forEach { if (ViewingUserStatus.WATCHED !in ViewingMetadataStore.statusesFor(it)) ViewingMetadataStore.toggleStatus(it, ViewingUserStatus.WATCHED) } })
-                            DropdownMenuItem(text = { Text("Clear watched") }, onClick = { expanded = false; list.items.forEach { if (ViewingUserStatus.WATCHED in ViewingMetadataStore.statusesFor(it)) ViewingMetadataStore.toggleStatus(it, ViewingUserStatus.WATCHED) } })
+                        SpectrumPopupMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            SpectrumPopupMenuItem(label = "Save list", leadingIcon = { Icon(RhythmIcons.Pushpin, contentDescription = null) }, onClick = { expanded = false; list.items.forEach { if (ViewingUserStatus.BOOKMARKED !in ViewingMetadataStore.statusesFor(it)) ViewingMetadataStore.toggleStatus(it, ViewingUserStatus.BOOKMARKED) } })
+                            SpectrumPopupMenuItem(label = "Mark all watched", leadingIcon = { Icon(RhythmIcons.CheckCircle, contentDescription = null) }, onClick = { expanded = false; list.items.forEach { if (ViewingUserStatus.WATCHED !in ViewingMetadataStore.statusesFor(it)) ViewingMetadataStore.toggleStatus(it, ViewingUserStatus.WATCHED) } })
+                            SpectrumPopupMenuItem(label = "Clear watched", leadingIcon = { Icon(RhythmIcons.Restore, contentDescription = null) }, onClick = { expanded = false; list.items.forEach { if (ViewingUserStatus.WATCHED in ViewingMetadataStore.statusesFor(it)) ViewingMetadataStore.toggleStatus(it, ViewingUserStatus.WATCHED) } })
                         }
                     }
                 }
@@ -888,18 +894,14 @@ private fun CollectionTitleRow(item: ViewingItem, order: Int, onClick: () -> Uni
                     onClick = { expanded = true },
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
                 ) { Icon(RhythmIcons.More, contentDescription = "More actions for ${displayItem.title}") }
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                ) {
-                    DropdownMenuItem(text = { Text("Open details", color = MaterialTheme.colorScheme.onSurface) }, onClick = { expanded = false; onClick() })
-                    if (hasTrailer) DropdownMenuItem(text = { Text("Play trailer", color = MaterialTheme.colorScheme.onSurface) }, onClick = { expanded = false; showTrailer = true })
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
-                    DropdownMenuItem(text = { Text("Add to watchlist", color = MaterialTheme.colorScheme.onSurface) }, onClick = { expanded = false; ViewingMetadataStore.toggleStatus(displayItem, ViewingUserStatus.WATCHLIST) })
-                    DropdownMenuItem(text = { Text("Mark watched", color = MaterialTheme.colorScheme.onSurface) }, onClick = { expanded = false; ViewingMetadataStore.toggleStatus(displayItem, ViewingUserStatus.WATCHED) })
-                    DropdownMenuItem(text = { Text("Favorite", color = MaterialTheme.colorScheme.onSurface) }, onClick = { expanded = false; ViewingMetadataStore.toggleStatus(displayItem, ViewingUserStatus.FAVORITE) })
-                    DropdownMenuItem(text = { Text("Hide", color = MaterialTheme.colorScheme.onSurfaceVariant) }, onClick = { expanded = false; ViewingMetadataStore.toggleStatus(displayItem, ViewingUserStatus.HIDDEN) })
+                SpectrumPopupMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    SpectrumPopupMenuItem(label = "Open details", leadingIcon = { Icon(RhythmIcons.Info, contentDescription = null) }, trailingIcon = { Icon(RhythmIcons.ArrowRight, contentDescription = null) }, onClick = { expanded = false; onClick() })
+                    if (hasTrailer) SpectrumPopupMenuItem(label = "Play trailer", leadingIcon = { Icon(RhythmIcons.Play, contentDescription = null) }, onClick = { expanded = false; showTrailer = true })
+                    SpectrumPopupMenuDivider()
+                    SpectrumPopupMenuItem(label = "Add to watchlist", leadingIcon = { Icon(RhythmIcons.AddToPlaylist, contentDescription = null) }, selected = ViewingUserStatus.WATCHLIST in ViewingMetadataStore.statusesFor(displayItem), onClick = { expanded = false; ViewingMetadataStore.toggleStatus(displayItem, ViewingUserStatus.WATCHLIST) })
+                    SpectrumPopupMenuItem(label = "Mark watched", leadingIcon = { Icon(RhythmIcons.CheckCircle, contentDescription = null) }, selected = ViewingUserStatus.WATCHED in ViewingMetadataStore.statusesFor(displayItem), onClick = { expanded = false; ViewingMetadataStore.toggleStatus(displayItem, ViewingUserStatus.WATCHED) })
+                    SpectrumPopupMenuItem(label = "Favorite", leadingIcon = { Icon(RhythmIcons.Favorite, contentDescription = null) }, selected = ViewingUserStatus.FAVORITE in ViewingMetadataStore.statusesFor(displayItem), onClick = { expanded = false; ViewingMetadataStore.toggleStatus(displayItem, ViewingUserStatus.FAVORITE) })
+                    SpectrumPopupMenuItem(label = "Hide", leadingIcon = { Icon(RhythmIcons.VisibilityOff, contentDescription = null) }, selected = ViewingUserStatus.HIDDEN in ViewingMetadataStore.statusesFor(displayItem), onClick = { expanded = false; ViewingMetadataStore.toggleStatus(displayItem, ViewingUserStatus.HIDDEN) })
                 }
             }
         }
@@ -1175,7 +1177,7 @@ private fun LibrarySecondaryControls(
                     Text("Browse", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Text(listOfNotNull(statusFilter?.libraryTitle, genreFilter).ifEmpty { listOf("All statuses and genres") }.joinToString(" • "), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                CompactDropdown(
+                DropdownSelector(
                     label = "Sort",
                     selected = sortMode.label,
                     options = listOf(ViewingSortMode.RELEASE, ViewingSortMode.CHRONOLOGICAL, ViewingSortMode.TITLE, ViewingSortMode.RATING, ViewingSortMode.RUNTIME, ViewingSortMode.GENRE),
@@ -1243,7 +1245,7 @@ private fun SearchCompactFilters(
     onSort: (ViewingSearchSortMode) -> Unit
 ) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        CompactDropdown(
+        DropdownSelector(
             label = "Genre",
             selected = selectedGenre ?: "All genres",
             options = listOf<String?>(null) + genres,
@@ -1251,7 +1253,7 @@ private fun SearchCompactFilters(
             onSelect = onGenre,
             modifier = Modifier.weight(1f)
         )
-        CompactDropdown(
+        DropdownSelector(
             label = "Sort",
             selected = sortMode.label,
             options = ViewingSearchSortMode.entries,
@@ -1274,14 +1276,14 @@ private fun LibraryControlPanel(
 ) {
     CompactMenuCard(title = "Browse controls", subtitle = "Category • sort • saved status") {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CompactDropdown(
+            DropdownSelector(
                 label = "Category",
                 selected = selectedTab,
                 options = listOf("Essentials", "Continue", "MCU", "DC", "Timeline", "Collections", "Saved"),
                 onSelect = onTab,
                 modifier = Modifier.weight(1f)
             )
-            CompactDropdown(
+            DropdownSelector(
                 label = "Sort",
                 selected = sortMode.label,
                 options = listOf(ViewingSortMode.RELEASE, ViewingSortMode.CHRONOLOGICAL, ViewingSortMode.TITLE, ViewingSortMode.RATING, ViewingSortMode.RUNTIME, ViewingSortMode.GENRE),
@@ -1291,7 +1293,7 @@ private fun LibraryControlPanel(
             )
         }
         val statusOptions = listOf<ViewingUserStatus?>(null) + ViewingUserStatus.entries.filter { it != ViewingUserStatus.HIDDEN }
-        CompactDropdown(
+        DropdownSelector(
             label = "Status",
             selected = statusFilter?.libraryTitle ?: "Any saved status",
             options = statusOptions,
@@ -1329,14 +1331,14 @@ private fun SearchFilterMenu(
         subtitle = listOf(selectedUniverse, selectedType.replace('_', '-'), selectedGenre, selectedCategory.label, sortMode.label).filterNotNull().joinToString(" • ")
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CompactDropdown("Universe", selectedUniverse, listOf("All", "Marvel", "DC", "MCU", "DCEU", "DCU", "Elseworlds"), onSelect = onUniverse, modifier = Modifier.weight(1f))
-            CompactDropdown("Type", selectedType.replace('_', '-'), listOf("All", "Movie", "Series", "Special", "Short", "One_Shot"), optionLabel = { it.replace('_', '-') }, onSelect = onType, modifier = Modifier.weight(1f))
+            DropdownSelector("Universe", selectedUniverse, listOf("All", "Marvel", "DC", "MCU", "DCEU", "DCU", "Elseworlds"), onSelect = onUniverse, modifier = Modifier.weight(1f))
+            DropdownSelector("Type", selectedType.replace('_', '-'), listOf("All", "Movie", "Series", "Special", "Short", "One_Shot"), optionLabel = { it.replace('_', '-') }, onSelect = onType, modifier = Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CompactDropdown("Genre", selectedGenre ?: "All genres", listOf<String?>(null) + genres, optionLabel = { it ?: "All genres" }, onSelect = onGenre, modifier = Modifier.weight(1f))
-            CompactDropdown("Category", selectedCategory.label, ViewingSearchCategory.entries, optionLabel = { it.label }, onSelect = onCategory, modifier = Modifier.weight(1f))
+            DropdownSelector("Genre", selectedGenre ?: "All genres", listOf<String?>(null) + genres, optionLabel = { it ?: "All genres" }, onSelect = onGenre, modifier = Modifier.weight(1f))
+            DropdownSelector("Category", selectedCategory.label, ViewingSearchCategory.entries, optionLabel = { it.label }, onSelect = onCategory, modifier = Modifier.weight(1f))
         }
-        CompactDropdown("Sort", sortMode.label, ViewingSearchSortMode.entries, optionLabel = { it.label }, onSelect = onSort, modifier = Modifier.fillMaxWidth())
+        DropdownSelector("Sort", sortMode.label, ViewingSearchSortMode.entries, optionLabel = { it.label }, onSelect = onSort, modifier = Modifier.fillMaxWidth())
     }
 }
 
@@ -1356,7 +1358,70 @@ private fun CompactMenuCard(title: String, subtitle: String, content: @Composabl
 }
 
 @Composable
-private fun <T> CompactDropdown(
+private fun SpectrumPopupMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val visibility = remember { MutableTransitionState(false) }
+    visibility.targetState = expanded
+    DropdownMenu(
+        expanded = visibility.currentState || visibility.targetState,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier.widthIn(min = 240.dp, max = 340.dp).padding(vertical = 6.dp),
+        shape = RoundedCornerShape(32.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 8.dp,
+        shadowElevation = 14.dp
+    ) {
+        AnimatedVisibility(
+            visibleState = visibility,
+            enter = fadeIn(tween(140)) + scaleIn(tween(160, easing = FastOutSlowInEasing), initialScale = 0.98f),
+            exit = fadeOut(tween(100)) + scaleOut(tween(120, easing = FastOutSlowInEasing), targetScale = 0.98f)
+        ) {
+            Column(content = content)
+        }
+    }
+}
+
+@Composable
+private fun SpectrumPopupMenuItem(
+    label: String,
+    leadingIcon: @Composable () -> Unit,
+    onClick: () -> Unit,
+    selected: Boolean = false,
+    trailingIcon: (@Composable () -> Unit)? = if (selected) ({ Icon(RhythmIcons.Check, contentDescription = null) }) else null
+) {
+    val contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    DropdownMenuItem(
+        text = { Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium) },
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
+        onClick = onClick,
+        modifier = Modifier
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .height(60.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent),
+        colors = MenuDefaults.itemColors(
+            textColor = contentColor,
+            leadingIconColor = contentColor,
+            trailingIconColor = contentColor
+        )
+    )
+}
+
+@Composable
+private fun SpectrumPopupMenuDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+    )
+}
+
+@Composable
+private fun <T> DropdownSelector(
     label: String,
     selected: String,
     options: List<T>,
@@ -1365,18 +1430,37 @@ private fun <T> CompactDropdown(
     onSelect: (T) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        label = "dropdown arrow"
+    )
     Box(modifier) {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp)) {
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
                 Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 Text(selected, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Icon(RhythmIcons.ExpandMore, contentDescription = null)
+            Icon(RhythmIcons.ExpandMore, contentDescription = null, modifier = Modifier.graphicsLayer { rotationZ = arrowRotation })
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        SpectrumPopupMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(optionLabel(option)) },
+                val optionText = optionLabel(option)
+                SpectrumPopupMenuItem(
+                    label = optionText,
+                    leadingIcon = {
+                        Icon(
+                            when (label) {
+                                "Sort" -> RhythmIcons.Sort
+                                "Genre", "Category" -> RhythmIcons.Category
+                                "Universe" -> RhythmIcons.Public
+                                "Status" -> RhythmIcons.CheckCircle
+                                else -> RhythmIcons.AppsGrid
+                            },
+                            contentDescription = null
+                        )
+                    },
+                    selected = optionText == selected,
                     onClick = { expanded = false; onSelect(option) }
                 )
             }
