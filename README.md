@@ -19,7 +19,7 @@ Marvel Spectrum is an Android/Kotlin Jetpack Compose app focused on MCU viewing 
 The active Android namespace and package are:
 
 ```text
-com.cinemaverse.mcu
+com.marvelspectrum
 ```
 
 Music and streaming integrations are disabled for viewing-first builds. Bundled MCU JSON and local poster assets are the primary offline data source, while TMDB and OMDb keys are optional enrichment only.
@@ -87,19 +87,21 @@ Marvel Spectrum resolves viewing artwork in this order:
 4. OMDb poster
 5. Built-in Marvel-style fallback artwork
 
-### Optional OMDb and TMDB enrichment
+### Optional cinema API enrichment
 
-API keys are optional and are only used to enrich missing metadata or remote artwork. Missing keys do not break the app because local JSON metadata and poster assets are bundled.
+API keys are optional and are only used to enrich missing metadata, trailers, or streaming availability. Missing keys do not break the app because local JSON metadata and poster assets are bundled. In-app API Management lets each user save their own Watchmode, TMDB, and OMDb keys in private device preferences.
 
 ```bash
 export OMDB_API_KEY="YOUR_OMDB_API_KEY_HERE"
 export TMDB_API_KEY="YOUR_TMDB_API_KEY_HERE"
 export TMDB_READ_ACCESS_TOKEN="YOUR_TMDB_READ_ACCESS_TOKEN_HERE"
+# Optional for local developer testing only; prefer entering Watchmode in-app.
+export WATCHMODE_API_KEY="YOUR_WATCHMODE_API_KEY_HERE"
 ./gradlew :app:assembleGithubDebug
 ```
 
-Do not commit real API secrets. `.env.example` contains placeholder names only.
+Do not commit real API secrets. `.env.example` contains placeholder names only. If a Watchmode key is pasted into chat, issues, logs, or source control, revoke/regenerate it in the Watchmode dashboard before using the app again. Watchmode image/media URLs are treated as third-party remote artwork and should remain disabled unless the user accepts the provider's rights/attribution terms. Run a secret scan before commits that touch integration code, for example `git grep -nE "(apiKey=|WATCHMODE_API_KEY=).{12,}" -- . ":!README.md" ":!build"`.
 
 ### Editing viewing lists
 
-Add or edit curated viewing orders in `app/src/main/java/com/cinemaverse/mcu/shared/data/viewing/ViewingLists.kt`. Keep MCU/movie metadata there when it is richer than JSON, and add/refresh poster filenames in the JSON/assets layer so artwork remains local, stable, and offline-friendly.
+Add or edit curated viewing orders in `app/src/main/java/com/marvelspectrum/shared/data/viewing/ViewingLists.kt`. Keep MCU/movie metadata there when it is richer than JSON, and add/refresh poster filenames in the JSON/assets layer so artwork remains local, stable, and offline-friendly.
