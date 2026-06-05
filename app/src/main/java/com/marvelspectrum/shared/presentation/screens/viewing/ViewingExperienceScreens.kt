@@ -73,6 +73,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -1671,7 +1672,7 @@ private fun PosterBackdrop(
     item: ViewingItem,
     modifier: Modifier,
     contentScale: ContentScale,
-    shape: RoundedCornerShape? = null,
+    shape: Shape? = null,
     intent: ArtworkDisplayIntent = ArtworkDisplayIntent.CARD_POSTER
 ) {
     val m = if (shape != null) modifier.clip(shape) else modifier
