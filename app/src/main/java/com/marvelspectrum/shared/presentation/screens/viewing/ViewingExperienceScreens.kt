@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -71,9 +73,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -441,65 +445,23 @@ fun ViewingDetailScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(ViewingUi.screenHPad, 12.dp, ViewingUi.screenHPad, ViewingUi.bottomPad),
+                contentPadding = PaddingValues(bottom = ViewingUi.bottomPad),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 item {
-                    ElevatedCard(
-                        shape = RoundedCornerShape(34.dp),
-                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f))
-                    ) {
-                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Box(Modifier.fillMaxWidth().height(430.dp).clip(RoundedCornerShape(28.dp))) {
-                                PosterBackdrop(selected, Modifier.fillMaxSize(), ContentScale.Crop)
-                                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.72f)))))
-                                Column(
-                                    Modifier.align(Alignment.BottomStart).padding(18.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(selected.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                                    Text(
-                                        listOfNotNull(selected.year, selected.runtime, selected.universe, selected.phase ?: selected.saga).joinToString(" • "),
-                                        color = Color.White.copy(alpha = 0.86f),
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    if (selected.genres.isNotEmpty()) FlowChips(selected.genres.take(4))
-                                }
-                                if (hasTrailer) {
-                                    FilledIconButton(
-                                        onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); showTrailer = true },
-                                        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
-                                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
-                                    ) { Icon(RhythmIcons.Play, contentDescription = "Play trailer for ${selected.title}") }
-                                }
-                            }
-                            Text(selected.overview ?: selected.plot ?: selected.description ?: "No overview available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                if (hasTrailer) {
-                                    Button(
-                                        onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); showTrailer = true },
-                                        shape = RoundedCornerShape(24.dp),
-                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
-                                    ) {
-                                        Icon(RhythmIcons.Play, contentDescription = null)
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("Watch trailer")
-                                    }
-                                }
-                                OutlinedButton(onClick = { ViewingMetadataStore.toggleStatus(selected, ViewingUserStatus.WATCHLIST) }, shape = RoundedCornerShape(24.dp)) { Text(if (ViewingUserStatus.WATCHLIST in userStatuses) "In watchlist" else "Watchlist") }
-                                OutlinedButton(onClick = { ViewingMetadataStore.toggleStatus(selected, ViewingUserStatus.WATCHED) }, shape = RoundedCornerShape(24.dp)) { Text(if (ViewingUserStatus.WATCHED in userStatuses) "Watched" else "Mark watched") }
-                            }
-                            StatusSelector(userStatuses) { next ->
-                                ViewingMetadataStore.toggleStatus(selected, next)
-                            }
-                        }
-                    }
+                    CinematicDetailHero(
+                        item = selected,
+                        userStatuses = userStatuses,
+                        hasTrailer = hasTrailer,
+                        onTrailer = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); showTrailer = true },
+                        onToggleStatus = { ViewingMetadataStore.toggleStatus(selected, it) }
+                    )
                 }
-                item { WhereToWatchSection(selected) }
-                item { MetadataGrid(selected) }
-                item { CreditsBlock(selected) }
-                if (related.isNotEmpty()) item { PosterRail("Related titles", selected.franchise ?: selected.universe ?: "Similar genre", related, onOpenItem = { relatedItemId = it.id }) }
-                item { MetadataSourceFooter(selected) }
+                item { DetailSection { WhereToWatchSection(selected) } }
+                item { DetailSection { MetadataGrid(selected) } }
+                item { DetailSection { CreditsBlock(selected) } }
+                if (related.isNotEmpty()) item { DetailSection { PosterRail("Related titles", selected.franchise ?: selected.universe ?: "Similar genre", related, onOpenItem = { relatedItemId = it.id }) } }
+                item { DetailSection { MetadataSourceFooter(selected) } }
             }
         }
     }
@@ -510,6 +472,106 @@ fun ViewingDetailScreen(
             onDismiss = { showTrailer = false }
         )
     }
+}
+
+@Composable
+private fun DetailSection(content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxWidth().padding(horizontal = ViewingUi.screenHPad)) { content() }
+}
+
+@Composable
+private fun CinematicDetailHero(
+    item: ViewingItem,
+    userStatuses: Set<ViewingUserStatus>,
+    hasTrailer: Boolean,
+    onTrailer: () -> Unit,
+    onToggleStatus: (ViewingUserStatus) -> Unit
+) {
+    val dark = isSystemInDarkTheme()
+    val panelColor = MaterialTheme.colorScheme.surface.copy(alpha = if (dark) 0.78f else 0.84f)
+    val bottomScrim = Color.Black.copy(alpha = if (dark) 0.58f else 0.48f)
+    Box(Modifier.fillMaxWidth().height(650.dp).background(MaterialTheme.colorScheme.background)) {
+        PosterBackdrop(item, Modifier.fillMaxWidth().height(390.dp), ContentScale.Crop)
+        PosterBackdrop(item, Modifier.fillMaxWidth().height(300.dp).offset(y = 300.dp).blur(44.dp), ContentScale.Crop)
+        Box(Modifier.fillMaxWidth().height(600.dp).background(universeAccentBrush(item.universe)))
+        Box(
+            Modifier.fillMaxWidth().height(410.dp).background(
+                Brush.verticalGradient(
+                    0f to Color.Transparent,
+                    0.48f to Color.Black.copy(alpha = if (dark) 0.12f else 0.08f),
+                    1f to bottomScrim
+                )
+            )
+        )
+        PosterBackdrop(
+            item,
+            Modifier.width(132.dp).height(198.dp).offset(x = ViewingUi.screenHPad, y = 245.dp),
+            ContentScale.Crop,
+            RoundedCornerShape(22.dp)
+        )
+        Surface(
+            shape = RoundedCornerShape(topStart = 30.dp, bottomStart = 30.dp),
+            color = panelColor,
+            tonalElevation = 4.dp,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
+            modifier = Modifier.fillMaxWidth().offset(x = 158.dp, y = 300.dp).padding(end = 158.dp)
+        ) {
+            Column(Modifier.padding(start = 18.dp, top = 16.dp, end = 18.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(item.universe ?: "Cinemaverse", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Text(item.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Text(listOfNotNull(item.year, item.runtime, item.phase ?: item.saga).joinToString(" • "), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    item.imdbRating?.let { GlassMetadataPill("IMDb $it") }
+                    item.tmdbRating?.let { GlassMetadataPill("TMDb ${String.format("%.1f", it)}") }
+                    GlassMetadataPill(item.status.name.lowercase().replaceFirstChar { it.titlecase() })
+                }
+            }
+        }
+        Column(
+            Modifier.fillMaxWidth().align(Alignment.BottomStart).padding(horizontal = ViewingUi.screenHPad),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(item.overview ?: item.plot ?: item.description ?: "No overview available.", color = MaterialTheme.colorScheme.onBackground, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (hasTrailer) HeroActionPill("Trailer", RhythmIcons.Play, selected = true, onClick = onTrailer)
+                HeroActionPill("Watch later", RhythmIcons.Playlist, ViewingUserStatus.WATCH_LATER in userStatuses) { onToggleStatus(ViewingUserStatus.WATCH_LATER) }
+                HeroActionPill("Favorite", RhythmIcons.Favorite, ViewingUserStatus.FAVORITE in userStatuses) { onToggleStatus(ViewingUserStatus.FAVORITE) }
+                HeroActionPill("Watched", RhythmIcons.Check, ViewingUserStatus.WATCHED in userStatuses) { onToggleStatus(ViewingUserStatus.WATCHED) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlassMetadataPill(label: String) {
+    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)) {
+        Text(label, Modifier.padding(horizontal = 9.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun HeroActionPill(label: String, icon: MaterialSymbolIcon, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label, fontWeight = FontWeight.SemiBold) },
+        leadingIcon = { Icon(icon, contentDescription = null) },
+        shape = RoundedCornerShape(50),
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+            labelColor = MaterialTheme.colorScheme.onSurface,
+            iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+        )
+    )
+}
+
+private fun universeAccentBrush(universe: String?): Brush = when (universe) {
+    "MCU", "Marvel" -> Brush.radialGradient(listOf(Color(0x66E62429), Color(0x33FFCA58), Color.Transparent), center = Offset(160f, 520f), radius = 760f)
+    "DCU", "DCEU", "Elseworlds", "DC" -> Brush.radialGradient(listOf(Color(0x66204CFF), Color(0x334CE7FF), Color.Transparent), center = Offset(740f, 420f), radius = 780f)
+    else -> Brush.linearGradient(listOf(Color(0x445D3FD3), Color.Transparent, Color(0x44F04C9C)))
 }
 
 @Composable
@@ -1033,14 +1095,30 @@ private fun FeaturedTitleCarouselCard(
     ) {
         Box(Modifier.fillMaxWidth().height(ViewingUi.heroHeight).clip(RoundedCornerShape(30.dp))) {
             PosterBackdrop(displayItem, Modifier.fillMaxSize(), ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)))))
-            Column(Modifier.align(Alignment.BottomStart).padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(displayItem.universe ?: "Cinemaverse highlight", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                Text(displayItem.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(listOfNotNull(displayItem.year, displayItem.runtime, displayItem.phase ?: displayItem.saga, list.title).joinToString(" • "), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = onClick) { Text("Details") }
-                    OutlinedButton(onClick = onLibrary) { Text("Library") }
+            Box(Modifier.fillMaxSize().background(universeAccentBrush(displayItem.universe)))
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(
+                        0f to Color.Transparent,
+                        0.52f to Color.Black.copy(alpha = 0.10f),
+                        1f to Color.Black.copy(alpha = 0.56f)
+                    )
+                )
+            )
+            Surface(
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
+                modifier = Modifier.align(Alignment.BottomStart).padding(14.dp)
+            ) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(displayItem.universe ?: "Cinemaverse highlight", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    Text(displayItem.title, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(listOfNotNull(displayItem.year, displayItem.runtime, displayItem.phase ?: displayItem.saga, list.title).joinToString(" • "), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = onClick, shape = RoundedCornerShape(50)) { Text("Details") }
+                        OutlinedButton(onClick = onLibrary, shape = RoundedCornerShape(50)) { Text("Library") }
+                    }
                 }
             }
         }
