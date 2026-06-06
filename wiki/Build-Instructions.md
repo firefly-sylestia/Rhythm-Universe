@@ -113,12 +113,12 @@ Check `app/build.gradle.kts`:
 ```kotlin
 android {
     namespace = "chromahub.rhythm.app"
-    compileSdk = 36
+    compileSdk = 37
     
     defaultConfig {
         applicationId = "chromahub.rhythm.app"
         minSdk = 26          // Android 8.0
-        targetSdk = 36       // Android 16
+        targetSdk = 37       // Android 16
         versionCode = 40310853
         versionName = "4.0.310.853"
     }

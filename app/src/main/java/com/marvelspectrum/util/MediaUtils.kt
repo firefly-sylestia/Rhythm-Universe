@@ -903,11 +903,10 @@ object MediaUtils {
     }
 
     /**
-     * Creates a write request for Android 11+ to get permission to embed lyrics in a file
-     */
-    @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.R)
-    /**
      * Returns true if jaudiotagger can read and write the given file extension.
+     *
+     * This helper is pure string matching and safe on every supported Android version;
+     * callers use it before deciding whether to perform scoped-storage write flows.
      * OGG Opus, WebM, MKA, and other non-Vorbis OGG variants are not supported.
      */
     fun isSupportedByJaudiotagger(extension: String): Boolean {
