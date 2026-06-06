@@ -919,11 +919,22 @@ object MediaUtils {
         }
     }
 
+    /**
+     * Creates a scoped-storage write request for embedding lyrics on Android 11+.
+     *
+     * Returns null on older Android versions where MediaStore.createWriteRequest is
+     * unavailable; legacy writes should use direct file access instead.
+     */
     fun createWriteRequestForLyrics(
         context: Context,
         song: Song,
         lyrics: String
     ): PendingLyricsWriteRequest? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            Log.w(TAG, "Lyrics write requests require Android 11+")
+            return null
+        }
+
         return try {
             val contentResolver = context.contentResolver
             Log.d(TAG, "Creating lyrics write request for song: ${song.title}")
