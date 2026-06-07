@@ -291,11 +291,10 @@ fun LocalNavigation(
 ) {
     val miniPlayerThemeId by appSettings.miniPlayerThemeId.collectAsState()
     val localExperienceMode by appSettings.localExperienceMode.collectAsState()
-    val viewingViewModel: ViewingViewModel = viewModel()
-    LaunchedEffect(localExperienceMode, viewingViewModel) {
-        if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
-            viewingViewModel.loadViewingData()
-        }
+    val viewingViewModel: ViewingViewModel? = if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
+        viewModel()
+    } else {
+        null
     }
     // Update monitoring
     val updaterViewModel: AppUpdaterViewModel = viewModel()
@@ -689,6 +688,9 @@ fun LocalNavigation(
     }
 }
 
+private fun requireViewingViewModel(viewingViewModel: ViewingViewModel?): ViewingViewModel =
+    requireNotNull(viewingViewModel) { "ViewingViewModel must be provided in Cinemaverse mode." }
+
 @Composable
 private fun LocalNavigationContent(
     modifier: Modifier = Modifier,
@@ -697,7 +699,7 @@ private fun LocalNavigationContent(
     themeViewModel: ThemeViewModel,
     appSettings: AppSettings,
     localExperienceMode: String,
-    viewingViewModel: ViewingViewModel,
+    viewingViewModel: ViewingViewModel?,
     snackbarHostState: SnackbarHostState,
     coroutineScope: kotlinx.coroutines.CoroutineScope,
     currentSong: com.marvelspectrum.shared.data.model.Song?,
@@ -750,12 +752,13 @@ private fun LocalNavigationContent(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val navigateToTopLevel: (String) -> Unit = { route ->
+        val preserveState = localExperienceMode != AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING
         navController.navigate(route) {
             popUpTo(navController.graph.findStartDestination().id) {
-                saveState = true
+                saveState = preserveState
             }
             launchSingleTop = true
-            restoreState = true
+            restoreState = preserveState
         }
     }
     val navigateBackOrToLanding: () -> Unit = {
@@ -1283,7 +1286,7 @@ private fun LocalNavigationContent(
                             onOpenSettings = { navigateToTopLevel(Screen.Settings.route) },
                             openSearchInternally = false,
                             homeReselectionKey = ViewingHomeReselectionBus.key,
-                            viewingViewModel = viewingViewModel
+                            viewingViewModel = requireViewingViewModel(viewingViewModel)
                         )
                     } else {
                         HomeScreen(
@@ -1398,7 +1401,7 @@ private fun LocalNavigationContent(
                             onBack = { navigateBackOrToLanding() },
                             onOpenDetail = {},
                             onOpenSettings = { navigateToTopLevel(Screen.Settings.route) },
-                            viewingViewModel = viewingViewModel
+                            viewingViewModel = requireViewingViewModel(viewingViewModel)
                         )
                     } else {
                         val streamingViewModel: com.marvelspectrum.features.streaming.presentation.viewmodel.StreamingMusicViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
@@ -1857,7 +1860,7 @@ private fun LocalNavigationContent(
                         ViewingLibraryScreen(
                             onOpenDetail = {},
                             onOpenSettings = { navigateToTopLevel(Screen.Settings.route) },
-                            viewingViewModel = viewingViewModel
+                            viewingViewModel = requireViewingViewModel(viewingViewModel)
                         )
                     } else {
                         LibraryScreen(
@@ -2096,7 +2099,7 @@ private fun LocalNavigationContent(
                     if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
                         ViewingDetailScreen(
                             onBack = { navigateBackOrToLanding() },
-                            viewingViewModel = viewingViewModel
+                            viewingViewModel = requireViewingViewModel(viewingViewModel)
                         )
                     } else {
                         PlayerScreen(
@@ -2897,12 +2900,13 @@ private fun LocalNavigationRail(
     localExperienceMode: String
 ) {
     val navigateToTopLevel: (String) -> Unit = { route ->
+        val preserveState = localExperienceMode != AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING
         navController.navigate(route) {
             popUpTo(navController.graph.findStartDestination().id) {
-                saveState = true
+                saveState = preserveState
             }
             launchSingleTop = true
-            restoreState = true
+            restoreState = preserveState
         }
     }
 

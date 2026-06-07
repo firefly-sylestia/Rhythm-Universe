@@ -255,7 +255,6 @@ fun ViewingHomeScreen(
     homeReselectionKey: Int = 0,
     viewingViewModel: ViewingViewModel = viewModel()
 ) {
-    LaunchedEffect(viewingViewModel) { viewingViewModel.loadViewingData() }
     val viewingState by viewingViewModel.uiState.collectAsState()
     val data = viewingState.data
     if (data == null) {
@@ -291,6 +290,7 @@ fun ViewingHomeScreen(
         showSearch -> ViewingSearchScreen(onBack = { showSearch = false }, onOpenDetail = { selectedItemId = it.id }, onOpenSettings = onOpenSettings, viewingViewModel = viewingViewModel)
         else -> ViewingHomeContent(
             data = data,
+            viewingState = viewingState,
             onOpenLibrary = onOpenLibrary,
             onOpenSearch = {
                 if (openSearchInternally) {
@@ -300,7 +300,7 @@ fun ViewingHomeScreen(
                 }
             },
             onOpenSettings = onOpenSettings,
-            onOpenItem = { selectedItemId = it.id; ViewingMetadataStore.markViewed(it); onOpenDetail() },
+            onOpenItem = { selectedItemId = it.id; onOpenDetail() },
             onOpenList = { selectedListId = it.id },
             modifier = modifier
         )
@@ -310,6 +310,7 @@ fun ViewingHomeScreen(
 @Composable
 private fun ViewingHomeContent(
     data: McuAssetDataSource.ViewingAssetData,
+    viewingState: com.marvelspectrum.shared.presentation.viewmodel.ViewingUiState,
     onOpenLibrary: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -317,9 +318,9 @@ private fun ViewingHomeContent(
     onOpenList: (ViewingList) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val marvel = remember(data) { data.allItems.filter { it.universe == "MCU" }.take(14) }
-    val dc = remember(data) { data.allItems.filter { it.universe in setOf("DCU", "DCEU", "Elseworlds") }.take(14) }
-    val lists = remember(data) { data.allLists.visibleManagedLists().take(8) }
+    val marvel = viewingState.homeMarvelItems
+    val dc = viewingState.homeDcItems
+    val lists = viewingState.visibleManagedLists.take(8)
     val recent = ViewingMetadataStore.recentItems(data)
     val continueItems = remember(data, recent) {
         (recent + data.allItems.filter { item ->
@@ -327,8 +328,8 @@ private fun ViewingHomeContent(
             ViewingUserStatus.WATCHING in statuses || ViewingUserStatus.WATCH_LATER in statuses
         }).distinctBy { it.id }.take(12)
     }
-    val trailerItems = remember(data) { data.allItems.filter { it.hasAnyTrailer() }.take(16) }
-    val upcomingItems = remember(data) { data.allItems.filter { it.status == ViewingStatus.UPCOMING || it.status == ViewingStatus.ANNOUNCED }.take(14) }
+    val trailerItems = viewingState.homeTrailerItems
+    val upcomingItems = viewingState.homeUpcomingItems
     val becauseYouWatched = remember(data, recent) {
         val last = recent.firstOrNull()
         if (last == null) emptyList() else data.allItems.filter { item ->
@@ -347,7 +348,7 @@ private fun ViewingHomeContent(
         item { SectionIdentityBlock(RhythmIcons.Play, "Continue your spectrum", "${continueItems.size} ready", "Recent activity, saved titles, and the stories waiting for you") }
         item {
             FeaturedTitleCarousel(
-                items = remember(data) { data.homeFeaturedTitles() },
+                items = viewingState.homeFeaturedTitles,
                 featuredList = data.featuredList,
                 onOpenItem = onOpenItem,
                 onOpenLibrary = onOpenLibrary
@@ -372,7 +373,6 @@ fun ViewingLibraryScreen(
     modifier: Modifier = Modifier,
     viewingViewModel: ViewingViewModel = viewModel()
 ) {
-    LaunchedEffect(viewingViewModel) { viewingViewModel.loadViewingData() }
     val viewingState by viewingViewModel.uiState.collectAsState()
     val data = viewingState.data
     if (data == null) {
@@ -400,14 +400,14 @@ fun ViewingLibraryScreen(
         selectedItem != null -> ViewingDetailScreen(item = selectedItem, list = selectedList, onBack = { selectedItemId = null }, viewingViewModel = viewingViewModel)
         selectedList != null -> ViewingListDetailScreen(list = selectedList, onBack = { selectedListId = null }, onOpenTitle = { selectedItemId = it.id; onOpenDetail() })
         else -> {
-            val genres = remember(data) { data.allItems.flatMap { it.genres }.distinct().sorted() }
-            val filtered = remember(tab, sortMode, statusFilter, genreFilter, data) {
+            val genres = viewingState.libraryGenres
+            val filtered = remember(tab, sortMode, statusFilter, genreFilter, data, viewingState) {
                 val base = when (tab) {
                     "Continue" -> ViewingMetadataStore.recentItems(data).ifEmpty { data.allItems.filter { ViewingUserStatus.WATCHING in ViewingMetadataStore.statusesFor(it) } }
                     "Essentials", "Essential" -> data.featuredList.items
-                    "MCU" -> data.allItems.filter { it.universe in setOf("MCU", "Marvel") }
-                    "DC" -> data.allItems.filter { it.universe in setOf("DCU", "DCEU", "Elseworlds") }
-                    "Timeline" -> data.allItems.sortedFor(ViewingSortMode.CHRONOLOGICAL)
+                    "MCU" -> viewingState.libraryMcuItems
+                    "DC" -> viewingState.libraryDcItems
+                    "Timeline" -> viewingState.libraryTimelineItems
                     "Saved" -> data.allItems.filter { item -> ViewingMetadataStore.statusesFor(item).any { status -> status != ViewingUserStatus.HIDDEN } }
                     else -> data.allItems
                 }
@@ -422,16 +422,16 @@ fun ViewingLibraryScreen(
             ) {
                 item { CinemaverseHeader(title = "Library", subtitle = "Every universe, timeline, and collection in one place", onOpenSettings = onOpenSettings) }
                 item { LibraryTabs(tab, onTab = { tab = it }) }
-                item { SectionIdentityBlock(tabIdentityIcon(tab), tab, if (tab == "Collections") "${data.allLists.visibleManagedLists().size} collections" else "${filtered.size} titles", tabIdentitySubtitle(tab)) }
+                item { SectionIdentityBlock(tabIdentityIcon(tab), tab, if (tab == "Collections") "${viewingState.visibleManagedLists.size} collections" else "${filtered.size} titles", tabIdentitySubtitle(tab)) }
                 item { LibrarySecondaryControls(sortMode, { sortMode = it }, statusFilter, { statusFilter = it }, genreFilter, { genreFilter = it }, genres, data.allItems) }
                 if (tab == "Collections") {
-                    item { CollectionCardGrid(data.allLists.visibleManagedLists(), onOpenList = { selectedListId = it.id }) }
+                    item { CollectionCardGrid(viewingState.visibleManagedLists, onOpenList = { selectedListId = it.id }) }
                 } else {
                     if (filtered.isEmpty()) item { EmptyState("Nothing here yet", "Open a title and add it to Watchlist, Favorite, or Watched.") }
                     if (tab in setOf("MCU", "DC")) {
-                        item { LibraryPosterGrid(filtered) { item -> selectedItemId = item.id; ViewingMetadataStore.markViewed(item); onOpenDetail() } }
+                        item { LibraryPosterGrid(filtered) { item -> selectedItemId = item.id; onOpenDetail() } }
                     } else {
-                        groupedViewingItems(filtered, sortMode) { item -> selectedItemId = item.id; ViewingMetadataStore.markViewed(item); onOpenDetail() }
+                        groupedViewingItems(filtered, sortMode) { item -> selectedItemId = item.id; onOpenDetail() }
                     }
                 }
             }
@@ -448,7 +448,6 @@ fun ViewingSearchScreen(
     modifier: Modifier = Modifier,
     viewingViewModel: ViewingViewModel = viewModel()
 ) {
-    LaunchedEffect(viewingViewModel) { viewingViewModel.loadViewingData() }
     val viewingState by viewingViewModel.uiState.collectAsState()
     val data = viewingState.data
     if (data == null) {
@@ -474,7 +473,7 @@ fun ViewingSearchScreen(
         return
     }
 
-    val genres = remember(data) { data.allItems.flatMap { it.genres }.distinct().sorted().take(28) }
+    val genres = viewingState.libraryGenres.take(28)
     val (rawItems, rawLists) = remember(query, data) { data.search(query) }
     val filteredItems = remember(query, selectedUniverse, selectedType, selectedGenre, selectedCategory, sortMode, rawItems, data) {
         rawItems.asSequence()
@@ -530,14 +529,14 @@ fun ViewingSearchScreen(
             item { CategoryChipRail(selectedCategory) { selectedCategory = it } }
             item { SearchCompactFilters(genres, selectedGenre, { selectedGenre = it }, sortMode, { sortMode = it }) }
             val recent = ViewingMetadataStore.recentItems(data).filter { it in filteredItems }.take(5)
-            if (recent.isNotEmpty()) item { ResultSection("Recently viewed", "Last opened in Cinemaverse", recent, onOpen = { selectedItemId = it.id; ViewingMetadataStore.markViewed(it); onOpenDetail(it) }) }
+            if (recent.isNotEmpty()) item { ResultSection("Recently viewed", "Last opened in Cinemaverse", recent, onOpen = { selectedItemId = it.id; onOpenDetail(it) }) }
             if (matchingLists.isNotEmpty()) item { ListRail("Matching collections", "Essential and generated orders", matchingLists, onOpenList = {}) }
             val topMatches = filteredItems.filterNot { it in recent }.take(8)
-            if (topMatches.isNotEmpty()) item { ResultSection("Top matches", "Best title matches for your filters", topMatches, onOpen = { selectedItemId = it.id; ViewingMetadataStore.markViewed(it); onOpenDetail(it) }) }
+            if (topMatches.isNotEmpty()) item { ResultSection("Top matches", "Best title matches for your filters", topMatches, onOpen = { selectedItemId = it.id; onOpenDetail(it) }) }
             val remaining = filteredItems.drop(topMatches.size).filterNot { it in recent }
             if (remaining.isNotEmpty()) {
                 item { SectionHeader("All results", "${remaining.size} more titles grouped by phase/chapter") }
-                groupedViewingItems(remaining, ViewingSortMode.PHASE) { item -> selectedItemId = item.id; ViewingMetadataStore.markViewed(item); onOpenDetail(item) }
+                groupedViewingItems(remaining, ViewingSortMode.PHASE) { item -> selectedItemId = item.id; onOpenDetail(item) }
             }
             if (filteredItems.isEmpty() && matchingLists.isEmpty()) item { EmptyState("No viewing results", "Try Marvel, DC, Timeline, Trailers, Specials, or clear a filter.") }
         }
@@ -553,7 +552,6 @@ fun ViewingDetailScreen(
     modifier: Modifier = Modifier,
     viewingViewModel: ViewingViewModel = viewModel()
 ) {
-    LaunchedEffect(viewingViewModel) { viewingViewModel.loadViewingData() }
     val viewingState by viewingViewModel.uiState.collectAsState()
     val data = viewingState.data
     if (data == null) {
