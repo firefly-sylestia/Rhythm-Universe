@@ -809,6 +809,7 @@ fun StreamingContentHomeScreen(
                     }
                 }
             }
+            }
 
             item {
                 Spacer(modifier = Modifier.height(30.dp))
