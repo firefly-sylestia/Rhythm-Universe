@@ -128,6 +128,8 @@ fun QueueBottomSheet(
     val context = LocalContext.current
     val appSettings = remember(context) { AppSettings.getInstance(context) }
     val hidePlayedQueueSongs by appSettings.hidePlayedQueueSongs.collectAsState()
+    val smartAutoQueueEnabled by appSettings.smartAutoQueueEnabled.collectAsState()
+    val smartAutoQueueTargetSize by appSettings.smartAutoQueueTargetSize.collectAsState()
     val showAlreadyPlayedSongsInQueue = !hidePlayedQueueSongs
     // Animation states
     var showContent by remember { mutableStateOf(false) }
@@ -369,7 +371,8 @@ fun QueueBottomSheet(
                                                     // Handle error silently
                                                 }
                                             },
-                                            showDragHandle = false // Hide drag handle when shuffle is enabled
+                                            showDragHandle = false, // Hide drag handle when shuffle is enabled
+                                            showSmartQueueBadge = smartAutoQueueEnabled && actualQueuePosition > currentQueueIndex && actualQueuePosition >= (displayQueue.size - smartAutoQueueTargetSize).coerceAtLeast(0)
                                         )
                                     }
                                 }
@@ -417,7 +420,8 @@ fun QueueBottomSheet(
                                             } catch (e: Exception) {
                                                 // Handle error silently
                                             }
-                                        }
+                                        },
+                                        showSmartQueueBadge = smartAutoQueueEnabled && actualQueuePosition > currentQueueIndex && actualQueuePosition >= (displayQueue.size - smartAutoQueueTargetSize).coerceAtLeast(0)
                                     )
                                 }
                             }
@@ -678,7 +682,8 @@ private fun QueueItem(
     isDragging: Boolean,
     onSongClick: () -> Unit,
     onRemove: () -> Unit,
-    showDragHandle: Boolean = true
+    showDragHandle: Boolean = true,
+    showSmartQueueBadge: Boolean = false
 ) {
     val context = LocalContext.current
 
@@ -816,13 +821,22 @@ private fun QueueItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                Text(
-                    text = song.artist,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = subtitleColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = song.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = subtitleColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (showSmartQueueBadge) {
+                        SmartQueueBadge()
+                    }
+                }
             }
             
             // Drag handle with improved visual feedback (only show if enabled)
@@ -890,6 +904,24 @@ private fun QueueItem(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SmartQueueBadge() {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.86f),
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        tonalElevation = 1.dp
+    ) {
+        Text(
+            text = "Smart Queue",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            maxLines = 1
+        )
     }
 }
 

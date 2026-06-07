@@ -65,6 +65,20 @@ fun QueueSettingsScreen(onBackClick: () -> Unit) {
     val playlistClickBehavior by appSettings.playlistClickBehavior.collectAsState(initial = "ask")
     val listQueueActionBehavior by appSettings.listQueueActionBehavior.collectAsState(initial = "replace")
     val queuePersistenceEnabled by appSettings.queuePersistenceEnabled.collectAsState()
+    val smartAutoQueueEnabled by appSettings.smartAutoQueueEnabled.collectAsState()
+    val smartAutoQueueOfflineOnly by appSettings.smartAutoQueueOfflineOnly.collectAsState()
+    val smartAutoQueueOnlineMetadata by appSettings.smartAutoQueueOnlineMetadata.collectAsState()
+    val smartAutoQueueTargetSize by appSettings.smartAutoQueueTargetSize.collectAsState()
+    val smartAutoQueueRefillThreshold by appSettings.smartAutoQueueRefillThreshold.collectAsState()
+    val smartAutoQueueRecentCooldownMinutes by appSettings.smartAutoQueueRecentCooldownMinutes.collectAsState()
+    val smartAutoQueueResetCooldownOnSessionEnd by appSettings.smartAutoQueueResetCooldownOnSessionEnd.collectAsState()
+    val smartAutoQueueLanguageMixMode by appSettings.smartAutoQueueLanguageMixMode.collectAsState()
+    val smartAutoQueueAllowEnglishBetweenHindi by appSettings.smartAutoQueueAllowEnglishBetweenHindi.collectAsState()
+    val smartAutoQueueAllowHindiBetweenEnglish by appSettings.smartAutoQueueAllowHindiBetweenEnglish.collectAsState()
+    val smartAutoQueuePreferSameLanguage by appSettings.smartAutoQueuePreferSameLanguage.collectAsState()
+    val smartAutoQueueDiscoveryLevel by appSettings.smartAutoQueueDiscoveryLevel.collectAsState()
+    val smartAutoQueueDiversityStrength by appSettings.smartAutoQueueDiversityStrength.collectAsState()
+    val smartAutoQueueAvoidSameArtistBackToBack by appSettings.smartAutoQueueAvoidSameArtistBackToBack.collectAsState()
 
     var showPlaylistBehaviorDialog by remember { mutableStateOf(false) }
     var showListQueueBehaviorDialog by remember { mutableStateOf(false) }
@@ -176,6 +190,25 @@ fun QueueSettingsScreen(onBackClick: () -> Unit) {
                         )
                     )
                 }
+            ),
+            SettingGroup(
+                title = "Smart Auto Queue",
+                items = listOf(
+                    SettingItem(RhythmIcons.AutoAwesome, "Smart Auto Queue", "Offline Spotify Smart Shuffle-style recommendations with a separate 20-track lane.", toggleState = smartAutoQueueEnabled, onToggleChange = { appSettings.setSmartAutoQueueEnabled(it) }),
+                    SettingItem(MaterialSymbolIcon("cloud_off"), "Offline-first mode", "Works offline by default and never requires network metadata.", toggleState = smartAutoQueueOfflineOnly, onToggleChange = { appSettings.setSmartAutoQueueOfflineOnly(it) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(MaterialSymbolIcon("cloud_sync"), "Online metadata enrichment", "Optional. Improves language, genre, and mood matching when enabled; playback stays local.", toggleState = smartAutoQueueOnlineMetadata, onToggleChange = { appSettings.setSmartAutoQueueOnlineMetadata(it) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(RhythmIcons.Queue, "Recommendation queue size", "Target $smartAutoQueueTargetSize recommendations (default 20, max 30). Existing Context Queue remains 50 tracks.", onClick = { appSettings.setSmartAutoQueueTargetSize(if (smartAutoQueueTargetSize < 20) 20 else if (smartAutoQueueTargetSize < 30) 30 else 5) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(RhythmIcons.Refresh, "Refill threshold", "Refill when Smart Queue drops to $smartAutoQueueRefillThreshold recommendations.", onClick = { appSettings.setSmartAutoQueueRefillThreshold(if (smartAutoQueueRefillThreshold < 8) 8 else if (smartAutoQueueRefillThreshold < 10) 10 else 5) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(MaterialSymbolIcon("schedule"), "Recent replay avoidance", "Default is 2 hours; tap to cycle session/1h/2h/6h/24h.", onClick = { val options = listOf(0, 60, 120, 360, 1440); val index = options.indexOf(smartAutoQueueRecentCooldownMinutes).takeIf { it >= 0 } ?: 2; appSettings.setSmartAutoQueueRecentCooldownMinutes(options[(index + 1) % options.size]) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(MaterialSymbolIcon("restart_alt"), "Reset cooldown on session end", "Clears session-only replay avoidance when listening session ends.", toggleState = smartAutoQueueResetCooldownOnSessionEnd, onToggleChange = { appSettings.setSmartAutoQueueResetCooldownOnSessionEnd(it) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(RhythmIcons.Language, "Language mix mode", smartAutoQueueLanguageMixMode.replace('_', ' ').lowercase().replaceFirstChar { it.titlecase() }, onClick = { val modes = listOf("SAME_LANGUAGE", "BALANCED", "MIX_ENGLISH_HINDI", "DISCOVERY"); val index = modes.indexOf(smartAutoQueueLanguageMixMode).takeIf { it >= 0 } ?: 1; appSettings.setSmartAutoQueueLanguageMixMode(modes[(index + 1) % modes.size]) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(RhythmIcons.Language, "Allow English between Hindi", "Controls English insertions during Hindi/Hinglish sessions.", toggleState = smartAutoQueueAllowEnglishBetweenHindi, onToggleChange = { appSettings.setSmartAutoQueueAllowEnglishBetweenHindi(it) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(RhythmIcons.Language, "Allow Hindi between English", "Controls Hindi/Hinglish insertions during English sessions.", toggleState = smartAutoQueueAllowHindiBetweenEnglish, onToggleChange = { appSettings.setSmartAutoQueueAllowHindiBetweenEnglish(it) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(MaterialSymbolIcon("filter_center_focus"), "Prefer same language", "Boosts tracks matching the current seed language without blocking discovery.", toggleState = smartAutoQueuePreferSameLanguage, onToggleChange = { appSettings.setSmartAutoQueuePreferSameLanguage(it) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(MaterialSymbolIcon("explore"), "Discovery level", smartAutoQueueDiscoveryLevel.lowercase().replaceFirstChar { it.titlecase() }, onClick = { val levels = listOf("LOW", "MEDIUM", "HIGH"); val index = levels.indexOf(smartAutoQueueDiscoveryLevel).takeIf { it >= 0 } ?: 1; appSettings.setSmartAutoQueueDiscoveryLevel(levels[(index + 1) % levels.size]) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(RhythmIcons.Tune, "Diversity strength", smartAutoQueueDiversityStrength.lowercase().replaceFirstChar { it.titlecase() }, onClick = { val levels = listOf("LOW", "MEDIUM", "HIGH"); val index = levels.indexOf(smartAutoQueueDiversityStrength).takeIf { it >= 0 } ?: 1; appSettings.setSmartAutoQueueDiversityStrength(levels[(index + 1) % levels.size]) }, enabled = smartAutoQueueEnabled),
+                    SettingItem(MaterialSymbolIcon("person"), "Avoid same artist back-to-back", "Keeps the 20-track Smart Queue varied while preserving manual queue priority.", toggleState = smartAutoQueueAvoidSameArtistBackToBack, onToggleChange = { appSettings.setSmartAutoQueueAvoidSameArtistBackToBack(it) }, enabled = smartAutoQueueEnabled)
+                )
             ),
             SettingGroup(
                 title = context.getString(R.string.settings_playback_persistence),
