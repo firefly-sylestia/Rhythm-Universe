@@ -255,6 +255,7 @@ fun ViewingHomeScreen(
     homeReselectionKey: Int = 0,
     viewingViewModel: ViewingViewModel = viewModel()
 ) {
+    LaunchedEffect(viewingViewModel) { viewingViewModel.loadViewingData() }
     val viewingState by viewingViewModel.uiState.collectAsState()
     val data = viewingState.data
     if (data == null) {
@@ -371,6 +372,7 @@ fun ViewingLibraryScreen(
     modifier: Modifier = Modifier,
     viewingViewModel: ViewingViewModel = viewModel()
 ) {
+    LaunchedEffect(viewingViewModel) { viewingViewModel.loadViewingData() }
     val viewingState by viewingViewModel.uiState.collectAsState()
     val data = viewingState.data
     if (data == null) {
@@ -446,6 +448,7 @@ fun ViewingSearchScreen(
     modifier: Modifier = Modifier,
     viewingViewModel: ViewingViewModel = viewModel()
 ) {
+    LaunchedEffect(viewingViewModel) { viewingViewModel.loadViewingData() }
     val viewingState by viewingViewModel.uiState.collectAsState()
     val data = viewingState.data
     if (data == null) {
@@ -550,6 +553,7 @@ fun ViewingDetailScreen(
     modifier: Modifier = Modifier,
     viewingViewModel: ViewingViewModel = viewModel()
 ) {
+    LaunchedEffect(viewingViewModel) { viewingViewModel.loadViewingData() }
     val viewingState by viewingViewModel.uiState.collectAsState()
     val data = viewingState.data
     if (data == null) {

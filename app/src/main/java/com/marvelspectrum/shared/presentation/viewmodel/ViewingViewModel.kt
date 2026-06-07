@@ -26,12 +26,8 @@ class ViewingViewModel(application: Application) : AndroidViewModel(application)
     private val _uiState = MutableStateFlow(ViewingUiState())
     val uiState: StateFlow<ViewingUiState> = _uiState.asStateFlow()
 
-    init {
-        loadViewingData()
-    }
-
-    fun loadViewingData() {
-        if (_uiState.value.isLoading) return
+    fun loadViewingData(forceRefresh: Boolean = false) {
+        if (!forceRefresh && (_uiState.value.isLoading || _uiState.value.data != null)) return
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)

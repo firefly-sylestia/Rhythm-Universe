@@ -133,6 +133,7 @@ import com.marvelspectrum.features.local.presentation.viewmodel.MusicViewModel
 import com.marvelspectrum.features.local.presentation.viewmodel.MusicViewModel.SortOrder
 import com.marvelspectrum.shared.presentation.viewmodel.ThemeViewModel
 import com.marvelspectrum.shared.presentation.viewmodel.AppUpdaterViewModel
+import com.marvelspectrum.shared.presentation.viewmodel.ViewingViewModel
 import coil.compose.AsyncImage
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -290,6 +291,12 @@ fun LocalNavigation(
 ) {
     val miniPlayerThemeId by appSettings.miniPlayerThemeId.collectAsState()
     val localExperienceMode by appSettings.localExperienceMode.collectAsState()
+    val viewingViewModel: ViewingViewModel = viewModel()
+    LaunchedEffect(localExperienceMode, viewingViewModel) {
+        if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
+            viewingViewModel.loadViewingData()
+        }
+    }
     // Update monitoring
     val updaterViewModel: AppUpdaterViewModel = viewModel()
     val updateAvailable by updaterViewModel.updateAvailable.collectAsState()
@@ -552,6 +559,7 @@ fun LocalNavigation(
                     themeViewModel = themeViewModel,
                     appSettings = appSettings,
                     localExperienceMode = localExperienceMode,
+                    viewingViewModel = viewingViewModel,
                     snackbarHostState = snackbarHostState,
                     coroutineScope = coroutineScope,
                     currentSong = currentSong,
@@ -612,6 +620,7 @@ fun LocalNavigation(
                 themeViewModel = themeViewModel,
                 appSettings = appSettings,
                 localExperienceMode = localExperienceMode,
+                viewingViewModel = viewingViewModel,
                 snackbarHostState = snackbarHostState,
                 coroutineScope = coroutineScope,
                 currentSong = currentSong,
@@ -688,6 +697,7 @@ private fun LocalNavigationContent(
     themeViewModel: ThemeViewModel,
     appSettings: AppSettings,
     localExperienceMode: String,
+    viewingViewModel: ViewingViewModel,
     snackbarHostState: SnackbarHostState,
     coroutineScope: kotlinx.coroutines.CoroutineScope,
     currentSong: com.marvelspectrum.shared.data.model.Song?,
@@ -1273,7 +1283,8 @@ private fun LocalNavigationContent(
                             onOpenDetail = {},
                             onOpenSettings = { navigateToTopLevel(Screen.Settings.route) },
                             openSearchInternally = false,
-                            homeReselectionKey = ViewingHomeReselectionBus.key
+                            homeReselectionKey = ViewingHomeReselectionBus.key,
+                            viewingViewModel = viewingViewModel
                         )
                     } else {
                         HomeScreen(
@@ -1387,7 +1398,8 @@ private fun LocalNavigationContent(
                         ViewingSearchScreen(
                             onBack = { navigateBackOrToLanding() },
                             onOpenDetail = {},
-                            onOpenSettings = { navigateToTopLevel(Screen.Settings.route) }
+                            onOpenSettings = { navigateToTopLevel(Screen.Settings.route) },
+                            viewingViewModel = viewingViewModel
                         )
                     } else {
                         val streamingViewModel: com.marvelspectrum.features.streaming.presentation.viewmodel.StreamingMusicViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
@@ -1845,7 +1857,8 @@ private fun LocalNavigationContent(
                     if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
                         ViewingLibraryScreen(
                             onOpenDetail = {},
-                            onOpenSettings = { navigateToTopLevel(Screen.Settings.route) }
+                            onOpenSettings = { navigateToTopLevel(Screen.Settings.route) },
+                            viewingViewModel = viewingViewModel
                         )
                     } else {
                         LibraryScreen(
@@ -2082,7 +2095,10 @@ private fun LocalNavigationContent(
                     }
 
                     if (localExperienceMode == AppSettings.LOCAL_EXPERIENCE_MODE_VIEWING) {
-                        ViewingDetailScreen(onBack = { navigateBackOrToLanding() })
+                        ViewingDetailScreen(
+                            onBack = { navigateBackOrToLanding() },
+                            viewingViewModel = viewingViewModel
+                        )
                     } else {
                         PlayerScreen(
                             song = currentSong,
