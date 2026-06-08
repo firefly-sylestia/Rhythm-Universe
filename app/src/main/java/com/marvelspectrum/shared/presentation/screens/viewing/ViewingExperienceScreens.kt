@@ -1266,25 +1266,22 @@ private fun TrailerCard(item: ViewingItem, onClick: () -> Unit) {
         ) {
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(22.dp))) {
                 PosterBackdrop(displayItem, Modifier.fillMaxSize(), ContentScale.Crop, intent = ArtworkDisplayIntent.HERO_BACKDROP)
-                // Semi-translucent play button overlay
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                // Small play icon overlay — bottom-right corner
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(10.dp),
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                    tonalElevation = 3.dp
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
-                        tonalElevation = 4.dp,
-                        modifier = Modifier.size(52.dp)
-                    ) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(
-                                RhythmIcons.Play,
-                                contentDescription = null,
-                                modifier = Modifier.size(26.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                    Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                        Icon(
+                            RhythmIcons.Play,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.White
+                        )
                     }
                 }
             }
