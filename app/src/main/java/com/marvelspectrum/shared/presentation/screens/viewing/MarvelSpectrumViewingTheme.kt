@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -36,6 +39,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -47,7 +52,19 @@ object SpectrumSpacing {
     val chipGap = 8.dp
     val bottomSafePadding = 120.dp
     val cardContentPadding = 16.dp
+    val waveformBarWidth = 3.dp
+    val waveformBarGap = 4.dp
+    val waveformHeight = 28.dp
+    val heroCompactHeight = 240.dp
+    val heroExpandedHeight = 360.dp
+    val heroCinematicHeight = 430.dp
+    val carouselIndicatorHeight = 5.dp
+    val carouselIndicatorInactiveWidth = 10.dp
+    val carouselIndicatorActiveWidth = 42.dp
+    val carouselIndicatorGap = 6.dp
+    val mediaCornerRadius = 28.dp
 }
+
 
 /** Soft geometry shared by the viewing experience. */
 object SpectrumShapes {
@@ -55,7 +72,10 @@ object SpectrumShapes {
     val pillTab: Shape = RoundedCornerShape(50)
     val circularIconButton: Shape = CircleShape
     val posterMask: Shape = RoundedCornerShape(20.dp)
+    val mediaFrame: Shape = RoundedCornerShape(SpectrumSpacing.mediaCornerRadius)
+    val rhythmChip: Shape = RoundedCornerShape(18.dp)
 }
+
 
 /** Purposeful durations: interaction feedback is quick; scene changes have room to breathe. */
 object SpectrumMotion {
@@ -63,6 +83,7 @@ object SpectrumMotion {
     const val selectionMillis = 180
     const val carouselMillis = 360
     const val backdropRevealMillis = 420
+    const val pulseMillis = 900
     const val pressedScale = 0.975f
 
     fun pressSpec() = tween<Float>(pressMillis, easing = FastOutSlowInEasing)
@@ -104,6 +125,111 @@ fun spectrumUniverseAccent(universe: String?): SpectrumUniverseAccent {
             container = lerp(scheme.primaryContainer, scheme.secondaryContainer, 0.35f),
             onContainer = lerp(scheme.onPrimaryContainer, scheme.onSecondaryContainer, 0.35f)
         )
+    }
+}
+
+@Composable
+fun readabilityGradient(strong: Boolean = false): Brush {
+    val bottomAlpha = if (strong) 0.88f else 0.72f
+    return Brush.verticalGradient(
+        listOf(
+            Color.Black.copy(alpha = 0.10f),
+            Color.Black.copy(alpha = 0.28f),
+            Color.Black.copy(alpha = bottomAlpha)
+        )
+    )
+}
+
+@Composable
+fun cinematicScrim(universe: String? = null): Brush {
+    val accent = spectrumUniverseAccent(universe)
+    return Brush.linearGradient(
+        listOf(
+            Color.Black.copy(alpha = 0.64f),
+            accent.primary.copy(alpha = 0.20f),
+            Color.Transparent
+        )
+    )
+}
+
+@Composable
+fun SpectrumRhythmDivider(
+    modifier: Modifier = Modifier,
+    universe: String? = null,
+    bars: Int = 18
+) {
+    val accent = spectrumUniverseAccent(universe)
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.waveformBarGap),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(bars) { index ->
+            val heightFactor = when (index % 6) {
+                0 -> 0.28f
+                1 -> 0.62f
+                2 -> 1f
+                3 -> 0.48f
+                4 -> 0.78f
+                else -> 0.36f
+            }
+            Box(
+                Modifier
+                    .width(SpectrumSpacing.waveformBarWidth)
+                    .height(SpectrumSpacing.waveformHeight * heightFactor)
+                    .clip(SpectrumShapes.pillTab)
+                    .background(lerp(MaterialTheme.colorScheme.outlineVariant, accent.primary, 0.45f).copy(alpha = 0.52f))
+            )
+        }
+        Spacer(Modifier.weight(1f))
+    }
+}
+
+@Composable
+fun SpectrumPulseIndicator(
+    active: Boolean,
+    modifier: Modifier = Modifier,
+    universe: String? = null,
+    label: String? = null
+) {
+    val accent = spectrumUniverseAccent(universe)
+    val pulse by animateFloatAsState(if (active) 1f else 0.55f, tween(SpectrumMotion.pulseMillis, easing = FastOutSlowInEasing), label = "spectrumPulse")
+    Row(
+        modifier = modifier.semantics { if (label != null) contentDescription = label },
+        horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.chipGap),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier
+                .size(9.dp)
+                .clip(CircleShape)
+                .background(accent.primary.copy(alpha = pulse))
+        )
+        if (label != null) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+fun SpectrumSceneSurface(
+    modifier: Modifier = Modifier,
+    universe: String? = null,
+    shape: Shape = SpectrumShapes.mediaFrame,
+    content: @Composable BoxScope.() -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val accent = spectrumUniverseAccent(universe)
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = lerp(scheme.surfaceContainerHigh, accent.container, 0.14f),
+        contentColor = scheme.onSurface,
+        border = BorderStroke(1.dp, lerp(scheme.outlineVariant, accent.primary, 0.22f)),
+        tonalElevation = 3.dp,
+        shadowElevation = 1.dp
+    ) {
+        Box(content = content)
     }
 }
 

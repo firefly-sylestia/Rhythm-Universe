@@ -138,7 +138,13 @@ class TmdbService(
             val key = video.optString("key").takeUsable()
             val type = video.optString("type").takeUsable()
             if (site.equals("YouTube", ignoreCase = true) && key != null && key.matches(Regex("^[A-Za-z0-9_-]{11}$"))) {
-                TmdbTrailer(key = key, name = video.optString("name").takeUsable(), type = type, official = video.optBoolean("official"))
+                TmdbTrailer(
+                    key = key,
+                    name = video.optString("name").takeUsable(),
+                    type = type,
+                    official = video.optBoolean("official"),
+                    language = video.optString("iso_639_1").takeUsable()
+                )
             } else {
                 null
             }
@@ -151,7 +157,8 @@ class TmdbService(
                     trailer.type.equals("Teaser", true) -> 3
                     else -> 4
                 }
-            }.thenBy { it.name ?: "" }
+            }.thenBy { if (it.language.equals("en", ignoreCase = true)) 0 else 1 }
+                .thenBy { it.name ?: "" }
         )
     }
 
@@ -187,7 +194,7 @@ class TmdbService(
     }
 }
 
-data class TmdbTrailer(val key: String, val name: String? = null, val type: String? = null, val official: Boolean = false) {
+data class TmdbTrailer(val key: String, val name: String? = null, val type: String? = null, val official: Boolean = false, val language: String? = null) {
     val url: String = "https://www.youtube.com/watch?v=$key"
 }
 
