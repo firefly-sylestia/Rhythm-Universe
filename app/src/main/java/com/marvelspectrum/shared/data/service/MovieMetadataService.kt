@@ -250,7 +250,7 @@ class MovieMetadataService(
         trailerUrl = api.trailerUrl ?: local.trailerUrl,
         youtubeVideoId = api.youtubeVideoId ?: local.youtubeVideoId,
         trailerSource = api.trailerSource ?: local.trailerSource,
-        trailers = (api.trailers + local.trailers).distinctBy { listOf(it.label, it.youtubeVideoId, it.url).joinToString(":") },
+        trailers = (api.trailers + local.trailers).distinctBy { it.mergeKey() },
         director = api.director ?: local.director,
         writer = api.writer ?: local.writer,
         actors = api.actors.ifEmpty { local.actors },
@@ -277,7 +277,7 @@ class MovieMetadataService(
         trailerUrl = local.trailerUrl ?: api.trailerUrl,
         youtubeVideoId = local.youtubeVideoId ?: api.youtubeVideoId,
         trailerSource = local.trailerSource ?: api.trailerSource,
-        trailers = (local.trailers + api.trailers).distinctBy { listOf(it.label, it.youtubeVideoId, it.url).joinToString(":") },
+        trailers = (local.trailers + api.trailers).distinctBy { it.mergeKey() },
         director = local.director ?: api.director,
         writer = local.writer ?: api.writer,
         actors = local.actors.ifEmpty { api.actors },
@@ -302,7 +302,7 @@ class MovieMetadataService(
             trailerUrl = api.trailerUrl ?: local.trailerUrl,
             youtubeVideoId = api.youtubeVideoId ?: local.youtubeVideoId,
             trailerSource = api.trailerSource ?: local.trailerSource,
-            trailers = (api.trailers + local.trailers).distinctBy { listOf(it.label, it.youtubeVideoId, it.url).joinToString(":") },
+            trailers = (api.trailers + local.trailers).distinctBy { it.mergeKey() },
             metadataSource = MetadataSource.WATCHMODE
         )
     }
@@ -322,7 +322,7 @@ class MovieMetadataService(
             trailerUrl = local.trailerUrl ?: api.trailerUrl,
             youtubeVideoId = local.youtubeVideoId ?: api.youtubeVideoId,
             trailerSource = local.trailerSource ?: api.trailerSource,
-            trailers = (local.trailers + api.trailers).distinctBy { listOf(it.label, it.youtubeVideoId, it.url).joinToString(":") },
+            trailers = (local.trailers + api.trailers).distinctBy { it.mergeKey() },
             metadataSource = MetadataSource.WATCHMODE
         )
     }
@@ -356,4 +356,9 @@ class MovieMetadataService(
         this == MetadataSource.MERGED -> MetadataSource.MERGED
         else -> next
     }
+}
+private fun com.marvelspectrum.shared.data.viewing.ViewingTrailer.mergeKey(): String = when {
+    !youtubeVideoId.isNullOrBlank() -> "youtube:${youtubeVideoId}"
+    !url.isNullOrBlank() -> "url:${url}"
+    else -> "label:${label.lowercase()}"
 }
