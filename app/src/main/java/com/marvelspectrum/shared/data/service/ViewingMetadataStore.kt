@@ -252,7 +252,7 @@ object ViewingMetadataStore {
         trailerUrl = remote.trailerUrl ?: local.trailerUrl,
         youtubeVideoId = remote.youtubeVideoId ?: local.youtubeVideoId,
         trailerSource = remote.trailerSource ?: local.trailerSource,
-        trailers = (remote.trailers + local.trailers).distinctBy { listOf(it.label, it.youtubeVideoId, it.url).joinToString(":") },
+        trailers = (remote.trailers + local.trailers).distinctBy { it.mergeKey() },
         watchProviders = remote.watchProviders.ifEmpty { local.watchProviders },
         director = remote.director ?: local.director,
         writer = remote.writer ?: local.writer,
@@ -404,4 +404,9 @@ object ViewingMetadataStore {
     private const val KEY_STATUS_PREFIX = "statuses:"
     private const val KEY_RECENT_PREFIX = "recent:"
     private const val KEY_ENRICHED_PREFIX = "enriched:"
+}
+private fun com.marvelspectrum.shared.data.viewing.ViewingTrailer.mergeKey(): String = when {
+    !youtubeVideoId.isNullOrBlank() -> "youtube:${youtubeVideoId}"
+    !url.isNullOrBlank() -> "url:${url}"
+    else -> "label:${label.lowercase()}"
 }

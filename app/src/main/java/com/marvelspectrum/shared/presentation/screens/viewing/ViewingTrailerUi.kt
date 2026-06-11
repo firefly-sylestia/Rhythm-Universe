@@ -218,6 +218,7 @@ internal fun TrailerStatusButton(
     if (selected) {
         FilledTonalButton(
             onClick = onClick,
+            modifier = Modifier.semantics { contentDescription = "${status.activeLabel}, selected. Toggle ${status.libraryTitle}." },
             shape = shape,
             colors = ButtonDefaults.filledTonalButtonColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -229,7 +230,7 @@ internal fun TrailerStatusButton(
             Text(status.activeLabel)
         }
     } else {
-        OutlinedButton(onClick = onClick, shape = shape) {
+        OutlinedButton(onClick = onClick, modifier = Modifier.semantics { contentDescription = "${status.inactiveLabel}. Toggle ${status.libraryTitle}." }, shape = shape) {
             Text(status.inactiveLabel)
         }
     }
@@ -239,13 +240,47 @@ internal fun TrailerStatusButton(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun TrailerRail(title: String, subtitle: String, items: List<ViewingItem>, onOpenTrailer: (ViewingItem) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SpectrumSectionHeader(title = title, subtitle = subtitle)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.cardGap)) {
             items(items, key = { "trailer-${it.id}" }) { item ->
-                PosterCard(item) { onOpenTrailer(item) }
+                TrailerPreviewCard(item = item, onClick = { onOpenTrailer(item) })
             }
         }
+    }
+}
+
+@Composable
+internal fun TrailerPreviewCard(item: ViewingItem, onClick: () -> Unit) {
+    val displayItem = rememberCachedItem(item)
+    val trailer = remember(displayItem) { displayItem.primaryTrailer() }
+    val accent = spectrumUniverseAccent(displayItem.universe)
+    PressableCard(
+        onClick = onClick,
+        modifier = Modifier
+            .width(292.dp)
+            .semantics { contentDescription = "Open trailer preview for ${displayItem.title}" }
+    ) {
+        SpectrumSceneSurface(
+            universe = displayItem.universe,
+            modifier = Modifier.fillMaxWidth().height(164.dp),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            PosterBackdrop(displayItem, Modifier.fillMaxSize(), ContentScale.Crop, intent = ArtworkDisplayIntent.HERO_BACKDROP)
+            Box(Modifier.matchParentSize().background(readabilityGradient(strong = true)))
+            Column(Modifier.align(Alignment.BottomStart).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.chipGap), verticalAlignment = Alignment.CenterVertically) {
+                    SpectrumPulseIndicator(active = trailer != null, universe = displayItem.universe)
+                    Surface(shape = SpectrumShapes.pillTab, color = accent.primary.copy(alpha = 0.88f), contentColor = MaterialTheme.colorScheme.onPrimary) {
+                        Text(trailer?.label ?: "Trailer ready", Modifier.padding(horizontal = 10.dp, vertical = 5.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                Text(displayItem.title, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(listOfNotNull(displayItem.year, displayItem.runtime, displayItem.universe).joinToString(" • "), color = Color.White.copy(alpha = 0.82f), style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Text("Tap for trailer options", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -256,14 +291,16 @@ internal fun ViewingItem.primaryTrailer(): ViewingTrailer? = availableTrailers()
     compareBy<ViewingTrailer> { it.trailerRank() }.thenBy { it.label.lowercase() }
 )
 
-internal fun ViewingItem.availableTrailers(): List<ViewingTrailer> = trailers.ifEmpty {
-    if (!youtubeVideoId.isNullOrBlank() || !trailerUrl.isNullOrBlank()) {
-        listOf(ViewingTrailer("Official trailer", youtubeVideoId, trailerUrl, trailerSource))
+internal fun ViewingItem.availableTrailers(): List<ViewingTrailer> {
+    val legacyTrailer = if (!youtubeVideoId.isNullOrBlank() || !trailerUrl.isNullOrBlank()) {
+        ViewingTrailer("Official trailer", youtubeVideoId, trailerUrl, trailerSource)
     } else {
-        emptyList()
+        null
     }
-}.filter { !it.youtubeVideoId.isNullOrBlank() || !it.url.isNullOrBlank() }
-    .distinctBy { listOf(it.youtubeVideoId.orEmpty(), it.url.orEmpty()).joinToString("|") }
+    return (trailers + listOfNotNull(legacyTrailer))
+        .filter { !it.youtubeVideoId.isNullOrBlank() || !it.url.isNullOrBlank() }
+        .distinctBy { it.youtubeVideoId?.takeIf(String::isNotBlank)?.let { id -> "youtube:$id" } ?: it.url?.takeIf(String::isNotBlank)?.let { url -> "url:$url" } ?: it.label }
+}
 
 private fun ViewingTrailer.trailerRank(): Int {
     val labelLower = label.lowercase()

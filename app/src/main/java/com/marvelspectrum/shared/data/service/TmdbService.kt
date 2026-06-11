@@ -5,6 +5,7 @@ import com.marvelspectrum.shared.data.viewing.TrailerSource
 import com.marvelspectrum.shared.data.viewing.ViewingCastMember
 import com.marvelspectrum.shared.data.viewing.ViewingCrewMember
 import com.marvelspectrum.shared.data.viewing.ViewingItem
+import com.marvelspectrum.shared.data.viewing.ViewingTrailer
 import com.marvelspectrum.shared.util.ViewingArtworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -95,7 +96,8 @@ class TmdbService(
             (0 until array.length()).mapNotNull { array.optJSONObject(it)?.optString("name")?.takeUsable() }
         } ?: emptyList()
         val credits = extractCredits(json.optJSONObject("credits"))
-        val trailer = extractTrailers(json.optJSONObject("videos")).firstOrNull()
+        val trailers = extractTrailers(json.optJSONObject("videos"))
+        val trailer = trailers.firstOrNull()
         val imdbId = json.optJSONObject("external_ids")?.optString("imdb_id")?.takeUsable()
         val releaseDate = json.optString("release_date").takeUsable()
         return ViewingItem(
@@ -118,6 +120,7 @@ class TmdbService(
             trailerUrl = trailer?.url,
             youtubeVideoId = trailer?.key,
             trailerSource = trailer?.let { TrailerSource.TMDB },
+            trailers = trailers.map { it.toViewingTrailer() },
             cast = credits.first,
             crew = credits.second,
             director = credits.second.firstOrNull { it.job == "Director" }?.name,
@@ -196,6 +199,14 @@ class TmdbService(
 
 data class TmdbTrailer(val key: String, val name: String? = null, val type: String? = null, val official: Boolean = false, val language: String? = null) {
     val url: String = "https://www.youtube.com/watch?v=$key"
+
+    fun toViewingTrailer(): ViewingTrailer {
+        val typeLabel = type?.takeIf { it.isNotBlank() } ?: "Trailer"
+        val officialPrefix = if (official && !typeLabel.contains("official", ignoreCase = true)) "Official " else ""
+        val namePart = name?.takeIf { it.isNotBlank() && !it.equals(typeLabel, ignoreCase = true) }
+        val label = listOfNotNull("$officialPrefix$typeLabel", namePart).joinToString(" • ")
+        return ViewingTrailer(label = label, youtubeVideoId = key, url = url, source = TrailerSource.TMDB)
+    }
 }
 
 

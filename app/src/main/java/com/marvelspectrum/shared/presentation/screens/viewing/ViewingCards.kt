@@ -118,7 +118,12 @@ import kotlinx.coroutines.delay
 @Composable
 internal fun PosterCard(item: ViewingItem, onClick: () -> Unit) {
     val displayItem = rememberCachedItem(item)
-    PressableCard(onClick = onClick, modifier = Modifier.width(ViewingUi.posterWidth)) {
+    PressableCard(
+        onClick = onClick,
+        modifier = Modifier
+            .width(ViewingUi.posterWidth)
+            .semantics { contentDescription = "Open details for ${displayItem.title}" }
+    ) {
         PosterBackdrop(displayItem, Modifier.fillMaxWidth().aspectRatio(2f / 3f), ContentScale.Crop, SpectrumShapes.posterMask)
         Spacer(Modifier.height(10.dp))
         Text(displayItem.title, modifier = Modifier.height(40.dp), maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
@@ -128,23 +133,39 @@ internal fun PosterCard(item: ViewingItem, onClick: () -> Unit) {
 
 @Composable
 internal fun ViewingListCard(list: ViewingList, onClick: () -> Unit) {
-    PressableCard(onClick = onClick, modifier = Modifier.width(220.dp)) {
-        CollectionArtwork(list, Modifier.fillMaxWidth().height(118.dp).clip(RoundedCornerShape(22.dp)), ContentScale.Crop)
+    val accent = spectrumUniverseAccent(list.universe ?: list.category)
+    PressableCard(
+        onClick = onClick,
+        modifier = Modifier
+            .width(226.dp)
+            .semantics { contentDescription = "Open collection ${list.title}, ${list.items.size} titles" }
+    ) {
+        CollectionArtwork(list, Modifier.fillMaxWidth().height(124.dp).clip(SpectrumShapes.mediaFrame), ContentScale.Crop)
         Spacer(Modifier.height(10.dp))
-        Text(list.title, modifier = Modifier.height(40.dp), maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold)
-        Text("${list.items.size} titles • ${list.category ?: list.universe ?: "Viewing order"}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(list.title, modifier = Modifier.height(40.dp), maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.ExtraBold)
+        SpectrumRhythmDivider(universe = list.universe ?: list.category, bars = 10)
+        Surface(shape = SpectrumShapes.pillTab, color = accent.container, contentColor = accent.onContainer) {
+            Text("${list.items.size} tracks • ${list.category ?: list.universe ?: "Viewing order"}", Modifier.padding(horizontal = 10.dp, vertical = 5.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 
 @Composable
 internal fun WideListCard(list: ViewingList, onClick: () -> Unit) {
-    PressableCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    val accent = spectrumUniverseAccent(list.universe ?: list.category)
+    PressableCard(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = "Open collection ${list.title}, ${list.items.size} titles" }
+    ) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            CollectionArtwork(list, Modifier.size(64.dp, 88.dp).clip(RoundedCornerShape(18.dp)), ContentScale.Crop)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(list.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            CollectionArtwork(list, Modifier.size(72.dp, 96.dp).clip(RoundedCornerShape(20.dp)), ContentScale.Crop)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(list.title, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(list.description.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text("${list.items.size} titles • ${list.category ?: "Collection"}", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                SpectrumRhythmDivider(universe = list.universe ?: list.category, bars = 12)
+                Text("${list.items.size} tracks • ${list.category ?: "Collection"}", color = accent.primary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             }
         }
     }

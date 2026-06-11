@@ -139,12 +139,16 @@ fun ViewingDetailScreen(
     val selected = rememberEnrichedItem(item ?: data.featuredItem)
     LaunchedEffect(selected.id) { ViewingMetadataStore.markViewed(selected) }
     var showTrailer by rememberSaveable(selected.id) { mutableStateOf(false) }
-    val statuses = ViewingMetadataStore.statusesFor(selected)
+    var statuses by remember(selected.id) { mutableStateOf(ViewingMetadataStore.statusesFor(selected)) }
+    val refreshStatuses = { statuses = ViewingMetadataStore.statusesFor(selected) }
     val related = remember(selected, data) { data.allItems.filter { it.id != selected.id && (it.franchise == selected.franchise || it.universe == selected.universe || it.genres.any(selected.genres::contains)) }.take(12) }
     Scaffold(topBar = { TopAppBar(title = {}, navigationIcon = { SpectrumIconButton(onClick = onBack) { Icon(RhythmIcons.Back, "Back") } }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)) }, modifier = modifier) { padding ->
         SpectrumGradientScaffoldBackground(universe = selected.universe) {
             LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, SpectrumSpacing.bottomSafePadding), verticalArrangement = Arrangement.spacedBy(22.dp)) {
-                item { CinematicDetailHero(selected, statuses, onTrailer = { showTrailer = true }) }
+                item { CinematicDetailHero(selected, statuses, onTrailer = { showTrailer = true }, onStatusToggle = { status ->
+                    ViewingMetadataStore.toggleStatus(selected, status)
+                    refreshStatuses()
+                }) }
                 item { Column(Modifier.padding(horizontal = SpectrumSpacing.screenPadding), verticalArrangement = Arrangement.spacedBy(22.dp)) {
                     Text(selected.overview ?: selected.plot ?: selected.description ?: "No overview available.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (selected.genres.isNotEmpty()) FlowChips(selected.genres.take(6))
@@ -230,7 +234,7 @@ internal fun String.providerGroupLabel(): String = when {
 
 
 @Composable
-internal fun CinematicDetailHero(item: ViewingItem, statuses: Set<ViewingUserStatus>, onTrailer: () -> Unit) {
+internal fun CinematicDetailHero(item: ViewingItem, statuses: Set<ViewingUserStatus>, onTrailer: () -> Unit, onStatusToggle: (ViewingUserStatus) -> Unit) {
     val accent = spectrumUniverseAccent(item.universe)
     val context = LocalContext.current
     val primaryTrailer = remember(item) { item.primaryTrailer() }
@@ -325,9 +329,9 @@ internal fun CinematicDetailHero(item: ViewingItem, statuses: Set<ViewingUserSta
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SpectrumRhythmDivider(universe = item.universe, bars = 20)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DetailActionPill("Watch later", RhythmIcons.AccessTime, ViewingUserStatus.WATCH_LATER in statuses) { ViewingMetadataStore.toggleStatus(item, ViewingUserStatus.WATCH_LATER) }
-                    DetailActionPill("Favorite", RhythmIcons.Favorite, ViewingUserStatus.FAVORITE in statuses) { ViewingMetadataStore.toggleStatus(item, ViewingUserStatus.FAVORITE) }
-                    DetailActionPill("Watched", RhythmIcons.Check, ViewingUserStatus.WATCHED in statuses) { ViewingMetadataStore.toggleStatus(item, ViewingUserStatus.WATCHED) }
+                    DetailActionPill("Watch later", RhythmIcons.AccessTime, ViewingUserStatus.WATCH_LATER in statuses) { onStatusToggle(ViewingUserStatus.WATCH_LATER) }
+                    DetailActionPill("Favorite", RhythmIcons.Favorite, ViewingUserStatus.FAVORITE in statuses) { onStatusToggle(ViewingUserStatus.FAVORITE) }
+                    DetailActionPill("Watched", RhythmIcons.Check, ViewingUserStatus.WATCHED in statuses) { onStatusToggle(ViewingUserStatus.WATCHED) }
                 }
             }
         }
@@ -335,7 +339,17 @@ internal fun CinematicDetailHero(item: ViewingItem, statuses: Set<ViewingUserSta
 }
 
 @Composable
-internal fun DetailActionPill(label: String, icon: MaterialSymbolIcon, selected: Boolean, onClick: () -> Unit) { SpectrumPillTab(selected, onClick) { Icon(icon, null); Text(label) } }
+internal fun DetailActionPill(label: String, icon: MaterialSymbolIcon, selected: Boolean, onClick: () -> Unit) {
+    SpectrumPillTab(
+        selected = selected,
+        onClick = onClick,
+        modifier = Modifier.semantics { contentDescription = "$label status${if (selected) ", selected" else ""}. Toggle $label." }
+    ) {
+        Icon(icon, null)
+        Text(label)
+    }
+}
+
 
 
 @Composable

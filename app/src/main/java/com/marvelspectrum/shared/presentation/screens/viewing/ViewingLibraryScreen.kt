@@ -424,14 +424,13 @@ internal fun SearchFilterMenu(
 
 @Composable
 internal fun CompactMenuCard(title: String, subtitle: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(24.dp)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    Text(subtitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
+    SpectrumGlassSurface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp)) {
+        Column(Modifier.fillMaxWidth().padding(SpectrumSpacing.cardContentPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold)
+                Text(subtitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
+            SpectrumRhythmDivider(bars = 16)
             content()
         }
     }
@@ -448,7 +447,7 @@ internal fun <T> CompactDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier) {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+        SpectrumPillTab(selected = false, onClick = { expanded = true }, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "$label filter, selected $selected" }) {
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
                 Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 Text(selected, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -464,7 +463,16 @@ internal fun <T> CompactDropdown(
 @Composable
 internal fun LibraryTabs(selected: String, onTab: (String) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.chipGap)) {
-        items(listOf("Continue", "Essential", "MCU", "DC", "Timeline", "Collections", "Saved")) { tab -> SpectrumPillTab(selected = selected == tab, onClick = { onTab(tab) }) { Text(tab) } }
+        items(listOf("Continue", "Essential", "MCU", "DC", "Timeline", "Collections", "Saved")) { tab ->
+            SpectrumPillTab(
+                selected = selected == tab,
+                onClick = { onTab(tab) },
+                modifier = Modifier.semantics { contentDescription = "Library tab $tab${if (selected == tab) ", selected" else ""}" }
+            ) {
+                Icon(tabIdentityIcon(tab), contentDescription = null)
+                Text(tab)
+            }
+        }
     }
 }
 
@@ -520,15 +528,13 @@ internal fun LazyListScope.groupedViewingItems(items: List<ViewingItem>, sortMod
 
 @Composable
 internal fun PhaseDivider(title: String, items: List<ViewingItem>) {
-    Surface(
-        shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-            Text("${items.size} titles", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+    SpectrumGlassSurface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), accent = spectrumUniverseAccent(title)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text("${items.size} tracks", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            SpectrumRhythmDivider(universe = title, bars = 14)
         }
     }
 }
@@ -557,5 +563,25 @@ internal fun LibraryPosterGrid(items: List<ViewingItem>, onOpenItem: (ViewingIte
 
 @Composable
 internal fun CollectionCardGrid(lists: List<ViewingList>, onOpenList: (ViewingList) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) { lists.chunked(2).forEach { row -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) { row.forEach { list -> PressableCard(Modifier.weight(1f), { onOpenList(list) }) { CollectionArtwork(list, Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(24.dp)), ContentScale.Crop); Spacer(Modifier.height(10.dp)); Text(list.title, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis); Text("${list.items.size} titles", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium) } }; if (row.size == 1) Spacer(Modifier.weight(1f)) } } }
+    Column(verticalArrangement = Arrangement.spacedBy(SpectrumSpacing.cardGap)) {
+        lists.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.cardGap)) {
+                row.forEach { list ->
+                    PressableCard(
+                        Modifier
+                            .weight(1f)
+                            .semantics { contentDescription = "Open collection ${list.title}, ${list.items.size} titles" },
+                        { onOpenList(list) }
+                    ) {
+                        CollectionArtwork(list, Modifier.fillMaxWidth().aspectRatio(1f).clip(SpectrumShapes.mediaFrame), ContentScale.Crop)
+                        Spacer(Modifier.height(10.dp))
+                        Text(list.title, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        SpectrumRhythmDivider(universe = list.universe ?: list.category, bars = 8)
+                        Text("${list.items.size} tracks", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
 }

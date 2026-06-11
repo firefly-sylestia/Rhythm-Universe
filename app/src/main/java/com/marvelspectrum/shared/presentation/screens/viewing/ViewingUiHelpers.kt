@@ -274,8 +274,18 @@ internal fun tabIdentitySubtitle(tab: String) = when (tab) { "Continue" -> "Pick
 
 @Composable
 internal fun UniverseGlow(universe: String?, modifier: Modifier = Modifier) {
-    val colors = when { universe.equals("MCU", true) || universe.orEmpty().contains("Marvel", true) -> listOf(Color(0x99D71936), Color(0x66F7B733), Color.Transparent); universe.orEmpty().contains("DC", true) || universe.equals("Elseworlds", true) -> listOf(Color(0x994A72FF), Color(0x6659E7FF), Color.Transparent); else -> listOf(Color(0x998A55FF), Color(0x66FF5FAA), Color.Transparent) }
-    Box(modifier.background(Brush.radialGradient(colors)))
+    val accent = spectrumUniverseAccent(universe)
+    Box(
+        modifier.background(
+            Brush.radialGradient(
+                listOf(
+                    accent.primary.copy(alpha = 0.54f),
+                    accent.secondary.copy(alpha = 0.32f),
+                    Color.Transparent
+                )
+            )
+        )
+    )
 }
 
 @Composable

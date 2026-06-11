@@ -223,7 +223,7 @@ private fun TrailerFallback(
     shape: Shape = RoundedCornerShape(28.dp)
 ) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.semantics { contentDescription = "$title. $body" },
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         tonalElevation = 2.dp

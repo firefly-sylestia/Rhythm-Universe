@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.marvelspectrum.shared.presentation.screens.viewing
 
@@ -10,6 +10,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -220,18 +221,17 @@ internal fun ViewingHomeContent(
             FeaturedTitleCarousel(
                 items = remember(data) { data.homeFeaturedTitles() },
                 featuredList = data.featuredList,
-                onOpenItem = onOpenItem,
-                onOpenLibrary = onOpenLibrary
+                onOpenItem = onOpenItem
             )
         }
         if (recent.isNotEmpty()) item { CinemaActivityMiniSurface(recent.first(), onClick = { onOpenItem(recent.first()) }) }
-        if (continueItems.isNotEmpty()) item { PosterRail("Continue watching", "Recently opened, watching, and watch-later titles", continueItems, onOpenItem) }
-        if (trailerItems.isNotEmpty()) item { TrailerRail("Trailers", "Preview the latest available title trailers", trailerItems, onOpenTrailer = { trailerPreview = it }) }
-        if (upcomingItems.isNotEmpty()) item { PosterRail("Upcoming", "Announced and upcoming Cinemaverse releases", upcomingItems, onOpenItem) }
-        if (becauseYouWatched.isNotEmpty()) item { PosterRail("Because you watched ${recent.first().title}", recent.first().universe ?: recent.first().franchise ?: "Personal picks", becauseYouWatched, onOpenItem) }
-        item { PosterRail("MCU", "Marvel Studios films, shows, specials, One-Shots, and Defenders", marvel, onOpenItem) }
-        item { PosterRail("DC", "DCU, DCEU, Elseworlds, and connected TV", dc, onOpenItem) }
-        item { ListRail("Managed collections", "Essentials, timelines, chapters, and character journeys", lists, onOpenList) }
+        if (continueItems.isNotEmpty()) item { ContinueQueueRail("Continue watching", "A mini-player queue for recent, watching, and watch-later titles", continueItems, onOpenItem) }
+        if (trailerItems.isNotEmpty()) item { TrailerRail("Trailers", "Wide cinematic previews with primary trailer metadata", trailerItems, onOpenTrailer = { trailerPreview = it }) }
+        if (upcomingItems.isNotEmpty()) item { SpectrumLaneRail("Upcoming", "Announced and upcoming Cinemaverse releases", upcomingItems, onOpenItem, universe = null) }
+        if (becauseYouWatched.isNotEmpty()) item { SpectrumLaneRail("Because you watched ${recent.first().title}", recent.first().universe ?: recent.first().franchise ?: "Personal picks", becauseYouWatched, onOpenItem, universe = recent.first().universe) }
+        item { SpectrumLaneRail("MCU spectrum lane", "Marvel Studios films, shows, specials, One-Shots, and Defenders", marvel, onOpenItem, universe = "MCU") }
+        item { SpectrumLaneRail("DC spectrum lane", "DCU, DCEU, Elseworlds, and connected TV", dc, onOpenItem, universe = "DC") }
+        item { CollectionAlbumRail("Managed collections", "Essentials, timelines, chapters, and character journeys", lists, onOpenList) }
     }
     trailerPreview?.let { item -> TrailerPlayerDialog(item = item, onOpenDetails = { trailerPreview = null; onOpenItem(item) }, onDismiss = { trailerPreview = null }) }
 }
@@ -378,11 +378,11 @@ internal fun CollectionTitleRow(item: ViewingItem, order: Int, onClick: () -> Un
 internal fun FeaturedTitleCarousel(
     items: List<ViewingItem>,
     featuredList: ViewingList,
-    onOpenItem: (ViewingItem) -> Unit,
-    onOpenLibrary: () -> Unit
+    onOpenItem: (ViewingItem) -> Unit
 ) {
     val carouselItems = if (items.isEmpty()) featuredList.items.take(6) else items
     val listState = rememberLazyListState()
+    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
     var selectedIndex by rememberSaveable(carouselItems.map { it.id }.joinToString()) { mutableStateOf(0) }
     var interactionPaused by rememberSaveable { mutableStateOf(false) }
     val visibleItem = carouselItems.getOrNull(selectedIndex) ?: return
@@ -390,8 +390,8 @@ internal fun FeaturedTitleCarousel(
     LaunchedEffect(listState.firstVisibleItemIndex, listState.isScrollInProgress) {
         if (listState.isScrollInProgress) {
             interactionPaused = true
-            selectedIndex = listState.firstVisibleItemIndex.coerceIn(0, carouselItems.lastIndex)
         } else if (interactionPaused) {
+            selectedIndex = listState.firstVisibleItemIndex.coerceIn(0, carouselItems.lastIndex)
             delay(2_400)
             interactionPaused = false
         }
@@ -412,6 +412,7 @@ internal fun FeaturedTitleCarousel(
         LazyRow(
             state = listState,
             horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.cardGap),
+            flingBehavior = snapFlingBehavior,
             modifier = Modifier.semantics { contentDescription = "Gesture-first featured title carousel" }
         ) {
             itemsIndexed(carouselItems, key = { index, item -> "featured-${item.id}-$index" }) { index, item ->
@@ -507,20 +508,123 @@ internal fun Int.floorMod(size: Int): Int = ((this % size) + size) % size
 
 @Composable
 internal fun PosterRail(title: String, subtitle: String, items: List<ViewingItem>, onOpenItem: (ViewingItem) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    SpectrumLaneRail(title = title, subtitle = subtitle, items = items, onOpenItem = onOpenItem)
+}
+
+@Composable
+internal fun ContinueQueueRail(title: String, subtitle: String, items: List<ViewingItem>, onOpenItem: (ViewingItem) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SpectrumSectionHeader(title = title, subtitle = subtitle)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.cardGap)) {
-            items(items, key = { it.id }) { PosterCard(it) { onOpenItem(it) } }
+            itemsIndexed(items, key = { index, item -> "queue-${item.id}-$index" }) { index, item ->
+                ContinueQueueCard(item = item, queueNumber = index + 1, onClick = { onOpenItem(item) })
+            }
         }
     }
 }
 
+@Composable
+internal fun ContinueQueueCard(item: ViewingItem, queueNumber: Int, onClick: () -> Unit) {
+    val displayItem = rememberCachedItem(item)
+    val accent = spectrumUniverseAccent(displayItem.universe)
+    val statuses = ViewingMetadataStore.statusesFor(displayItem)
+    PressableCard(
+        onClick = onClick,
+        modifier = Modifier
+            .width(286.dp)
+            .semantics { contentDescription = "Continue queue item $queueNumber: ${displayItem.title}. Open details." }
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            PosterBackdrop(displayItem, Modifier.size(66.dp, 96.dp), ContentScale.Crop, SpectrumShapes.posterMask)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.chipGap), verticalAlignment = Alignment.CenterVertically) {
+                    SpectrumPulseIndicator(active = queueNumber == 1, universe = displayItem.universe)
+                    Text("Queue $queueNumber", style = MaterialTheme.typography.labelMedium, color = accent.primary, fontWeight = FontWeight.Bold)
+                }
+                Text(displayItem.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium)
+                Text(statuses.firstOrNull()?.activeLabel ?: "Ready to resume", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                Surface(shape = SpectrumShapes.pillTab, color = MaterialTheme.colorScheme.surfaceContainerHighest) {
+                    Box(Modifier.fillMaxWidth().height(6.dp)) {
+                        Box(Modifier.fillMaxWidth(((queueNumber % 5) + 3) / 8f).height(6.dp).background(accent.primary.copy(alpha = 0.78f)))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SpectrumLaneRail(title: String, subtitle: String, items: List<ViewingItem>, onOpenItem: (ViewingItem) -> Unit, universe: String? = items.firstOrNull()?.universe) {
+    val accent = spectrumUniverseAccent(universe)
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        SpectrumSectionHeader(title = title, subtitle = subtitle)
+        SpectrumRhythmDivider(universe = universe, bars = 22)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.cardGap)) {
+            items(items, key = { it.id }) { item -> SpectrumLaneCard(item, accent) { onOpenItem(item) } }
+        }
+    }
+}
+
+@Composable
+internal fun SpectrumLaneCard(item: ViewingItem, accent: SpectrumUniverseAccent, onClick: () -> Unit) {
+    val displayItem = rememberCachedItem(item)
+    PressableCard(
+        onClick = onClick,
+        modifier = Modifier
+            .width(168.dp)
+            .semantics { contentDescription = "Open ${displayItem.title} from ${displayItem.universe ?: "spectrum"} lane" }
+    ) {
+        Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(SpectrumShapes.posterMask)) {
+            PosterBackdrop(displayItem, Modifier.fillMaxSize(), ContentScale.Crop, SpectrumShapes.posterMask)
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.42f)))))
+            Surface(
+                modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
+                shape = SpectrumShapes.pillTab,
+                color = accent.primary.copy(alpha = 0.86f),
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) { Text(displayItem.year ?: displayItem.type.name, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) }
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(displayItem.title, modifier = Modifier.height(42.dp), maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+        Text(listOfNotNull(displayItem.phase ?: displayItem.saga, displayItem.runtime).joinToString(" • "), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
 
 @Composable
 internal fun ListRail(title: String, subtitle: String, lists: List<ViewingList>, onOpenList: (ViewingList) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    CollectionAlbumRail(title, subtitle, lists, onOpenList)
+}
+
+@Composable
+internal fun CollectionAlbumRail(title: String, subtitle: String, lists: List<ViewingList>, onOpenList: (ViewingList) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SpectrumSectionHeader(title = title, subtitle = subtitle)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.cardGap)) { items(lists, key = { it.id }) { ViewingListCard(it) { onOpenList(it) } } }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.cardGap)) {
+            items(lists, key = { it.id }) { list -> CollectionAlbumCard(list) { onOpenList(list) } }
+        }
+    }
+}
+
+@Composable
+internal fun CollectionAlbumCard(list: ViewingList, onClick: () -> Unit) {
+    val accent = spectrumUniverseAccent(list.universe ?: list.category)
+    PressableCard(
+        onClick = onClick,
+        modifier = Modifier
+            .width(248.dp)
+            .semantics { contentDescription = "Open collection ${list.title}, ${list.items.size} titles" }
+    ) {
+        CollectionArtwork(list, Modifier.fillMaxWidth().height(142.dp).clip(SpectrumShapes.mediaFrame), ContentScale.Crop)
+        Spacer(Modifier.height(12.dp))
+        Text(list.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(list.description.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        SpectrumRhythmDivider(universe = list.universe ?: list.category, bars = 12)
+        Row(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.chipGap), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = SpectrumShapes.pillTab, color = accent.container, contentColor = accent.onContainer) {
+                Text("${list.items.size} tracks", Modifier.padding(horizontal = 10.dp, vertical = 5.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            }
+            Text(list.category ?: list.universe ?: "Collection", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 

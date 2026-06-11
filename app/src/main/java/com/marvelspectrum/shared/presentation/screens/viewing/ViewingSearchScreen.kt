@@ -267,7 +267,16 @@ internal fun SearchChipRail(title: String, values: List<String>, selected: Strin
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.chipGap)) {
-            items(values) { value -> FilterChip(selected = selected == value, onClick = { onSelect(value) }, leadingIcon = if (selected == value) ({ Icon(RhythmIcons.Check, contentDescription = null) }) else null, label = { Text(value.replace('_', '-')) }) }
+            items(values) { value ->
+                SpectrumPillTab(
+                    selected = selected == value,
+                    onClick = { onSelect(value) },
+                    modifier = Modifier.semantics { contentDescription = "$title filter ${value.replace('_', '-')}${if (selected == value) ", selected" else ""}" }
+                ) {
+                    if (selected == value) Icon(RhythmIcons.Check, contentDescription = null)
+                    Text(value.replace('_', '-'))
+                }
+            }
         }
     }
 }
@@ -277,7 +286,12 @@ internal fun GenreChipRail(genres: List<String>, selected: String?, onSelect: (S
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Genres", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.chipGap)) {
-            items(genres) { genre -> FilterChip(selected = selected == genre, onClick = { onSelect(genre) }, leadingIcon = { Text("•", color = if (selected == genre) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary) }, label = { Text(genre) }) }
+            items(genres) { genre ->
+                SpectrumPillTab(selected = selected == genre, onClick = { onSelect(genre) }, modifier = Modifier.semantics { contentDescription = "Genre filter $genre${if (selected == genre) ", selected" else ""}" }) {
+                    SpectrumPulseIndicator(active = selected == genre, universe = genre)
+                    Text(genre)
+                }
+            }
         }
     }
 }
@@ -285,7 +299,12 @@ internal fun GenreChipRail(genres: List<String>, selected: String?, onSelect: (S
 @Composable
 internal fun CategoryChipRail(selected: ViewingSearchCategory, onSelect: (ViewingSearchCategory) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(SpectrumSpacing.chipGap)) {
-        items(ViewingSearchCategory.entries) { category -> FilterChip(selected = selected == category, onClick = { onSelect(category) }, leadingIcon = if (selected == category) ({ Icon(RhythmIcons.Check, contentDescription = null) }) else null, label = { Text(category.label) }) }
+        items(ViewingSearchCategory.entries) { category ->
+            SpectrumPillTab(selected = selected == category, onClick = { onSelect(category) }, modifier = Modifier.semantics { contentDescription = "Search category ${category.label}${if (selected == category) ", selected" else ""}" }) {
+                if (selected == category) Icon(RhythmIcons.Check, contentDescription = null)
+                Text(category.label)
+            }
+        }
     }
 }
 
@@ -298,8 +317,9 @@ internal fun SearchSortRail(sortMode: ViewingSearchSortMode, onSort: (ViewingSea
 
 @Composable
 internal fun ResultSection(title: String, subtitle: String, items: List<ViewingItem>, onOpen: (ViewingItem) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SpectrumSectionHeader(title = title, subtitle = subtitle)
+        SpectrumRhythmDivider(bars = 18)
         items.forEachIndexed { index, item -> ViewingOrderRow(item, index + 1, onClick = { onOpen(item) }) }
     }
 }
