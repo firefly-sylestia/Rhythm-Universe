@@ -218,7 +218,7 @@ internal fun collectionBrush(seed: String?): Brush {
 
 internal fun String.initials(): String = trim().split(Regex("\\s+")).filter { it.isNotBlank() && it.first().isLetterOrDigit() }.take(3).joinToString("") { it.first().uppercase() }.ifBlank { "CU" }
 
-private enum class ArtworkDisplayIntent { CARD_POSTER, HERO_BACKDROP }
+internal enum class ArtworkDisplayIntent { CARD_POSTER, HERO_BACKDROP }
 
 @Composable
 internal fun PosterBackdrop(

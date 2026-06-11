@@ -235,7 +235,7 @@ internal fun CinematicDetailHero(item: ViewingItem, statuses: Set<ViewingUserSta
     val context = LocalContext.current
     val primaryTrailer = remember(item) { item.primaryTrailer() }
     val openTrailer = primaryTrailer?.externalUrl()?.let { url ->
-        { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } }
+        { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }; Unit }
     }
     Column(
         Modifier

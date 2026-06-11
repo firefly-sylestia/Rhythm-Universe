@@ -249,8 +249,6 @@ internal fun SearchCompactFilters(
 }
 
 @Composable
-
-@Composable
 internal fun ExpressiveSearchField(query: String, onQuery: (String) -> Unit) {
     OutlinedTextField(
         value = query,
@@ -315,7 +313,3 @@ internal fun List<ViewingItem>.sortedForSearch(mode: ViewingSearchSortMode): Lis
     ViewingSearchSortMode.TITLE -> sortedFor(ViewingSortMode.TITLE)
     ViewingSearchSortMode.RELEVANCE -> this
 }
-
-
-@Composable
-

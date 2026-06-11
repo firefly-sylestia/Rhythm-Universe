@@ -117,7 +117,6 @@ import com.marvelspectrum.shared.util.ViewingArtworkUtils
 import kotlinx.coroutines.delay
 
 @Composable
-@Composable
 fun ViewingHomeScreen(
     onOpenLibrary: () -> Unit,
     onOpenSearch: () -> Unit,
@@ -518,8 +517,6 @@ internal fun PosterRail(title: String, subtitle: String, items: List<ViewingItem
 
 
 @Composable
-
-@Composable
 internal fun ListRail(title: String, subtitle: String, lists: List<ViewingList>, onOpenList: (ViewingList) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
         SpectrumSectionHeader(title = title, subtitle = subtitle)
@@ -549,5 +546,3 @@ internal fun CinemaActivityMiniSurface(item: ViewingItem, onClick: () -> Unit) {
         }
     }
 }
-
-

@@ -190,8 +190,6 @@ fun ViewingLibraryScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-
-@Composable
 internal fun ViewingListDetailScreen(list: ViewingList, onBack: () -> Unit, onOpenTitle: (ViewingItem) -> Unit) {
     var showOrderHelp by rememberSaveable { mutableStateOf(false) }
     val firstPlayable = list.items.firstOrNull { ViewingUserStatus.WATCHED !in ViewingMetadataStore.statusesFor(it) } ?: list.items.firstOrNull()
@@ -288,8 +286,6 @@ internal fun ViewingList.orderingBasisText(): String = when {
     !franchise.isNullOrBlank() -> "Ordered as a curated $franchise journey."
     else -> "Ordered as a curated ${category ?: universe ?: "Cinemaverse"} collection."
 }
-
-@Composable
 
 @Composable
 internal fun ViewingOrderRow(item: ViewingItem, order: Int, onClick: () -> Unit) {
@@ -513,7 +509,6 @@ internal fun StatusSelector(selected: Set<ViewingUserStatus>, onStatus: (Viewing
 
 
 
-@Composable
 
 internal fun LazyListScope.groupedViewingItems(items: List<ViewingItem>, sortMode: ViewingSortMode, onOpenTitle: (ViewingItem) -> Unit) {
     val grouped = items.groupBy { item -> item.phase ?: item.saga ?: item.universe ?: "Cinemaverse" }
@@ -564,6 +559,3 @@ internal fun LibraryPosterGrid(items: List<ViewingItem>, onOpenItem: (ViewingIte
 internal fun CollectionCardGrid(lists: List<ViewingList>, onOpenList: (ViewingList) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) { lists.chunked(2).forEach { row -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) { row.forEach { list -> PressableCard(Modifier.weight(1f), { onOpenList(list) }) { CollectionArtwork(list, Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(24.dp)), ContentScale.Crop); Spacer(Modifier.height(10.dp)); Text(list.title, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis); Text("${list.items.size} titles", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium) } }; if (row.size == 1) Spacer(Modifier.weight(1f)) } } }
 }
-
-@Composable
-
